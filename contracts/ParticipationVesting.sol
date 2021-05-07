@@ -3,8 +3,8 @@ pragma solidity ^0.6.12;
 import "./math/SafeMath.sol";
 import "./IERC20.sol";
 
-/// Vesting smart contract
-contract VestingContract  {
+/// ParticipationVesting smart contract
+contract ParticipationVesting  {
 
     using SafeMath for *;
 
