@@ -82,9 +82,9 @@ contract ParticipationVesting  {
     public
     {
         address user = msg.sender;
+        require(hasParticipated[user] == true, "Withdraw: User is not a participant.");
 
         Participation storage p = addressToParticipation[user];
-
         uint256 totalToWithdraw = 0;
 
         uint i = 0;
