@@ -1,0 +1,8 @@
+{
+  "local" : {
+    "numberOfPortions": 10,
+    "timeBetweenPortions": 123456,
+    "distributionStartDate":  12345131,
+    "adminWallet": "0xADeA14a2F5ffa5016f34141D00C249e691AE300E"
+  }
+}
