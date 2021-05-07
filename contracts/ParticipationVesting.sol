@@ -23,6 +23,7 @@ contract ParticipationVesting  {
     mapping(address => Participation) public addressToParticipation;
     mapping(address => bool) public hasParticipated;
 
+    uint public initialPortionUnlockingTime;
     uint public numberOfPortions;
     uint [] public distributionDates;
 
@@ -36,6 +37,7 @@ contract ParticipationVesting  {
         uint _numberOfPortions,
         uint timeBetweenPortions,
         uint distributionStartDate,
+        uint _initialPortionUnlockingTime,
         address _adminWallet,
         address _token
     )
@@ -45,6 +47,10 @@ contract ParticipationVesting  {
         adminWallet = _adminWallet;
         // Store number of portions
         numberOfPortions = _numberOfPortions;
+
+        // Time when initial portion is unlocked
+        initialPortionUnlockingTime = _initialPortionUnlockingTime;
+
         // Set distribution dates
         for(uint i = 0 ; i < _numberOfPortions; i++) {
             distributionDates.push(distributionStartDate + i*timeBetweenPortions);
@@ -96,9 +102,11 @@ contract ParticipationVesting  {
 
         uint256 totalToWithdraw = 0;
 
-        // Initial portion can be unlocked whenever
-        if(p.initialPortionWithdrawn == false) {
+        // Initial portion can be withdrawn
+        if(p.initialPortionWithdrawn == false && block.timestamp >= initialPortionUnlockingTime) {
             totalToWithdraw = totalToWithdraw.add(p.initialPortion);
+            // Mark initial portion as withdrawn
+            p.initialPortionWithdrawn = true;
         }
 
         uint i = 0;
