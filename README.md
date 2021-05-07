@@ -3,7 +3,7 @@
 
 _The first protocol, exclusively for the Avalanche ecosystem, to offer promising and innovative projects a fast, secure, and efficient platform for decentralized fundraising._
 
-### Token
+### Token (Mainnet)
 - **Deployed to Avalanche blockchain**
 - **Token address:** `0xd1c3f94DE7e5B45fa4eDBBA472491a9f4B166FC4`
 - **Total supply :** 100000000 XAVA
