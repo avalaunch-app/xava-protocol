@@ -28,7 +28,7 @@ contract ParticipationVesting  {
 
     uint public initialPortionUnlockingTime;
     uint public numberOfPortions;
-    uint [] public distributionDates;
+    uint [] distributionDates;
 
     modifier onlyAdmin {
         require(msg.sender == adminWallet, "OnlyAdmin: Restricted access.");
@@ -149,4 +149,12 @@ contract ParticipationVesting  {
         return block.timestamp >= distributionDates[portionId];
     }
 
+    // Get all distribution dates
+    function getDistributionDates()
+    external
+    view
+    returns (address [] memory)
+    {
+        return distributionDates;
+    }
 }
