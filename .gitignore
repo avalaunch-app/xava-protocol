@@ -4,3 +4,4 @@ cache
 yarn.lock
 .env
 .idea
+package-lock.json
