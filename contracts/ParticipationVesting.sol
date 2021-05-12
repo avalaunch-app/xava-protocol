@@ -9,6 +9,9 @@ contract ParticipationVesting  {
 
     using SafeMath for *;
 
+    uint public totalTokensToDistribute;
+    uint public totalTokensWithdrawn;
+
     struct Participation {
         uint256 initialPortion;
         uint256 vestedAmount;
@@ -67,10 +70,18 @@ contract ParticipationVesting  {
     external
     onlyAdmin
     {
+        require(totalTokensToDistribute.sub(totalTokensWithdrawn).add(participationAmount) <= token.balanceOf(address(this)),
+            "Safeguarding existing token buyers. Not enough tokens."
+        );
+
+        totalTokensToDistribute = totalTokensToDistribute.add(participationAmount);
+
         require(hasParticipated[participant] == false, "User already registered as participant.");
+
         uint initialPortionAmount = participationAmount.mul(20).div(100);
         // Vested 80%
         uint vestedAmount = participationAmount.sub(initialPortionAmount);
+
         // Compute amount per portion
         uint portionAmount = vestedAmount.div(numberOfPortions);
         bool[] memory isPortionWithdrawn = new bool[](numberOfPortions);
@@ -124,6 +135,8 @@ contract ParticipationVesting  {
             i++;
         }
 
+        // Account total tokens withdrawn.
+        totalTokensWithdrawn = totalTokensWithdrawn.add(totalToWithdraw);
         // Transfer all tokens to user
         token.transfer(user, totalToWithdraw);
     }
