@@ -1,0 +1,13 @@
+{
+    "ropsten": {
+        "XavaToken": "0xd8dAA42dFC3f507A12AcDbb9854b682fABaFEeC9",
+        "ParticipationVesting": "0xd6FBE8ac9396f986F8b4D1eBc939daA37529cF79"
+    },
+    "fuji": {
+        "XavaToken": "0x95b1C35D6088766b63de6dc19B014EA3F9c92F16",
+        "ParticipationVesting": "0xA42682cA07a263f47B7f57DD51CcF8E6d8bFe190"
+    },
+    "mainnet": {
+        "XavaToken": "0xd1c3f94DE7e5B45fa4eDBBA472491a9f4B166FC4"
+    }
+}
