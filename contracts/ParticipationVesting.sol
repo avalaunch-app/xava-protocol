@@ -62,13 +62,26 @@ contract ParticipationVesting  {
         token = IERC20(_token);
     }
 
+    // Function to register multiple participants at a time
+    function registerParticipants(
+        address [] memory participants,
+        uint256 [] memory participationAmounts
+    )
+    external
+    onlyAdmin
+    {
+        for(uint i = 0; i < participants.length; i++) {
+            registerParticipant(participants[i], participationAmounts[i]);
+        }
+    }
+
+
     /// Register participant
     function registerParticipant(
         address participant,
         uint participationAmount
     )
-    external
-    onlyAdmin
+    internal
     {
         require(totalTokensToDistribute.sub(totalTokensWithdrawn).add(participationAmount) <= token.balanceOf(address(this)),
             "Safeguarding existing token buyers. Not enough tokens."
@@ -120,19 +133,18 @@ contract ParticipationVesting  {
             p.initialPortionWithdrawn = true;
         }
 
-        uint i = 0;
 
-        while (isPortionUnlocked(i) == true && i < distributionDates.length) {
-            // If portion is not withdrawn
-            if(!p.isVestedPortionWithdrawn[i]) {
-                // Add this portion to withdraw amount
-                totalToWithdraw = totalToWithdraw.add(p.amountPerPortion);
+        // For loop instead of while
+        for(uint i = 0 ; i < numberOfPortions ; i++) {
+            if(isPortionUnlocked(i) == true && i < distributionDates.length) {
+                if(!p.isVestedPortionWithdrawn[i]) {
+                    // Add this portion to withdraw amount
+                    totalToWithdraw = totalToWithdraw.add(p.amountPerPortion);
 
-                // Mark portion as withdrawn
-                p.isVestedPortionWithdrawn[i] = true;
+                    // Mark portion as withdrawn
+                    p.isVestedPortionWithdrawn[i] = true;
+                }
             }
-            // Increment counter
-            i++;
         }
 
         // Account total tokens withdrawn.
@@ -149,11 +161,33 @@ contract ParticipationVesting  {
         return block.timestamp >= distributionDates[portionId];
     }
 
+
+    function getParticipation(address account)
+    external
+    view
+    returns (uint256, uint256, uint256, bool, bool [] memory)
+    {
+        Participation memory p = addressToParticipation[account];
+        bool [] memory isVestedPortionWithdrawn = new bool [](numberOfPortions);
+
+        for(uint i=0; i < numberOfPortions; i++) {
+            isVestedPortionWithdrawn[i] = p.isVestedPortionWithdrawn[i];
+        }
+
+        return (
+            p.initialPortion,
+            p.vestedAmount,
+            p.amountPerPortion,
+            p.initialPortionWithdrawn,
+            isVestedPortionWithdrawn
+        );
+    }
+
     // Get all distribution dates
     function getDistributionDates()
     external
     view
-    returns (address [] memory)
+    returns (uint256 [] memory)
     {
         return distributionDates;
     }
