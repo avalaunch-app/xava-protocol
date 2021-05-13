@@ -15,7 +15,7 @@ async function main() {
         config[hre.network.name].numberOfPortions,
         config[hre.network.name].timeBetweenPortions,
         config[hre.network.name].distributionStartDate,
-        config[hre.network.name].distributionStartDate,
+        config[hre.network.name].firstPortionUnlock,
         config[hre.network.name].adminWallet,
         getSavedContractAddresses()[hre.network.name]["XavaToken"]
     );
