@@ -9,9 +9,9 @@ async function main() {
 
     await hre.run('compile')
 
-    const ParticipationVesting = await hre.ethers.getContractFactory('ParticipationVesting');
+    const ParticipationVestingPrivate = await hre.ethers.getContractFactory('ParticipationVestingPrivate');
 
-    const participationVestingContract = await ParticipationVesting.deploy(
+    const participationVestingContract = await ParticipationVestingPrivate.deploy(
         config[hre.network.name].numberOfPortions,
         config[hre.network.name].timeBetweenPortions,
         config[hre.network.name].distributionStartDate,
@@ -21,20 +21,12 @@ async function main() {
     );
 
     await participationVestingContract.deployed();
-    console.log("Participation Vesting contract deployed to: ", participationVestingContract.address);
-    saveContractAddress(hre.network.name, 'ParticipationVesting', participationVestingContract.address);
+    console.log("Participation Vesting Seed contract deployed to: ", participationVestingContract.address);
+    saveContractAddress(hre.network.name, 'ParticipationVestingSeed', participationVestingContract.address);
 
     let token = await hre.ethers.getContractAt('XavaToken', getSavedContractAddresses()[hre.network.name]["XavaToken"]);
     await token.transfer(participationVestingContract.address, "60000000000000000000000");
     console.log('Transfer done');
-
-    await delay(30000);
-    console.log('Waited 15 seconds');
-
-    console.log(await token.balanceOf(participationVestingContract.address));
-
-    await delay (15000);
-    console.log('Waited 5 seconds');
 
     await participationVestingContract.registerParticipants(
         ['0xf3B39c28bF4c5c13346eEFa8F90e88B78A610381','0x3EC7eF9B96a36faa0c0949a2ba804f60D12593Dd'],

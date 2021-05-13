@@ -5,7 +5,7 @@ import "./math/SafeMath.sol";
 import "./IERC20.sol";
 
 /// ParticipationVesting smart contract
-contract ParticipationVesting  {
+contract ParticipationVestingPrivate {
 
     using SafeMath for *;
 
