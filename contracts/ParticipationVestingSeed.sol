@@ -92,7 +92,7 @@ contract ParticipationVestingSeed  {
         require(hasParticipated[participant] == false, "User already registered as participant.");
 
         uint initialPortionAmount = participationAmount.mul(10).div(100);
-        // Vested 80%
+        // Vested 90%
         uint vestedAmount = participationAmount.sub(initialPortionAmount);
 
         // Compute amount per portion
