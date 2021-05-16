@@ -78,7 +78,7 @@ contract Farm is Ownable {
 
     // Fund the farm, increase the end block
     function fund(uint256 _amount) public {
-        require(block.number < endTimestamp, "fund: too late, the farm is closed");
+        require(block.timestamp < endTimestamp, "fund: too late, the farm is closed");
         erc20.safeTransferFrom(address(msg.sender), address(this), _amount);
         endTimestamp += _amount.div(rewardPerSecond);
     }
@@ -121,7 +121,7 @@ contract Farm is Ownable {
         uint256 accERC20PerShare = pool.accERC20PerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
 
-        if (block.number > pool.lastRewardTimestamp && lpSupply != 0) {
+        if (block.timestamp > pool.lastRewardTimestamp && lpSupply != 0) {
             uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
             uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
             uint256 erc20Reward = nrOfSeconds.mul(rewardPerSecond).mul(pool.allocPoint).div(totalAllocPoint);
