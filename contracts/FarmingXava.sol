@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/IFarmTokenSwap.sol";
 
 // Farm distributes the ERC20 rewards based on staked LP to each user.
 //
@@ -12,6 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // Modified by LTO Network to work for non-mintable ERC20.
 
 contract Farm is Ownable {
+
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -40,6 +42,9 @@ contract Farm is Ownable {
         uint256 accERC20PerShare;   // Accumulated ERC20s per share, times 1e36.
     }
 
+    // Address of the contract to swap XAVA for WXAVA
+    IFarmTokenSwap public farmTokenSwapContract;
+
     // Address of the ERC20 Token contract.
     IERC20 public erc20;
     // The total amount of ERC20 that's paid out as reward.
@@ -63,11 +68,12 @@ contract Farm is Ownable {
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
-    constructor(IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp) public {
+    constructor(IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp, address _farmTokenSwapContract) public {
         erc20 = _erc20;
         rewardPerSecond = _rewardPerSecond;
         startTimestamp = _startTimestamp;
         endTimestamp = _startTimestamp;
+        farmTokenSwapContract = IFarmTokenSwap(_farmTokenSwapContract);
     }
 
     // Number of LP pools
@@ -156,6 +162,7 @@ contract Farm is Ownable {
             return;
         }
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
+
         if (lpSupply == 0) {
             pool.lastRewardTimestamp = lastTimestamp;
             return;
@@ -177,7 +184,11 @@ contract Farm is Ownable {
             uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
             erc20Transfer(msg.sender, pendingAmount);
         }
-        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+        if(_pid == 0) {
+            farmTokenSwapContract.swapXavaToWXava(address(msg.sender), _amount);
+        } else {
+            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+        }
         user.amount = user.amount.add(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
         emit Deposit(msg.sender, _pid, _amount);
@@ -193,7 +204,11 @@ contract Farm is Ownable {
         erc20Transfer(msg.sender, pendingAmount);
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
-        pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        if(_pid == 0) {
+            farmTokenSwapContract.swapWXavaForXava(address(msg.sender), _amount);
+        } else {
+            pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        }
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
