@@ -1,6 +1,6 @@
 pragma solidity ^0.6.12;
 
-import "./XavaToken.sol";
+import "../XavaToken.sol";
 
 
 contract WXavaToken is XavaToken {

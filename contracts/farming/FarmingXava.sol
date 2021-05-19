@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IFarmTokenSwap.sol";
+import "../interfaces/IFarmTokenSwap.sol";
 
 // Farm distributes the ERC20 rewards based on staked LP to each user.
 //
