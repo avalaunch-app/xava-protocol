@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "../interfaces/IFarmTokenSwap.sol";
 
 // Farm distributes the ERC20 rewards based on staked LP to each user.
 //
@@ -40,10 +39,9 @@ contract Farm is Ownable {
         uint256 allocPoint;         // How many allocation points assigned to this pool. ERC20s to distribute per block.
         uint256 lastRewardTimestamp;    // Last timstamp that ERC20s distribution occurs.
         uint256 accERC20PerShare;   // Accumulated ERC20s per share, times 1e36.
+        uint256 totalDeposits; // Total amount of tokens deposited at the moment (staked)
     }
 
-    // Address of the contract to swap XAVA for WXAVA
-    IFarmTokenSwap public farmTokenSwapContract;
 
     // Address of the ERC20 Token contract.
     IERC20 public erc20;
@@ -68,12 +66,11 @@ contract Farm is Ownable {
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
-    constructor(IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp, address _farmTokenSwapContract) public {
+    constructor(IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp) public {
         erc20 = _erc20;
         rewardPerSecond = _rewardPerSecond;
         startTimestamp = _startTimestamp;
         endTimestamp = _startTimestamp;
-        farmTokenSwapContract = IFarmTokenSwap(_farmTokenSwapContract);
     }
 
     // Number of LP pools
@@ -100,7 +97,8 @@ contract Farm is Ownable {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardTimestamp: lastRewardTimestamp,
-            accERC20PerShare: 0
+            accERC20PerShare: 0,
+            totalDeposits: 0
         }));
     }
 
@@ -124,7 +122,8 @@ contract Farm is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accERC20PerShare = pool.accERC20PerShare;
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
+
+        uint256 lpSupply = pool.totalDeposits;
 
         if (block.timestamp > pool.lastRewardTimestamp && lpSupply != 0) {
             uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
@@ -161,7 +160,7 @@ contract Farm is Ownable {
         if (lastTimestamp <= pool.lastRewardTimestamp) {
             return;
         }
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
+        uint256 lpSupply = pool.totalDeposits;
 
         if (lpSupply == 0) {
             pool.lastRewardTimestamp = lastTimestamp;
@@ -184,11 +183,9 @@ contract Farm is Ownable {
             uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
             erc20Transfer(msg.sender, pendingAmount);
         }
-        if(_pid == 0) {
-            farmTokenSwapContract.swapXavaToWXava(address(msg.sender), _amount);
-        } else {
-            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-        }
+
+        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+
         user.amount = user.amount.add(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
         emit Deposit(msg.sender, _pid, _amount);
@@ -200,15 +197,15 @@ contract Farm is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: can't withdraw more than deposit");
         updatePool(_pid);
+
         uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
+
         erc20Transfer(msg.sender, pendingAmount);
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
-        if(_pid == 0) {
-            farmTokenSwapContract.swapWXavaForXava(address(msg.sender), _amount);
-        } else {
-            pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        }
+        pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        pool.totalDeposits = pool.totalDeposits.sub(_amount);
+
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
