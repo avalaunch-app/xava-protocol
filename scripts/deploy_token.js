@@ -2,7 +2,6 @@ const hre = require("hardhat");
 const { saveContractAddress } = require('./utils')
 
 async function main() {
-
   const tokenName = "Avalaunch";
   const symbol = "XAVA";
   const totalSupply = "100000000000000000000000000";
