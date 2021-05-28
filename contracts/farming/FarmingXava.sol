@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // Cloned from https://github.com/SashimiProject/sashimiswap/blob/master/contracts/MasterChef.sol
 // Modified by LTO Network to work for non-mintable ERC20.
 
-contract Farm is Ownable {
+contract FarmingXava is Ownable {
 
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -49,7 +49,8 @@ contract Farm is Ownable {
     uint256 public paidOut = 0;
     // ERC20 tokens rewarded per second.
     uint256 public rewardPerSecond;
-
+    // Total rewards added to farm
+    uint256 public totalRewards;
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
@@ -83,6 +84,7 @@ contract Farm is Ownable {
         require(block.timestamp < endTimestamp, "fund: too late, the farm is closed");
         erc20.safeTransferFrom(address(msg.sender), address(this), _amount);
         endTimestamp += _amount.div(rewardPerSecond);
+        totalRewards = totalRewards.add(_amount);
     }
 
     // Add a new lp to the pool. Can only be called by the owner.
@@ -178,13 +180,16 @@ contract Farm is Ownable {
     function deposit(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
+
         updatePool(_pid);
+
         if (user.amount > 0) {
             uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
             erc20Transfer(msg.sender, pendingAmount);
         }
 
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+        pool.totalDeposits = pool.totalDeposits.add(_amount);
 
         user.amount = user.amount.add(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
