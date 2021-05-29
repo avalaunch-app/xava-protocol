@@ -7,13 +7,15 @@ async function main() {
 
     const contracts = getSavedContractAddresses()[hre.network.name];
 
-    const startSecond = 1622132697;
-    const rewardsPerSecond = ethers.utils.parseEther("2");
+    const startSecond = 1622314800;
 
-    const LPToken = await hre.ethers.getContractFactory("XavaToken");
-    const lpToken = await LPToken.deploy('LP mock token', 'LPToken', ethers.utils.parseEther('10000'), 18);
-    await lpToken.deployed();
-    console.log("LP token deployed to: ", lpToken.address);
+    const rewardsPerSecond = ethers.utils.parseEther("0.5");
+
+    const allocPoints = {
+        lp: 400,
+        xava: 200,
+        placeHolder: 2850
+    };
 
     const FarmingXava = await hre.ethers.getContractFactory('FarmingXava');
 
@@ -22,16 +24,16 @@ async function main() {
         rewardsPerSecond,
         startSecond
     );
-    await farm.deployed();
-
+    await farmingXava.deployed();
     console.log('FarmingXava deployed: ', farmingXava.address);
     saveContractAddress(hre.network.name, 'FarmingXava', farmingXava.address);
 
-    await farmingXava.addPool(700, lpToken.address, true);
-    await farmingXava.addPool(300, contracts['XavaToken'], true);
+    await farmingXava.add(allocPoints.lp, contracts['LpToken'], true);
+    await farmingXava.add(allocPoints.xava, contracts['XavaToken'], true);
 
-    const xava = ethers.getContractAt('XavaToken', contracts['XavaToken']);
-    let totalRewards = ethers.utils.parseEther("200200");
+    const xava = await hre.ethers.getContractAt('XavaToken', contracts['XavaToken']);
+
+    let totalRewards = ethers.utils.parseEther("500000");
     await xava.approve(farmingXava.address, totalRewards);
     console.log('Approval for farm done properly.');
 
