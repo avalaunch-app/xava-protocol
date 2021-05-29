@@ -46,8 +46,8 @@ async function main() {
     await farmingXava.deposit(2, totalSupplyDevToken);
     console.log('Dev token deposited amount: ', totalSupplyDevToken);
 
-    await farmingXava.fund(totalRewards);
-    console.log('Funded farm.');
+    // await farmingXava.fund(totalRewards);
+    // console.log('Funded farm.');
 
 }
 
