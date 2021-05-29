@@ -14,6 +14,7 @@
         "XavaToken": "0xd1c3f94DE7e5B45fa4eDBBA472491a9f4B166FC4",
         "LpToken": "0x42152bDD72dE8d6767FE3B4E17a221D6985E8B25",
         "ParticipationVestingSeed": "0xB53E0fa6898C97A477F9c05733bdc10B78e10d6A",
-        "ParticipationVestingPrivate": "0x4f579b76B9413D3C4a7981A7eA0BbBB7A0D54332"
+        "ParticipationVestingPrivate": "0x4f579b76B9413D3C4a7981A7eA0BbBB7A0D54332",
+        "DevToken": "0xBf838Ffffd86805933d8C1F971acfD59bbaE5026"
     }
 }
