@@ -30,6 +30,7 @@ async function main() {
 
     await farmingXava.add(allocPoints.lp, contracts['LpToken'], true);
     await farmingXava.add(allocPoints.xava, contracts['XavaToken'], true);
+    await farmingXava.add(allocPoints.placeHolder, contracts['DevToken'], true);
 
     const xava = await hre.ethers.getContractAt('XavaToken', contracts['XavaToken']);
 
