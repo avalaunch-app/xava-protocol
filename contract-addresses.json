@@ -4,11 +4,15 @@
         "ParticipationVesting": "0xd6FBE8ac9396f986F8b4D1eBc939daA37529cF79"
     },
     "fuji": {
-        "XavaToken": "0x95b1C35D6088766b63de6dc19B014EA3F9c92F16",
-        "ParticipationVesting": "0xA42682cA07a263f47B7f57DD51CcF8E6d8bFe190"
+        "XavaToken": "0x293BD634900E811128CF11E04D081De02f2f1720",
+        "LpToken": "0x2EbBC3Fe952232F284541F62d813fd567E310b47",
+        "ParticipationVesting": "0xA42682cA07a263f47B7f57DD51CcF8E6d8bFe190",
+        "FarmingXava": "0x7dAb04905ecAE72Fe36fB5f6a83201E8bD6ff935",
+        "DevToken": "0x21103c4bDdB8ad49716D12f92EbdEfE8CF84F605"
     },
     "mainnet": {
         "XavaToken": "0xd1c3f94DE7e5B45fa4eDBBA472491a9f4B166FC4",
+        "LpToken": "0x42152bDD72dE8d6767FE3B4E17a221D6985E8B25",
         "ParticipationVestingSeed": "0xB53E0fa6898C97A477F9c05733bdc10B78e10d6A",
         "ParticipationVestingPrivate": "0x4f579b76B9413D3C4a7981A7eA0BbBB7A0D54332"
     }

@@ -33,13 +33,22 @@ async function main() {
     await farmingXava.add(allocPoints.placeHolder, contracts['DevToken'], true);
 
     const xava = await hre.ethers.getContractAt('XavaToken', contracts['XavaToken']);
+    const devToken = await hre.ethers.getContractAt('DevToken', contracts['DevToken']);
 
     let totalRewards = ethers.utils.parseEther("500000");
     await xava.approve(farmingXava.address, totalRewards);
     console.log('Approval for farm done properly.');
 
+    const totalSupplyDevToken = ethers.utils.parseEther('10000');
+    await devToken.approve(farmingXava.address, totalSupplyDevToken);
+    console.log('Dev token successfully approved.');
+
+    await farmingXava.deposit(2, totalSupplyDevToken);
+    console.log('Dev token deposited amount: ', totalSupplyDevToken);
+
     await farmingXava.fund(totalRewards);
     console.log('Funded farm.');
+
 }
 
 // We recommend this pattern to be able to use async/await everywhere

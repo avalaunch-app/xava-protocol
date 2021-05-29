@@ -4,7 +4,7 @@ const { saveContractAddress } = require('./utils')
 async function main() {
     const tokenName = "XavaDevToken";
     const symbol = "XavaDT";
-    const totalSupply = "10000000000000000000000";
+    const totalSupply = ethers.utils.parseEther('10000');
     const decimals = 18;
 
     const DevToken = await hre.ethers.getContractFactory("DevToken");
