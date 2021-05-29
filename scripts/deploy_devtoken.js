@@ -2,8 +2,8 @@ const hre = require("hardhat");
 const { saveContractAddress } = require('./utils')
 
 async function main() {
-    const tokenName = "DevToken";
-    const symbol = "DT";
+    const tokenName = "XavaDevToken";
+    const symbol = "XavaDT";
     const totalSupply = "10000000000000000000000";
     const decimals = 18;
 
