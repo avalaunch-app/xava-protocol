@@ -1,17 +1,18 @@
 pragma solidity ^0.6.12;
 
 import "../interfaces/IAdmin.sol";
-import "../IERC20.sol";
 import "../math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+
 
 
 contract Sale {
 
     using ECDSA for bytes32;
     using SafeMath for uint256;
-
-//    TODO: Use safe ERC20
+    using SafeERC20 for IERC20;
 
     // Admin contract
     IAdmin admin;
@@ -172,7 +173,7 @@ contract Sale {
         // TODO: Change this to be required before registrations
         require(block.timestamp < roundIdToStartTime[1], "Deposit too late. Round already started.");
 
-        bool success = token.transferFrom(msg.sender, address(this), amountOfTokensToSell);
+        bool success = token.safeTransferFrom(msg.sender, address(this), amountOfTokensToSell);
         require(success, "TransferFrom failed.");
     }
 
@@ -247,7 +248,7 @@ contract Sale {
 
         if(!p.isWithdrawn) {
             p.isWithdrawn = true;
-            token.transfer(msg.sender, p.amount);
+            token.safeTransfer(msg.sender, p.amount);
         } else {
             revert("Tokens already withdrawn.");
         }
@@ -286,12 +287,12 @@ contract Sale {
         safeTransferAVAX(msg.sender, totalProfit);
 
         if(leftover > 0 && !withBurn) {
-            token.transfer(msg.sender, leftover);
+            token.safeTransfer(msg.sender, leftover);
             return;
         }
 
         if(withBurn) {
-            token.transfer(address(1), leftover);
+            token.safeTransfer(address(1), leftover);
         }
     }
 
