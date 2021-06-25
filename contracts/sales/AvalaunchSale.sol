@@ -85,7 +85,6 @@ contract AvalaunchSale {
     modifier saleSet {
         // TODO: Iterate and make sure all the caps are set
         // TODO: Check that price is updated
-        // TODO: Add function to postpone sale by shifting all start times by passed argument in seconds
         // TODO: Extend registration period, making sure it ends at least 24 hrs before 1st round start
         _;
     }
@@ -95,6 +94,7 @@ contract AvalaunchSale {
     event TokenPriceSet(uint256 newPrice);
     event MaxParticipationSet(uint256 roundId, uint256 maxParticipation);
     event TokensWithdrawn(address user, uint256 amount);
+
 
     constructor() public {
         // TODO: All the param validations are going to be here
@@ -129,10 +129,35 @@ contract AvalaunchSale {
         require(admin.isAdmin(msg.sender));
         require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "1st round already started.");
         require(price > 0, "Price can not be 0.");
+
+        // Set new price in AVAX
         sale.tokenPriceInAVAX = price;
 
         // Emit event token price is set
         emit TokenPriceSet(price);
+    }
+
+
+    /// @notice     Admin function to postpone the sale
+    function postponeSale(uint timeToShift) external {
+        require(admin.isAdmin(msg.sender));
+        require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "1st round already started.");
+
+        // Iterate through all registered rounds and postpone them
+        for(uint i = 0; i < roundIds.length; i++) {
+            Round storage round = roundIdToRound[roundIds[i]];
+            // Postpone sale
+            round.startTime = round.startTime.add(timeToShift);
+        }
+    }
+
+    /// @notice     Function to extend registration period
+    function extendRegistrationPeriod(uint timeToAdd) external {
+        require(admin.isAdmin(msg.sender), "Admin restricted function.");
+        require(registration.registrationTimeEnds.add(timeToAdd) < roundIdToRound[roundIds[0]].startTime,
+            "Registration period overflows sale start.");
+
+        registration.registrationTimeEnds = registration.registrationTimeEnds.add(timeToAdd);
     }
 
 
