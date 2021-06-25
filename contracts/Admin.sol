@@ -11,7 +11,7 @@ contract Admin {
 
     // Modifier restricting access to only admin
     modifier onlyAdmin {
-        require(isAdmin[msg.sender] == true);
+        require(isAdmin[msg.sender] == true, "not admin");
         _;
     }
 
@@ -54,6 +54,7 @@ contract Admin {
             if(i == admins.length) {
                 revert("Passed admin address does not exist");
             }
+            i++;
         }
 
         // Copy the last admin position to the current index
