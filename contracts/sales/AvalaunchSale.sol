@@ -1,14 +1,13 @@
 pragma solidity ^0.6.12;
 
 import "../interfaces/IAdmin.sol";
-import "../math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 
 
-contract Sale {
+contract AvalaunchSale {
 
     using ECDSA for bytes32;
     using SafeMath for uint256;
@@ -19,74 +18,24 @@ contract Sale {
     // Token being sold
     IERC20 public token;
 
-    //TODO
     struct Sale {
+        // Address of sale owner
         address saleOwner;
-        uint256 tokenPrice;
+        // Price of the token quoted in AVAX
+        uint256 tokenPriceInAVAX;
+        // Amount of tokens to sell
         uint256 amountOfTokensToSell;
+        // Total tokens being sold
         uint256 totalTokensSold;
+        // Total AVAX Raised
         uint256 totalAVAXRaised;
+        // Registration time starts
         uint256 registrationTimeStarts;
-        uint256 saleEnds;
+        // Sale end time
+        uint256 saleEnd;
+        // When tokens can be withdrawn
+        uint256 tokensUnlockTime;
     }
-
-    Sale sale;
-
-    // Address of sale owner
-    // This address will deposit tokens and later on claim the earnings from the sale
-    address public saleOwner;
-
-    // Token price against AVAX
-    uint256 public tokenPriceInAVAX;
-
-    // Total amount of tokens to sell
-    uint256 public amountOfTokensToSell;
-
-    // Total amount of tokens being sold
-    uint256 public totalTokensSold;
-
-    // Total AVAX raised.
-    uint256 public totalAVAXRaised;
-
-    // User to round for which he registered
-    mapping (address => uint256) addressToRoundRegisteredFor;
-
-    // mapping if user is participated or not
-    mapping (address => bool) public isParticipated;
-
-    // Mapping rounds to start times
-    // 1 - 1st July 10am (ends when 2nd starts)
-    // 2 - 1st July 12pm (ends when 3rd starts)
-    // 3 - 1st July 5pm
-    // Sale end
-
-    struct Round {
-        uint startTime;
-        uint roundId;
-        uint maxParticipation;
-    }
-
-    Round [] rounds;
-
-    mapping (uint256 => uint256) public roundIdToStartTime;
-
-    // Storing round ids
-    uint256 [] roundIds;
-
-    // Mapping round id to maximal participation
-    mapping (uint256 => uint256) public roundIdToMaxParticipation;
-
-    // Assuming registration gate is open from the moment contract is deployed
-    uint256 public registrationTimeEnds;
-
-    // Public round ending time
-    uint256 public saleEnd;
-
-    // Time when users can claim/withdraw the tokens bought
-    uint256 public tokensUnlockTime;
-
-    // One ether in weis
-    uint256 public constant one = 10**18;
 
     // Mapping user to his participation
     struct Participation {
@@ -96,12 +45,40 @@ contract Sale {
         bool isWithdrawn;
     }
 
+    struct Round {
+        uint startTime;
+        uint endTime;
+        uint roundId;
+        uint maxParticipation;
+    }
+
+    struct Registration {
+        uint256 registrationTimeEnds;
+        uint256 numberOfRegistrants;
+    }
+
+    // Sale
+    Sale sale;
+
+    // Registration
+    Registration registration;
+
+    // Array storing IDS of rounds (IDs start from 1, so they can't be mapped as array indexes
+    uint256 [] public roundIds;
+    // Mapping round Id to round
+    mapping (uint256 => Round) public roundIdToRound;
     // Mapping user to his participation
     mapping (address => Participation) public userToParticipation;
+    // User to round for which he registered
+    mapping (address => uint256) addressToRoundRegisteredFor;
+    // mapping if user is participated or not
+    mapping (address => bool) public isParticipated;
+    // One ether in weis
+    uint256 public constant one = 10**18;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner {
-        require(msg.sender == saleOwner, 'OnlySaleOwner:: Restricted');
+        require(msg.sender == sale.saleOwner, 'OnlySaleOwner:: Restricted');
         _;
     }
 
@@ -110,11 +87,14 @@ contract Sale {
         // TODO: Check that price is updated
         // TODO: Add function to postpone sale by shifting all start times by passed argument in seconds
         // TODO: Extend registration period, making sure it ends at least 24 hrs before 1st round start
+        _;
     }
 
-    event TokensSold(address user, address saleContract, uint amount);
-    event Registration(address user, address saleContract, uint roundId);
-    //TODO: Add more events
+    event TokensSold(address user, uint256 amount);
+    event UserRegistered(address user, uint256 roundId);
+    event TokenPriceSet(uint256 newPrice);
+    event MaxParticipationSet(uint256 roundId, uint256 maxParticipation);
+    event TokensWithdrawn(address user, uint256 amount);
 
     constructor() public {
         // TODO: All the param validations are going to be here
@@ -130,7 +110,7 @@ contract Sale {
     public
     {
         require(roundId != 0, "Round ID can not be 0.");
-        require(block.timestamp <= registrationTimeEnds, "Registration gate is closed.");
+        require(block.timestamp <= registration.registrationTimeEnds, "Registration gate is closed.");
         require(checkRegistrationSignature(signature, msg.sender, roundId), "Invalid signature");
         require(addressToRoundRegisteredFor[msg.sender] == 0, "User can not register twice.");
 
@@ -138,7 +118,7 @@ contract Sale {
         addressToRoundRegisteredFor[msg.sender] = roundId;
 
         // Emit Registration event
-        emit Registration(msg.sender, address(this), roundId);
+        emit UserRegistered(msg.sender, roundId);
     }
 
 
@@ -147,19 +127,26 @@ contract Sale {
     public
     {
         require(admin.isAdmin(msg.sender));
-        require(block.timestamp < roundIdToStartTime[1], "1st round already started.");
+        require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "1st round already started.");
         require(price > 0, "Price can not be 0.");
-        tokenPriceInAVAX = price;
+        sale.tokenPriceInAVAX = price;
+
+        // Emit event token price is set
+        emit TokenPriceSet(price);
     }
 
-    /// @notice TODO: Add comments
+
+    /// @notice     Admin function to set max participation cap per round
     function setCapPerRound(uint256[] calldata rounds, uint256[] calldata caps) public {
         require(admin.isAdmin(msg.sender));
-        require(block.timestamp < roundIdToStartTime[1], "1st round already started.");
+        require(block.timestamp < roundIdToRound[rounds[0]].startTime, "1st round already started.");
         require(rounds.length == caps.length, "Arrays length is different.");
 
         for(uint i = 0; i < rounds.length; i++) {
-            roundIdToMaxParticipation[rounds[i]] = caps[i];
+            Round storage round = roundIdToRound[rounds[i]];
+            round.maxParticipation = caps[i];
+
+            emit MaxParticipationSet(rounds[i], round.maxParticipation);
         }
     }
 
@@ -169,12 +156,10 @@ contract Sale {
     public
     onlySaleOwner
     {
-        require(totalTokensSold == 0 && token.balanceOf(address(this)) == 0, "Deposit can be done only once");
-        // TODO: Change this to be required before registrations
-        require(block.timestamp < roundIdToStartTime[1], "Deposit too late. Round already started.");
+        require(sale.totalTokensSold == 0 && token.balanceOf(address(this)) == 0, "Deposit can be done only once");
+        require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "Deposit too late. Round already started.");
 
-        bool success = token.safeTransferFrom(msg.sender, address(this), amountOfTokensToSell);
-        require(success, "TransferFrom failed.");
+        token.safeTransferFrom(msg.sender, address(this), sale.amountOfTokensToSell);
     }
 
 
@@ -190,7 +175,7 @@ contract Sale {
 
         require(roundId != 0, "Round can not be 0.");
 
-        require(amount <= roundIdToMaxParticipation[roundId], "Overflowing maximal participation for this round.");
+        require(amount <= roundIdToRound[roundId].maxParticipation, "Overflowing maximal participation for this round.");
 
         // Verify the signature
         require(checkSignature(signature, msg.sender, amount, roundId), "Invalid signature. Verification failed");
@@ -209,16 +194,16 @@ contract Sale {
         require(roundId == currentRound, "You can not participate in this round.");
 
         // Compute the amount of tokens user is buying
-        uint256 amountOfTokensBuying = (msg.value).mul(one).div(tokenPriceInAVAX);
+        uint256 amountOfTokensBuying = (msg.value).mul(one).div(sale.tokenPriceInAVAX);
 
         // Check in terms of user allo
         require(amountOfTokensBuying <= amount, "Trying to buy more than allowed.");
 
         // Increase amount of sold tokens
-        totalTokensSold = totalTokensSold.add(amountOfTokensBuying);
+        sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
 
         // Increase amount of AVAX raised
-        totalAVAXRaised = totalAVAXRaised.add(msg.value);
+        sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
 
         // Create participation object
         Participation memory p = Participation({
@@ -234,21 +219,21 @@ contract Sale {
         // Mark user is participated
         isParticipated[msg.sender] = true;
 
-        // Fire event
-        //TODO: Improve event
-        emit TokensSold(msg.sender, address(this), amountOfTokensBuying);
+        emit TokensSold(msg.sender, amountOfTokensBuying);
     }
 
 
     /// Users can claim their participation
     function withdrawTokens() public {
-        require(block.timestamp >= tokensUnlockTime, "Tokens can not be withdrawn yet.");
+        require(block.timestamp >= sale.tokensUnlockTime, "Tokens can not be withdrawn yet.");
 
         Participation memory p = userToParticipation[msg.sender];
 
         if(!p.isWithdrawn) {
             p.isWithdrawn = true;
             token.safeTransfer(msg.sender, p.amount);
+            // Emit event that tokens are withdrawn
+            emit TokensWithdrawn(msg.sender, p.amount);
         } else {
             revert("Tokens already withdrawn.");
         }
@@ -275,14 +260,13 @@ contract Sale {
     onlySaleOwner
     {
         // Make sure sale ended
-        require(block.timestamp >= saleEnd);
+        require(block.timestamp >= sale.saleEnd);
 
         // Earnings amount of the owner in AVAX
         uint totalProfit = address(this).balance;
 
         // Amount of tokens which are not sold
-        uint leftover = amountOfTokensToSell.sub(totalTokensSold);
-        // TODO: Add an option to burn leftover
+        uint leftover = sale.amountOfTokensToSell.sub(sale.totalTokensSold);
 
         safeTransferAVAX(msg.sender, totalProfit);
 
@@ -299,14 +283,19 @@ contract Sale {
     /// @notice     Get current round in progress.
     ///             If 0 is returned, means sale didn't start or it's ended.
     function getCurrentRound() public view returns (uint) {
-        if(block.timestamp >= roundIdToStartTime[1] && block.timestamp < roundIdToStartTime[2]) {
-            return 1; // means staking round is active
-        } else if (block.timestamp >= roundIdToStartTime[2] && block.timestamp < roundIdToStartTime[3]) {
-            return 2; // means validator round is active
-        } else if (block.timestamp > roundIdToStartTime[3] && block.timestamp < saleEnd) {
-            return 3; // means public round is active
+        uint i = 0;
+        if(block.timestamp < roundIdToRound[roundIds[0]].startTime) {
+            return 0; // Sale didn't start yet.
         }
-        return 0; // means sale is ended or haven't started yet
+        while(block.timestamp < roundIdToRound[roundIds[i]].startTime && i < roundIds.length) {
+            i++;
+        }
+
+        if(i == roundIds.length) {
+            return 0; // Means sale is ended
+        }
+
+        return i;
     }
 
     /// @notice     Check signature user submits for registration.
@@ -337,8 +326,15 @@ contract Sale {
         return messageHash.recover(signature);
     }
 
-    function getParticipation(address _user) external view returns (uint, uint, uint, bool) {
-        //TODO...
+    /// @notice     Function to get participation for passed user address
+    function getParticipation(address _user) external view returns (uint256, uint256, uint256, bool) {
+        Participation memory p = userToParticipation[_user];
+        return (
+            p.amount,
+            p.timestamp,
+            p.roundId,
+            p.isWithdrawn
+        );
     }
 
 }
