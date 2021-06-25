@@ -86,6 +86,11 @@ contract AvalaunchSale {
         _;
     }
 
+    modifier onlyAdmin {
+        require(admin.isAdmin(msg.sender), "Only admin can call this function.");
+        _;
+    }
+
     modifier saleSet {
         // TODO: Iterate and make sure all the caps are set
         // TODO: Check that price is updated
@@ -119,8 +124,8 @@ contract AvalaunchSale {
         uint256 _tokensUnlockTime
     )
     external
+    onlyAdmin
     {
-        require(admin.isAdmin(msg.sender));
         require(!sale.isCreated, "setSaleParams: Sale is already created.");
         require(_token != address(0), "setSaleParams: Token address can not be 0.");
         require(_saleOwner != address(0), "setSaleParams: Sale owner address can not be 0.");
@@ -144,8 +149,7 @@ contract AvalaunchSale {
     }
 
     /// @notice     Function to set registration period parameters
-    function setRegistrationTime(uint256 _registrationTimeStarts, uint256 _registrationTimeEnds) external {
-        require(admin.isAdmin(msg.sender));
+    function setRegistrationTime(uint256 _registrationTimeStarts, uint256 _registrationTimeEnds) external onlyAdmin {
         require(_registrationTimeStarts >= block.timestamp && _registrationTimeEnds > _registrationTimeStarts);
         registration.registrationTimeStarts = _registrationTimeStarts;
         registration.registrationTimeEnds = _registrationTimeEnds;
@@ -153,8 +157,7 @@ contract AvalaunchSale {
         emit RegistrationTimeSet(registration.registrationTimeStarts, registration.registrationTimeEnds);
     }
 
-    function setRounds(uint256[] calldata startTimes, uint256[] calldata maxParticipations) external {
-        require(admin.isAdmin(msg.sender));
+    function setRounds(uint256[] calldata startTimes, uint256[] calldata maxParticipations) external onlyAdmin{
         require(startTimes.length == maxParticipations.length, "setRounds: Bad input.");
         require(roundIds.length == 0, "setRounds: Rounds are already");
         for(uint i = 0; i < startTimes.length; i++) {
@@ -201,9 +204,9 @@ contract AvalaunchSale {
 
     /// @notice     Admin function, to update token price before sale to match the closest $ desired rate.
     function updateTokenPriceInAVAX(uint256 price)
-    public
+    external
+    onlyAdmin
     {
-        require(admin.isAdmin(msg.sender));
         require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "1st round already started.");
         require(price > 0, "Price can not be 0.");
 
@@ -216,8 +219,7 @@ contract AvalaunchSale {
 
 
     /// @notice     Admin function to postpone the sale
-    function postponeSale(uint timeToShift) external {
-        require(admin.isAdmin(msg.sender));
+    function postponeSale(uint timeToShift) external onlyAdmin{
         require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "1st round already started.");
 
         // Iterate through all registered rounds and postpone them
@@ -229,8 +231,7 @@ contract AvalaunchSale {
     }
 
     /// @notice     Function to extend registration period
-    function extendRegistrationPeriod(uint timeToAdd) external {
-        require(admin.isAdmin(msg.sender), "Admin restricted function.");
+    function extendRegistrationPeriod(uint timeToAdd) external onlyAdmin {
         require(registration.registrationTimeEnds.add(timeToAdd) < roundIdToRound[roundIds[0]].startTime,
             "Registration period overflows sale start.");
 
@@ -239,8 +240,7 @@ contract AvalaunchSale {
 
 
     /// @notice     Admin function to set max participation cap per round
-    function setCapPerRound(uint256[] calldata rounds, uint256[] calldata caps) public {
-        require(admin.isAdmin(msg.sender));
+    function setCapPerRound(uint256[] calldata rounds, uint256[] calldata caps) public onlyAdmin {
         require(block.timestamp < roundIdToRound[rounds[0]].startTime, "1st round already started.");
         require(rounds.length == caps.length, "Arrays length is different.");
 
