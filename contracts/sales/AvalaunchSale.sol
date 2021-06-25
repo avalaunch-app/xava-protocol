@@ -20,6 +20,7 @@ contract AvalaunchSale {
     IERC20 public token;
 
     struct Sale {
+        bool isCreated;
         // Address of sale owner
         address saleOwner;
         // Price of the token quoted in AVAX
@@ -30,8 +31,6 @@ contract AvalaunchSale {
         uint256 totalTokensSold;
         // Total AVAX Raised
         uint256 totalAVAXRaised;
-        // Registration time starts
-        uint256 registrationTimeStarts;
         // Sale end time
         uint256 saleEnd;
         // When tokens can be withdrawn
@@ -49,11 +48,11 @@ contract AvalaunchSale {
     // Round structure
     struct Round {
         uint startTime;
-        uint roundId;
         uint maxParticipation;
     }
 
     struct Registration {
+        uint256 registrationTimeStarts;
         uint256 registrationTimeEnds;
         uint256 numberOfRegistrants;
     }
@@ -95,10 +94,70 @@ contract AvalaunchSale {
     event TokenPriceSet(uint256 newPrice);
     event MaxParticipationSet(uint256 roundId, uint256 maxParticipation);
     event TokensWithdrawn(address user, uint256 amount);
-
+    event SaleCreated(address saleOwner, uint256 tokenPriceInAVAX, uint256 amountOfTokensToSell,
+        uint256 saleEnd, uint256 tokensUnlockTime);
+    event RegistrationTimeSet(uint256 registrationTimeStarts, uint256 registrationTimeEnds);
+    event RoundAdded(uint256 roundId, uint256 startTime, uint256 maxParticipation);
 
     constructor() public {
         // TODO: All the param validations are going to be here
+    }
+
+    /// @notice     Admin function to set sale parameters
+    function setSaleParams(
+        address _saleOwner,
+        uint256 _tokenPriceInAVAX,
+        uint256 _amountOfTokensToSell,
+        uint256 _saleEnd,
+        uint256 _tokensUnlockTime
+    )
+    external
+    {
+        require(admin.isAdmin(msg.sender));
+        require(!sale.isCreated, "setSaleParams: Sale is already created.");
+        require(_saleOwner != address(0), "setSaleParams: Sale owner address can not be 0.");
+        require(_tokenPriceInAVAX != 0 && _amountOfTokensToSell != 0 && _saleEnd > block.timestamp &&
+            _tokensUnlockTime > block.timestamp, "setSaleParams: Bad input");
+
+        sale.isCreated = true;
+        sale.saleOwner = _saleOwner;
+        sale.tokenPriceInAVAX = _tokenPriceInAVAX;
+        sale.amountOfTokensToSell = _amountOfTokensToSell;
+        sale.saleEnd = _saleEnd;
+        sale.tokensUnlockTime = _tokensUnlockTime;
+
+        emit SaleCreated(sale.saleOwner, sale.tokenPriceInAVAX, sale.amountOfTokensToSell, sale.saleEnd, sale.tokensUnlockTime);
+    }
+
+    /// @notice     Function to set registration period parameters
+    function setRegistrationTime(uint256 _registrationTimeStarts, uint256 _registrationTimeEnds) external {
+        require(admin.isAdmin(msg.sender));
+        require(_registrationTimeStarts >= block.timestamp && _registrationTimeEnds > _registrationTimeStarts);
+        registration.registrationTimeStarts = _registrationTimeStarts;
+        registration.registrationTimeEnds = _registrationTimeEnds;
+
+        emit RegistrationTimeSet(registration.registrationTimeStarts, registration.registrationTimeEnds);
+    }
+
+    function setRounds(uint256[] calldata startTimes, uint256[] calldata maxParticipations) external {
+        require(admin.isAdmin(msg.sender));
+        require(startTimes.length == maxParticipations.length, "setRounds: Bad input.");
+        require(roundIds.length == 0, "setRounds: Rounds are already");
+        for(uint i = 0; i < startTimes.length; i++) {
+            // Compute round Id
+            uint roundId = i+1;
+
+            // Push id to array of ids
+            roundIds.push(roundId);
+            // Create round
+            Round memory round = Round(startTimes[i], maxParticipations[i]);
+
+            // Map round id to round
+            roundIdToRound[roundId] = round;
+
+            // Fire event
+            emit RoundAdded(roundId, round.startTime, round.maxParticipation);
+        }
     }
 
     /// @notice     Registration for sale.
