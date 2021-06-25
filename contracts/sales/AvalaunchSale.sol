@@ -149,15 +149,28 @@ contract AvalaunchSale {
     }
 
     /// @notice     Function to set registration period parameters
-    function setRegistrationTime(uint256 _registrationTimeStarts, uint256 _registrationTimeEnds) external onlyAdmin {
+    function setRegistrationTime(
+        uint256 _registrationTimeStarts,
+        uint256 _registrationTimeEnds
+    )
+    external
+    onlyAdmin
+    {
         require(_registrationTimeStarts >= block.timestamp && _registrationTimeEnds > _registrationTimeStarts);
+
         registration.registrationTimeStarts = _registrationTimeStarts;
         registration.registrationTimeEnds = _registrationTimeEnds;
 
         emit RegistrationTimeSet(registration.registrationTimeStarts, registration.registrationTimeEnds);
     }
 
-    function setRounds(uint256[] calldata startTimes, uint256[] calldata maxParticipations) external onlyAdmin{
+    function setRounds(
+        uint256[] calldata startTimes,
+        uint256[] calldata maxParticipations
+    )
+    external
+    onlyAdmin
+    {
         require(startTimes.length == maxParticipations.length, "setRounds: Bad input.");
         require(roundIds.length == 0, "setRounds: Rounds are already");
         for(uint i = 0; i < startTimes.length; i++) {
@@ -184,7 +197,7 @@ contract AvalaunchSale {
         bytes memory signature,
         uint roundId
     )
-    public
+    external
     {
         require(roundId != 0, "Round ID can not be 0.");
         require(block.timestamp <= registration.registrationTimeEnds, "Registration gate is closed.");
@@ -203,7 +216,9 @@ contract AvalaunchSale {
 
 
     /// @notice     Admin function, to update token price before sale to match the closest $ desired rate.
-    function updateTokenPriceInAVAX(uint256 price)
+    function updateTokenPriceInAVAX(
+        uint256 price
+    )
     external
     onlyAdmin
     {
@@ -219,7 +234,12 @@ contract AvalaunchSale {
 
 
     /// @notice     Admin function to postpone the sale
-    function postponeSale(uint timeToShift) external onlyAdmin{
+    function postponeSale(
+        uint256 timeToShift
+    )
+    external
+    onlyAdmin
+    {
         require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "1st round already started.");
 
         // Iterate through all registered rounds and postpone them
@@ -231,7 +251,12 @@ contract AvalaunchSale {
     }
 
     /// @notice     Function to extend registration period
-    function extendRegistrationPeriod(uint timeToAdd) external onlyAdmin {
+    function extendRegistrationPeriod(
+        uint256 timeToAdd
+    )
+    external
+    onlyAdmin
+    {
         require(registration.registrationTimeEnds.add(timeToAdd) < roundIdToRound[roundIds[0]].startTime,
             "Registration period overflows sale start.");
 
@@ -240,7 +265,13 @@ contract AvalaunchSale {
 
 
     /// @notice     Admin function to set max participation cap per round
-    function setCapPerRound(uint256[] calldata rounds, uint256[] calldata caps) public onlyAdmin {
+    function setCapPerRound(
+        uint256[] calldata rounds,
+        uint256[] calldata caps
+    )
+    public
+    onlyAdmin
+    {
         require(block.timestamp < roundIdToRound[rounds[0]].startTime, "1st round already started.");
         require(rounds.length == caps.length, "Arrays length is different.");
 
@@ -404,7 +435,15 @@ contract AvalaunchSale {
     /// @param      signature is the message signed by the trusted entity (backend)
     /// @param      user is the address of user which is registering for sale
     /// @param      roundId is the round for which user is submitting registration
-    function checkRegistrationSignature(bytes memory signature, address user, uint256 roundId) public view returns (bool) {
+    function checkRegistrationSignature(
+        bytes memory signature,
+        address user,
+        uint256 roundId
+    )
+    public
+    view
+    returns (bool)
+    {
         bytes32 hash = keccak256(abi.encodePacked(user, roundId, address(this)));
         bytes32 messageHash = hash.toEthSignedMessageHash();
         return admin.isAdmin(messageHash.recover(signature));
@@ -412,7 +451,16 @@ contract AvalaunchSale {
 
 
     // Function to check if admin was the message signer
-    function checkSignature(bytes memory signature, address user, uint256 amount, uint256 round) public view returns (bool) {
+    function checkSignature(
+        bytes memory signature,
+        address user,
+        uint256 amount,
+        uint256 round
+    )
+    public
+    view
+    returns (bool)
+    {
         return admin.isAdmin(getParticipationSigner(signature, user, amount, round));
     }
 
@@ -422,7 +470,16 @@ contract AvalaunchSale {
     /// @param      user is the address of user for which we're signing the message
     /// @param      amount is the maximal amount of tokens user can buy
     /// @param      roundId is the Id of the round user is participating.
-    function getParticipationSigner(bytes memory signature, address user, uint256 amount, uint256 roundId) public pure returns (address) {
+    function getParticipationSigner(
+        bytes memory signature,
+        address user,
+        uint256 amount,
+        uint256 roundId
+    )
+    public
+    pure
+    returns (address)
+    {
         bytes32 hash = keccak256(abi.encodePacked(user, amount, roundId));
         bytes32 messageHash = hash.toEthSignedMessageHash();
         return messageHash.recover(signature);
