@@ -1,10 +1,11 @@
-pragma solidity ^0.6.12;
+//"SPDX-License-Identifier: UNLICENSED"
+pragma solidity 0.6.12;
 
 import "../interfaces/IAdmin.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-
+import "../interfaces/ISalesFactory.sol";
 
 
 contract AvalaunchSale {
@@ -13,13 +14,16 @@ contract AvalaunchSale {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+
+    ISalesFactory factory;
+
     // Admin contract
     IAdmin public admin;
 
-    // Token being sold
-    IERC20 public token;
-
     struct Sale {
+        // Token being sold
+        IERC20 token;
+        // Is sale created
         bool isCreated;
         // Address of sale owner
         address saleOwner;
@@ -99,12 +103,15 @@ contract AvalaunchSale {
     event RegistrationTimeSet(uint256 registrationTimeStarts, uint256 registrationTimeEnds);
     event RoundAdded(uint256 roundId, uint256 startTime, uint256 maxParticipation);
 
-    constructor() public {
-        // TODO: All the param validations are going to be here
+    constructor(address _admin) public {
+        require(_admin != address(0));
+        admin = IAdmin(_admin);
+        factory = ISalesFactory(msg.sender);
     }
 
     /// @notice     Admin function to set sale parameters
     function setSaleParams(
+        address _token,
         address _saleOwner,
         uint256 _tokenPriceInAVAX,
         uint256 _amountOfTokensToSell,
@@ -115,10 +122,13 @@ contract AvalaunchSale {
     {
         require(admin.isAdmin(msg.sender));
         require(!sale.isCreated, "setSaleParams: Sale is already created.");
+        require(_token != address(0), "setSaleParams: Token address can not be 0.");
         require(_saleOwner != address(0), "setSaleParams: Sale owner address can not be 0.");
         require(_tokenPriceInAVAX != 0 && _amountOfTokensToSell != 0 && _saleEnd > block.timestamp &&
             _tokensUnlockTime > block.timestamp, "setSaleParams: Bad input");
 
+        // Set params
+        sale.token = IERC20(_token);
         sale.isCreated = true;
         sale.saleOwner = _saleOwner;
         sale.tokenPriceInAVAX = _tokenPriceInAVAX;
@@ -126,6 +136,10 @@ contract AvalaunchSale {
         sale.saleEnd = _saleEnd;
         sale.tokensUnlockTime = _tokensUnlockTime;
 
+        // Mark in factory
+        factory.setSaleOwnerAndToken(sale.saleOwner, address(sale.token));
+
+        // Emit event
         emit SaleCreated(sale.saleOwner, sale.tokenPriceInAVAX, sale.amountOfTokensToSell, sale.saleEnd, sale.tokensUnlockTime);
     }
 
@@ -244,10 +258,10 @@ contract AvalaunchSale {
     public
     onlySaleOwner
     {
-        require(sale.totalTokensSold == 0 && token.balanceOf(address(this)) == 0, "Deposit can be done only once");
+        require(sale.totalTokensSold == 0 && sale.token.balanceOf(address(this)) == 0, "Deposit can be done only once");
         require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "Deposit too late. Round already started.");
 
-        token.safeTransferFrom(msg.sender, address(this), sale.amountOfTokensToSell);
+        sale.token.safeTransferFrom(msg.sender, address(this), sale.amountOfTokensToSell);
     }
 
 
@@ -319,7 +333,7 @@ contract AvalaunchSale {
 
         if(!p.isWithdrawn) {
             p.isWithdrawn = true;
-            token.safeTransfer(msg.sender, p.amount);
+            sale.token.safeTransfer(msg.sender, p.amount);
             // Emit event that tokens are withdrawn
             emit TokensWithdrawn(msg.sender, p.amount);
         } else {
@@ -359,12 +373,12 @@ contract AvalaunchSale {
         safeTransferAVAX(msg.sender, totalProfit);
 
         if(leftover > 0 && !withBurn) {
-            token.safeTransfer(msg.sender, leftover);
+            sale.token.safeTransfer(msg.sender, leftover);
             return;
         }
 
         if(withBurn) {
-            token.safeTransfer(address(1), leftover);
+            sale.token.safeTransfer(address(1), leftover);
         }
     }
 
