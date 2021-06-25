@@ -14,7 +14,8 @@ contract AvalaunchSale {
     using SafeERC20 for IERC20;
 
     // Admin contract
-    IAdmin admin;
+    IAdmin public admin;
+
     // Token being sold
     IERC20 public token;
 
@@ -58,7 +59,7 @@ contract AvalaunchSale {
     }
 
     // Sale
-    Sale sale;
+    Sale public sale;
 
     // Registration
     Registration registration;
@@ -116,6 +117,9 @@ contract AvalaunchSale {
 
         // Rounds are 1,2,3
         addressToRoundRegisteredFor[msg.sender] = roundId;
+
+        // Increment number of registered users
+        registration.numberOfRegistrants++;
 
         // Emit Registration event
         emit UserRegistered(msg.sender, roundId);
@@ -359,6 +363,14 @@ contract AvalaunchSale {
             p.timestamp,
             p.roundId,
             p.isWithdrawn
+        );
+    }
+
+    /// @notice     Function to get info about the registration
+    function getRegistrationInfo() external view returns (uint256, uint256) {
+        return (
+            registration.registrationTimeEnds,
+            registration.numberOfRegistrants
         );
     }
 
