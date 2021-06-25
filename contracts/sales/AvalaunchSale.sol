@@ -37,7 +37,7 @@ contract AvalaunchSale {
         uint256 tokensUnlockTime;
     }
 
-    // Mapping user to his participation
+    // Participation structure
     struct Participation {
         uint256 amount;
         uint256 timestamp;
@@ -45,9 +45,9 @@ contract AvalaunchSale {
         bool isWithdrawn;
     }
 
+    // Round structure
     struct Round {
         uint startTime;
-        uint endTime;
         uint roundId;
         uint maxParticipation;
     }
