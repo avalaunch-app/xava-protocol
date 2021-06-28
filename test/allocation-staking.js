@@ -50,7 +50,7 @@ describe("AllocationStaking", function() {
       const ALLOC_POINT = 1000;
       const DEPOSIT_FEE = 100;
 
-      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, DEPOSIT_FEE, false);
+      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, false);
 
       let poolLength = await AllocationStaking.poolLength();
       let totalAllocPoint = await AllocationStaking.totalAllocPoint();
@@ -69,7 +69,7 @@ describe("AllocationStaking", function() {
       let startTimestamp = await AllocationStaking.startTimestamp();
 
       await XavaToken.approve(AllocationStaking.address, TOKENS_TO_ADD);
-      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, DEPOSIT_FEE, false);
+      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, false);
       await AllocationStaking.fund(TOKENS_TO_ADD);
 
       let deployerBalanceAfter = await XavaToken.balanceOf(deployer.address);
@@ -93,7 +93,7 @@ describe("AllocationStaking", function() {
       const DEPOSIT_FEE = 100;
 
       await XavaToken.approve(AllocationStaking.address, TOKENS_TO_ADD);
-      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, DEPOSIT_FEE, false);
+      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, false);
       await AllocationStaking.fund(TOKENS_TO_ADD);
 
       // test
@@ -126,7 +126,7 @@ describe("AllocationStaking", function() {
       let rewardPerSecond = await AllocationStaking.rewardPerSecond();
 
       await XavaToken.approve(AllocationStaking.address, TOKENS_TO_ADD);
-      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, DEPOSIT_FEE, false);
+      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, false);
       await AllocationStaking.fund(TOKENS_TO_ADD);
 
       // deposit
@@ -160,7 +160,7 @@ describe("AllocationStaking", function() {
       let rewardPerSecond = await AllocationStaking.rewardPerSecond();
 
       await XavaToken.approve(AllocationStaking.address, TOKENS_TO_ADD);
-      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, DEPOSIT_FEE, false);
+      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, false);
       await AllocationStaking.fund(TOKENS_TO_ADD);
 
       // deposit
@@ -250,7 +250,7 @@ describe("AllocationStaking", function() {
       let rewardPerSecond = await AllocationStaking.rewardPerSecond();
 
       await XavaToken.approve(AllocationStaking.address, TOKENS_TO_ADD);
-      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, DEPOSIT_FEE, false);
+      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, false);
       await AllocationStaking.fund(TOKENS_TO_ADD);
 
       // deposit
@@ -275,7 +275,7 @@ describe("AllocationStaking", function() {
       const DEPOSIT_FEE = 100;
 
       await XavaToken.approve(AllocationStaking.address, TOKENS_TO_ADD);
-      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, DEPOSIT_FEE, false);
+      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, false);
       await AllocationStaking.fund(TOKENS_TO_ADD);
 
       // deposit
