@@ -7,19 +7,66 @@ describe("AvalaunchSale", function() {
   let AvalaunchSale;
   let XavaToken;
   let SalesFactory;
-  let deployer, alice, bob;
+  let deployer, alice, bob, cedric;
   let ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
   const TOKEN_PRICE_IN_AVAX = 12;
   const AMOUNT_OF_TOKENS_TO_SELL = 1000000;
-  const SALE_END = 10; // TODO
-  const TOKENS_UNLOCK_TIME = 5; // TODO
+  const SALE_END_DELTA = 100;
+  const TOKENS_UNLOCK_TIME_DELTA = 150;
+  const REGISTRATION_TIME_STARTS_DELTA = 10;
+  const REGISTRATION_TIME_ENDS_DELTA = 40;
+  const ROUNDS_START_DELTAS = [50, 70, 90];
+  const ROUNDS_MAX_PARTICIPATIONS = [100, 1000, 10000];
+
+  function firstOrDefault(first, key, def) {
+    if (first && first[key] !== undefined) {
+      return first[key];
+    }
+    return def;
+  }
+
+  async function getCurrentBlockTimestamp() {
+    return (await ethers.provider.getBlock('latest')).timestamp;
+  }
+
+  async function setSaleParams(params) {
+    const blockTimestamp = await getCurrentBlockTimestamp();
+
+    const token = firstOrDefault(params, 'token', XavaToken.address);
+    const saleOwner = firstOrDefault(params, 'saleOwner', deployer.address);
+    const tokenPriceInAVAX = firstOrDefault(params, 'tokenPriceInAVAX', TOKEN_PRICE_IN_AVAX);
+    const amountOfTokensToSell = firstOrDefault(params, 'amountOfTokensToSell', AMOUNT_OF_TOKENS_TO_SELL);
+    const saleEnd = blockTimestamp + firstOrDefault(params, 'saleEndDelta', SALE_END_DELTA); 
+    const tokensUnlockTime = blockTimestamp + firstOrDefault(params, 'tokensUnlockTimeDelta', TOKENS_UNLOCK_TIME_DELTA);
+
+    return AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
+  }
+
+  async function setRegistrationTime(params) {
+    const blockTimestamp = await getCurrentBlockTimestamp();
+
+    const registrationTimeStarts = blockTimestamp + firstOrDefault(params, 'registrationTimeStartsDelta', REGISTRATION_TIME_STARTS_DELTA); 
+    const registrationTimeEnds = blockTimestamp + firstOrDefault(params, 'registrationTimeEndsDelta', REGISTRATION_TIME_ENDS_DELTA);
+
+    return AvalaunchSale.setRegistrationTime(registrationTimeStarts, registrationTimeEnds);
+  }
+
+  async function setRounds(params) {
+    const blockTimestamp = await getCurrentBlockTimestamp();
+
+    const startTimes = firstOrDefault(params, 'startTimes', ROUNDS_START_DELTAS).map((s) => blockTimestamp+s);
+    const maxParticipations = firstOrDefault(params, 'maxParticipations', ROUNDS_MAX_PARTICIPATIONS);
+
+    return AvalaunchSale.setRounds(startTimes, maxParticipations);
+  }
 
   beforeEach(async function() {
     const accounts = await ethers.getSigners();
     deployer = accounts[0];
     alice = accounts[1];
     bob = accounts[2];
+    cedric = accounts[3];
 
     const XavaTokenFactory = await ethers.getContractFactory("XavaToken");
     XavaToken = await XavaTokenFactory.deploy("Xava", "XAVA", ethers.utils.parseUnits("100000000"), 18);
@@ -44,16 +91,16 @@ describe("AvalaunchSale", function() {
       expect(admin).to.equal(Admin.address);
     });
 
-    describe("Set sale parameters", async function() {
+    xdescribe("Set sale parameters", async function() {
       it("Should set the sale parameters", async function() {
         // Given
-        const BLOCK_TIMESTAMP = (await ethers.provider.getBlock('latest')).timestamp;
+        const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
         const token = XavaToken.address;
         const saleOwner = deployer.address;
         const tokenPriceInAVAX = TOKEN_PRICE_IN_AVAX;
         const amountOfTokensToSell = AMOUNT_OF_TOKENS_TO_SELL;
-        const saleEnd = BLOCK_TIMESTAMP + SALE_END; 
-        const tokensUnlockTime = BLOCK_TIMESTAMP + TOKENS_UNLOCK_TIME;
+        const saleEnd = blockTimestamp + SALE_END_DELTA; 
+        const tokensUnlockTime = blockTimestamp + TOKENS_UNLOCK_TIME_DELTA;
 
         // When
         await AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
@@ -74,158 +121,203 @@ describe("AvalaunchSale", function() {
 
       it("Should not allow non-admin to set sale parameters", async function() {
         // Given
-        // When
+        await Admin.removeAdmin(deployer.address);
+
         // Then
-        expect(false).to.be.true;
+        await expect(setSaleParams()).to.be.revertedWith("Only admin can call this function.");
       });
 
       it("Should emit SaleCreated event when parameters are set", async function() {
         // Given
-        // When
+        const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
+        const token = XavaToken.address;
+        const saleOwner = deployer.address;
+        const tokenPriceInAVAX = TOKEN_PRICE_IN_AVAX;
+        const amountOfTokensToSell = AMOUNT_OF_TOKENS_TO_SELL;
+        const saleEnd = blockTimestamp + SALE_END_DELTA; 
+        const tokensUnlockTime = blockTimestamp + TOKENS_UNLOCK_TIME_DELTA;
+
         // Then
-        expect(false).to.be.true;
+        await expect(AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime))
+          .to.emit(AvalaunchSale, "SaleCreated")
+          .withArgs(saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
       });
 
       it("Should not set sale parameters if sale is already created", async function() {
         // Given
-        // When
+        await setSaleParams();
+
         // Then
-        expect(false).to.be.true;
+        await expect(setSaleParams()).to.be.revertedWith("setSaleParams: Sale is already created.");
       });
 
       it("Should not set sale parameters if token address is the zero address", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setSaleParams({token: ZERO_ADDRESS})).to.be.revertedWith("setSaleParams: Token address can not be 0.");
       });
 
       it("Should not set sale parameters if sale owner is the zero address", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setSaleParams({saleOwner: ZERO_ADDRESS})).to.be.revertedWith("setSaleParams: Sale owner address can not be 0.");
       });
 
       it("Should not set sale parameters if token price is 0", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setSaleParams({tokenPriceInAVAX: 0})).to.be.revertedWith("setSaleParams: Bad input");
       });
 
       it("Should not set sale parameters if token amount is 0", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setSaleParams({amountOfTokensToSell: 0})).to.be.revertedWith("setSaleParams: Bad input");
       });
 
       it("Should not set sale parameters if sale end date is in the past", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setSaleParams({saleEndDelta: -100})).to.be.revertedWith("setSaleParams: Bad input");
       });
 
       it("Should not set sale parameters if tokens unlock time is in the past", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setSaleParams({tokensUnlockTimeDelta: -100})).to.be.revertedWith("setSaleParams: Bad input");
       });
     });
 
-    describe("Set sale registration times", async function() {
+    xdescribe("Set sale registration times", async function() {
       it("Should set the registration times", async function() {
         // Given
+        const blockTimestamp = await getCurrentBlockTimestamp();
+
+        const registrationTimeStarts = blockTimestamp + REGISTRATION_TIME_STARTS_DELTA; 
+        const registrationTimeEnds = blockTimestamp + REGISTRATION_TIME_ENDS_DELTA;
+
         // When
+        await AvalaunchSale.setRegistrationTime(registrationTimeStarts, registrationTimeEnds);
+
         // Then
-        expect(false).to.be.true;
+        const registration = await AvalaunchSale.registration();
+        expect(registration.registrationTimeStarts).to.equal(registrationTimeStarts);
+        expect(registration.registrationTimeEnds).to.equal(registrationTimeEnds);
       });
 
       it("Should not allow non-admin to set registration times", async function() {
         // Given
-        // When
+        await Admin.removeAdmin(deployer.address);
+
         // Then
-        expect(false).to.be.true;
+        await expect(setRegistrationTime()).to.be.revertedWith("Only admin can call this function.");
       });
 
       it("Should emit RegistrationTimeSet when setting registration times", async function() {
         // Given
-        // When
+        const blockTimestamp = await getCurrentBlockTimestamp();
+
+        const registrationTimeStarts = blockTimestamp + REGISTRATION_TIME_STARTS_DELTA; 
+        const registrationTimeEnds = blockTimestamp + REGISTRATION_TIME_ENDS_DELTA;
+
         // Then
-        expect(false).to.be.true;
+        await expect(AvalaunchSale.setRegistrationTime(registrationTimeStarts, registrationTimeEnds))
+          .to.emit(AvalaunchSale, "RegistrationTimeSet")
+          .withArgs(registrationTimeStarts, registrationTimeEnds);
+      });
+
+      it("Should not set registration times twice", async function() {
+        // Given
+        await setRegistrationTime()
+
+        // Then
+        await expect(setRegistrationTime()).to.be.reverted;
       });
 
       it("Should not set registration times if registration start time is in the past", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setRegistrationTime({registrationTimeStartsDelta: -100})).to.be.reverted;
+      });
+
+      it("Should not set registration times if registration end time is in the past", async function() {
+        // Then
+        await expect(setRegistrationTime({registrationTimeEndsDelta: -100})).to.be.reverted;
       });
 
       it("Should not set registration times if registration end time is before start time", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setRegistrationTime({registrationTimeStartsDelta: 30, registrationTimeEndsDelta: 20})).to.be.reverted;
+      });
+
+      it("Should not set registration times if registration end time is equal to start time", async function() {
+        // Then
+        await expect(setRegistrationTime({registrationTimeStartsDelta: 30, registrationTimeEndsDelta: 30})).to.be.reverted;
       });
     });
 
     describe("Set sale rounds", async function() {
       it("Should set sale rounds", async function() {
         // Given
+        const blockTimestamp = await getCurrentBlockTimestamp();
+        const startTimes = ROUNDS_START_DELTAS.map((s) => blockTimestamp+s);
+        const maxParticipations = ROUNDS_MAX_PARTICIPATIONS;
+
         // When
+        await AvalaunchSale.setRounds(startTimes, maxParticipations);
+
         // Then
-        expect(false).to.be.true;
+        for (let i = 0; i < startTimes.length; i++) {
+          expect(await AvalaunchSale.roundIds(i)).to.equal(i+1);
+          expect((await AvalaunchSale.roundIdToRound(i+1)).startTime).to.equal(startTimes[i]);
+          expect((await AvalaunchSale.roundIdToRound(i+1)).maxParticipation).to.equal(maxParticipations[i]);
+        }
       });
 
       it("Should not allow non-admin to set sale rounds", async function() {
         // Given
-        // When
+        await Admin.removeAdmin(deployer.address);
+
         // Then
-        expect(false).to.be.true;
+        await expect(setRounds()).to.be.revertedWith("Only admin can call this function.");
       });
 
       it("Should not set sale rounds if rounds are already set", async function() {
         // Given
-        // When
+        await setRounds();
+        
         // Then
-        expect(false).to.be.true;
+        await expect(setRounds()).to.be.revertedWith("setRounds: Rounds are already");
       });
 
       it("Should not set sale rounds if times and participation arrays lengths don't match", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setRounds({maxParticipations: [10, 100]})).to.be.revertedWith("setRounds: Bad input.");
       });
 
       it("Should not set sale rounds if round start times are not sorted", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setRounds({startTimes: [50, 45, 60]})).to.be.reverted;
+      });
+
+      it("Should not set sale rounds if 0 rounds are provided", async function() {
+        // Then
+        await expect(setRounds({startTimes: [], maxParticipations: []})).to.be.reverted;
       });
 
       it("Should not set sale rounds if one round's max participation is 0", async function() {
-        // Given
-        // When
         // Then
-        expect(false).to.be.true;
+        await expect(setRounds({maxParticipations: [10, 0, 1000]})).to.be.reverted;
       });
 
       it("Should emit RoundAdded event", async function() {
         // Given
-        // When
+        const blockTimestamp = await getCurrentBlockTimestamp();
+        const startTimes = [blockTimestamp + 50];
+        const maxParticipations = [125];
+
         // Then
-        expect(false).to.be.true;
+        await expect(AvalaunchSale.setRounds(startTimes, maxParticipations))
+          .to.emit(AvalaunchSale, "RoundAdded")
+          .withArgs(1, startTimes[0], maxParticipations[0]);
       });
     });
   });
 
-  context("Update", async function() {
+  xcontext("Update", async function() {
     describe("Update token price", async function() {
       it("Should emit set the token price", async function() {
         // Given
@@ -385,4 +477,10 @@ describe("AvalaunchSale", function() {
   });
 });
 
+// set registration time - no check sale has been created
+// set registration time - can set after sale ends
 // TODO participate - check deposit tokens has been called
+// TODO register - no check for registration time starts
+// GetCurrentRound - must use saleEnd for ended
+// setRounds - no check sale has been created
+// setRounds - no check rounds are before sale end

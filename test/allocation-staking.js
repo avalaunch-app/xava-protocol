@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
-describe("AllocationStaking", function() {
+xdescribe("AllocationStaking", function() {
 
   let XavaToken;
   let AllocationStaking;

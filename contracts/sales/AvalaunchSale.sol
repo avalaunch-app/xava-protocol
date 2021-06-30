@@ -65,7 +65,7 @@ contract AvalaunchSale {
     Sale public sale;
 
     // Registration
-    Registration registration;
+    Registration public registration;
 
     // Array storing IDS of rounds (IDs start from 1, so they can't be mapped as array indexes
     uint256 [] public roundIds;
