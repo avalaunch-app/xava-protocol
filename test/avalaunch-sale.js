@@ -61,6 +61,12 @@ describe("AvalaunchSale", function() {
     return AvalaunchSale.setRounds(startTimes, maxParticipations);
   }
 
+  async function runFullSetup(params) {
+    await setSaleParams(params);
+    await setRegistrationTime(params);
+    await setRounds(params);
+  }
+
   beforeEach(async function() {
     const accounts = await ethers.getSigners();
     deployer = accounts[0];
@@ -82,7 +88,7 @@ describe("AvalaunchSale", function() {
     AvalaunchSale = AvalaunchSaleFactory.attach(await SalesFactory.allSales(0));
   });
 
-  context("Setup", async function() {
+  xcontext("Setup", async function() {
     it("Should setup the token correctly", async function() {
       // Given
       let admin = await AvalaunchSale.admin();
@@ -91,7 +97,7 @@ describe("AvalaunchSale", function() {
       expect(admin).to.equal(Admin.address);
     });
 
-    xdescribe("Set sale parameters", async function() {
+    describe("Set sale parameters", async function() {
       it("Should set the sale parameters", async function() {
         // Given
         const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
@@ -182,7 +188,7 @@ describe("AvalaunchSale", function() {
       });
     });
 
-    xdescribe("Set sale registration times", async function() {
+    describe("Set sale registration times", async function() {
       it("Should set the registration times", async function() {
         // Given
         const blockTimestamp = await getCurrentBlockTimestamp();
@@ -317,73 +323,118 @@ describe("AvalaunchSale", function() {
     });
   });
 
-  xcontext("Update", async function() {
+  context("Update", async function() {
     describe("Update token price", async function() {
-      it("Should emit set the token price", async function() {
+      it("Should set the token price", async function() {
         // Given
+        const price = 123;
+        await runFullSetup();
+
         // When
+        await AvalaunchSale.updateTokenPriceInAVAX(price);
+
         // Then
-        expect(false).to.be.true;
+        expect((await AvalaunchSale.sale()).tokenPriceInAVAX).to.equal(price);
       });
 
       it("Should not allow non-admin to set token price", async function() {
         // Given
-        // When
+        const price = 123;
+        await runFullSetup();
+        await Admin.removeAdmin(deployer.address);
+
         // Then
-        expect(false).to.be.true;
+        await expect(AvalaunchSale.updateTokenPriceInAVAX(price)).to.be.revertedWith("Only admin can call this function.");
       });
 
       it("Should emit TokenPriceSet event", async function() {
         // Given
-        // When
+        const price = 123;
+        await runFullSetup();
+
         // Then
-        expect(false).to.be.true;
+        await expect(AvalaunchSale.updateTokenPriceInAVAX(price))
+          .to.emit(AvalaunchSale, "TokenPriceSet")
+          .withArgs(price);
       });
 
       it("Should not update token price if 1st round already started", async function() {
         // Given
+        const price = 123;
+        await runFullSetup();
+
         // When
+        await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0]]);
+        await ethers.provider.send("evm_mine");
+
         // Then
-        expect(false).to.be.true;
+        await expect(AvalaunchSale.updateTokenPriceInAVAX(price)).to.be.revertedWith("1st round already started.");
       });
 
       it("Should not update token price to zero", async function() {
         // Given
-        // When
+        const price = 0;
+        await runFullSetup();
+
         // Then
-        expect(false).to.be.true;
+        await expect(AvalaunchSale.updateTokenPriceInAVAX(price)).to.be.revertedWith("Price can not be 0.");
       });
     });
 
     describe("Postpone sale", async function() {
       it("Should postpone the sale", async function() {
         // Given
+        const timeToShift = 10;
+        await runFullSetup();
+        const currentStartRound1 = parseInt((await AvalaunchSale.roundIdToRound(1)).startTime);
+        const currentStartRound2 = parseInt((await AvalaunchSale.roundIdToRound(2)).startTime);
+        const currentStartRound3 = parseInt((await AvalaunchSale.roundIdToRound(3)).startTime);
+        
         // When
+        await AvalaunchSale.postponeSale(timeToShift);
+
         // Then
-        expect(false).to.be.true;
+        expect((await AvalaunchSale.roundIdToRound(1)).startTime).to.equal(currentStartRound1 + timeToShift);
+        expect((await AvalaunchSale.roundIdToRound(2)).startTime).to.equal(currentStartRound2 + timeToShift);
+        expect((await AvalaunchSale.roundIdToRound(3)).startTime).to.equal(currentStartRound3 + timeToShift);
       });
 
       it("Should not allow non-admin to postpone sale", async function() {
         // Given
-        // When
+        const timeToShift = 10;
+        await runFullSetup();
+        await Admin.removeAdmin(deployer.address);
+
         // Then
-        expect(false).to.be.true;
+        await expect(AvalaunchSale.postponeSale(timeToShift)).to.be.revertedWith("Only admin can call this function.");
       });
 
       it("Should not postpone sale if sale already started", async function() {
         // Given
+        const timeToShift = 10;
+        await runFullSetup();
+
         // When
+        await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0]]);
+        await ethers.provider.send("evm_mine");
+
         // Then
-        expect(false).to.be.true;
+        await expect(AvalaunchSale.postponeSale(timeToShift)).to.be.revertedWith("1st round already started.");
       });
     });
 
     describe("Extend registration period", async function() {
       it("Should extend the registration period", async function() {
         // Given
+        const timeToAdd = 10;
+        await runFullSetup();
+        const currentRegistrationEnd = parseInt((await AvalaunchSale.registration()).registrationTimeEnds);
+        
         // When
+        await AvalaunchSale.extendRegistrationPeriod(timeToAdd);
+
         // Then
-        expect(false).to.be.true;
+        expect((await AvalaunchSale.registration()).registrationTimeEnds).to.equal(currentRegistrationEnd + timeToAdd);
       });
 
       it("Should not allow non-admin to extend registration period", async function() {
@@ -477,10 +528,14 @@ describe("AvalaunchSale", function() {
   });
 });
 
+// postpone - should not postpone if rounds not set
+// updateTokenPrice - must check setRounds has been called
 // set registration time - no check sale has been created
 // set registration time - can set after sale ends
+// set registration time - no check does not overlap sale start
 // TODO participate - check deposit tokens has been called
 // TODO register - no check for registration time starts
 // GetCurrentRound - must use saleEnd for ended
 // setRounds - no check sale has been created
 // setRounds - no check rounds are before sale end
+// setRounds - no check sale does not overlap registration
