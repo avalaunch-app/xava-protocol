@@ -272,7 +272,7 @@ contract AvalaunchSale {
     public
     onlyAdmin
     {
-        require(block.timestamp < roundIdToRound[rounds[0]].startTime, "1st round already started.");
+        require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "1st round already started.");
         require(rounds.length == caps.length, "Arrays length is different.");
 
         for(uint i = 0; i < rounds.length; i++) {
