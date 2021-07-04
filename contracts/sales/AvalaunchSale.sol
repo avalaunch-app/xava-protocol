@@ -480,7 +480,7 @@ contract AvalaunchSale {
     pure
     returns (address)
     {
-        bytes32 hash = keccak256(abi.encodePacked(user, amount, roundId));
+        bytes32 hash = keccak256(abi.encodePacked(user, amount, roundId, address(this)));
         bytes32 messageHash = hash.toEthSignedMessageHash();
         return messageHash.recover(signature);
     }
