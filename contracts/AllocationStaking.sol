@@ -256,4 +256,20 @@ contract AllocationStaking is Ownable {
         paidOut += _amount;
     }
 
+    // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
+    function getPendingAndDepositedForUsers(address [] users, uint pid)
+    external
+    view
+    returns (uint256 [] , uint256 [])
+    {
+        uint256 [] deposits = new uint256[](users.length);
+        uint256 [] earnings = new uint256[](users.length);
+
+        for(uint i=0; i < users.length; i++) {
+            deposits[i] = deposited(pid , users[i]);
+            earnings[i] = pending(pid, users[i]);
+        }
+
+        return (deposits, earnings);
+    }
 }
