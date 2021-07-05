@@ -327,7 +327,7 @@ contract AvalaunchSale {
         require(roundId == currentRound, "You can not participate in this round.");
 
         // Compute the amount of tokens user is buying
-        uint256 amountOfTokensBuying = (msg.value).mul(one).div(sale.tokenPriceInAVAX);
+        uint256 amountOfTokensBuying = (msg.value).div(sale.tokenPriceInAVAX);
 
         // Check in terms of user allo
         require(amountOfTokensBuying <= amount, "Trying to buy more than allowed.");
@@ -360,7 +360,7 @@ contract AvalaunchSale {
     function withdrawTokens() public {
         require(block.timestamp >= sale.tokensUnlockTime, "Tokens can not be withdrawn yet.");
 
-        Participation memory p = userToParticipation[msg.sender];
+        Participation storage p = userToParticipation[msg.sender];
 
         if(!p.isWithdrawn) {
             p.isWithdrawn = true;
@@ -420,15 +420,16 @@ contract AvalaunchSale {
         if(block.timestamp < roundIdToRound[roundIds[0]].startTime) {
             return 0; // Sale didn't start yet.
         }
-        while(block.timestamp < roundIdToRound[roundIds[i]].startTime && i < roundIds.length) {
+
+        while((i+1) < roundIds.length && block.timestamp > roundIdToRound[roundIds[i+1]].startTime) {
             i++;
         }
 
-        if(i == roundIds.length) {
+        if(block.timestamp >= sale.saleEnd) {
             return 0; // Means sale is ended
         }
 
-        return i;
+        return roundIds[i];
     }
 
     /// @notice     Check signature user submits for registration.

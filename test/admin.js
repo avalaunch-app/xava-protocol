@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
-xdescribe("Admin", function() {
+describe("Admin", function() {
 
   let Admin;
   let deployer, alice, bob, cedric;
