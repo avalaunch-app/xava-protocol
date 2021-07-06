@@ -477,7 +477,7 @@ contract AvalaunchSale {
         uint256 roundId
     )
     public
-    pure
+    view
     returns (address)
     {
         bytes32 hash = keccak256(abi.encodePacked(user, amount, roundId, address(this)));
