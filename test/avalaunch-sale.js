@@ -27,7 +27,8 @@ describe("AvalaunchSale", function() {
   const PARTICIPATION_ROUND = 1;
   const PARTICIPATION_VALUE = 80;
 
-  const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
+  // const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
+  const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
   function firstOrDefault(first, key, def) {
     if (first && first[key] !== undefined) {
@@ -548,8 +549,8 @@ describe("AvalaunchSale", function() {
       it("Should not update token price if rounds not set", async function() {
         // Given
         const price = 123;
-        await setSaleParams(params);
-        await setRegistrationTime(params);
+        await setSaleParams();
+        await setRegistrationTime();
 
         // Then
         await expect(AvalaunchSale.updateTokenPriceInAVAX(price)).to.be.reverted;
@@ -600,8 +601,8 @@ describe("AvalaunchSale", function() {
       it("Should not postpone sale if rounds not set", async function() {
         // Given
         const timeToShift = 10;
-        await setSaleParams(params);
-        await setRegistrationTime(params);
+        await setSaleParams();
+        await setRegistrationTime();
 
         // Then
         await expect(AvalaunchSale.postponeSale(timeToShift)).to.be.reverted;
@@ -654,7 +655,7 @@ describe("AvalaunchSale", function() {
         await AvalaunchSale.setCapPerRound(rounds, caps);
 
         // Then
-        expect((await AvalaunchSale.roundIdToRound(1)).maxParticipation).to.equal(100);
+        expect((await AvalaunchSale.roundIdToRound(1)).maxParticipation).to.equal(ROUNDS_MAX_PARTICIPATIONS[0]);
         expect((await AvalaunchSale.roundIdToRound(2)).maxParticipation).to.equal(20);
         expect((await AvalaunchSale.roundIdToRound(3)).maxParticipation).to.equal(30);
       });
@@ -1106,7 +1107,7 @@ describe("AvalaunchSale", function() {
 
       it("Should fail if signer is neither sale owner nor admin", async function() {
         // Given
-        await runFullSetup({saleOwner: alice.address});
+        await runFullSetupNoDeposit({saleOwner: alice.address});
         await Admin.removeAdmin(deployer.address);
         const sig = signParticipation(deployer.address, 100, 1, DEPLOYER_PRIVATE_KEY);
 
@@ -1370,7 +1371,7 @@ describe("AvalaunchSale", function() {
         await expect(participate()).to.be.reverted;
       });
 
-      it("Should buy more than 0 tokens", async function() {
+      it("Should fail if buying 0 tokens", async function() {
         // Given
         await runFullSetup();
 
@@ -1541,7 +1542,7 @@ describe("AvalaunchSale", function() {
 
       it("Should not withdraw twice", async function() {
         // Given
-        await runFullSetup();
+        await runFullSetup({amountOfTokensToSell: 10});
 
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
