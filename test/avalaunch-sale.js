@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const ethUtil = require("ethereumjs-util")
 
-describe("AvalaunchSale", function() {
+xdescribe("AvalaunchSale", function() {
 
   let Admin;
   let AvalaunchSale;
@@ -27,8 +27,7 @@ describe("AvalaunchSale", function() {
   const PARTICIPATION_ROUND = 1;
   const PARTICIPATION_VALUE = 80;
 
-  // const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
-  const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
 
   function firstOrDefault(first, key, def) {
     if (first && first[key] !== undefined) {
