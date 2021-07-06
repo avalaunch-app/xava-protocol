@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/ISalesFactory.sol";
 
 
 contract AllocationStaking is Ownable {
@@ -17,6 +18,9 @@ contract AllocationStaking is Ownable {
         uint256 amount;     // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
     }
+
+    // TODO: Xava taken as deposit fee
+    // TODO: 2% distributed immediately to everyone
 
     // Info of each pool.
     struct PoolInfo {
@@ -39,6 +43,9 @@ contract AllocationStaking is Ownable {
     // Total rewards added to farm
     uint256 public totalRewards;
 
+    // Address of sales factory contract
+    ISalesFactory public salesFactory;
+
     // Info of each pool.
     PoolInfo[] public poolInfo;
 
@@ -58,11 +65,19 @@ contract AllocationStaking is Ownable {
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
-    constructor(IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp) public {
+    modifier onlyVerifiedSales {
+        require(salesFactory.isSaleCreatedThroughFactory(msg.sender), "Sale not created through factory.");
+        _;
+    }
+
+
+    constructor(IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp, address _salesFactory) public {
         erc20 = _erc20;
         rewardPerSecond = _rewardPerSecond;
         startTimestamp = _startTimestamp;
         endTimestamp = _startTimestamp;
+        // Create sales factory contract
+        salesFactory = ISalesFactory(_salesFactory);
     }
 
     // Number of LP pools
@@ -105,13 +120,13 @@ contract AllocationStaking is Ownable {
     }
 
     // View function to see deposited LP for a user.
-    function deposited(uint256 _pid, address _user) external view returns (uint256) {
+    function deposited(uint256 _pid, address _user) public view returns (uint256) {
         UserInfo storage user = userInfo[_pid][_user];
         return user.amount;
     }
 
     // View function to see pending ERC20s for a user.
-    function pending(uint256 _pid, address _user) external view returns (uint256) {
+    function pending(uint256 _pid, address _user) public view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accERC20PerShare = pool.accERC20PerShare;
@@ -147,7 +162,7 @@ contract AllocationStaking is Ownable {
 
     // Update reward variables of the given pool to be up-to-date.
     function burnXavaFromUser(uint256 _pid, address _user, uint256 _amountToBurn) public
-    //TODO: Add access modifier only to pool contracts
+    onlyVerifiedSales
     {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
@@ -257,13 +272,13 @@ contract AllocationStaking is Ownable {
     }
 
     // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
-    function getPendingAndDepositedForUsers(address [] users, uint pid)
+    function getPendingAndDepositedForUsers(address [] memory users, uint pid)
     external
     view
-    returns (uint256 [] , uint256 [])
+    returns (uint256 [] memory , uint256 [] memory)
     {
-        uint256 [] deposits = new uint256[](users.length);
-        uint256 [] earnings = new uint256[](users.length);
+        uint256 [] memory deposits = new uint256[](users.length);
+        uint256 [] memory earnings = new uint256[](users.length);
 
         for(uint i=0; i < users.length; i++) {
             deposits[i] = deposited(pid , users[i]);
