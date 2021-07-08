@@ -14,7 +14,6 @@ contract AvalaunchSale {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-
     // Pointer to Allocation staking contract, where burnXavaFromUser will be called.
     IAllocationStaking allocationStakingContract;
 
@@ -305,6 +304,7 @@ contract AvalaunchSale {
     function participate(
         bytes memory signature,
         uint256 amount,
+        uint256 amountXavaToBurn,
         uint256 roundId
     )
     external
@@ -316,14 +316,13 @@ contract AvalaunchSale {
         require(amount <= roundIdToRound[roundId].maxParticipation, "Overflowing maximal participation for this round.");
 
         // Verify the signature
-        require(checkSignature(signature, msg.sender, amount, roundId), "Invalid signature. Verification failed");
+        require(checkParticipationSignature(signature, msg.sender, amount, amountXavaToBurn, roundId), "Invalid signature. Verification failed");
 
         // Check user haven't participated before
         require(isParticipated[msg.sender] == false, "User can participate only once.");
 
         // Disallow contract calls.
         require(msg.sender == tx.origin, "Only direct contract calls.");
-
 
         // Get current active round
         uint256 currentRound = getCurrentRound();
@@ -350,6 +349,9 @@ contract AvalaunchSale {
             roundId: roundId,
             isWithdrawn: false
         });
+
+        // Burn XAVA from this user.
+        allocationStakingContract.burnXavaFromUser(0, msg.sender, amountXavaToBurn);
 
         // Add participation for user.
         userToParticipation[msg.sender] = p;
@@ -456,17 +458,18 @@ contract AvalaunchSale {
 
 
     // Function to check if admin was the message signer
-    function checkSignature(
+    function checkParticipationSignature(
         bytes memory signature,
         address user,
         uint256 amount,
+        uint256 amountXavaToBurn,
         uint256 round
     )
     public
     view
     returns (bool)
     {
-        return admin.isAdmin(getParticipationSigner(signature, user, amount, round));
+        return admin.isAdmin(getParticipationSigner(signature, user, amount, amountXavaToBurn, round));
     }
 
 
@@ -479,13 +482,14 @@ contract AvalaunchSale {
         bytes memory signature,
         address user,
         uint256 amount,
+        uint256 amountXavaToBurn,
         uint256 roundId
     )
     public
     view
     returns (address)
     {
-        bytes32 hash = keccak256(abi.encodePacked(user, amount, roundId, address(this)));
+        bytes32 hash = keccak256(abi.encodePacked(user, amount, amountXavaToBurn, roundId, address(this)));
         bytes32 messageHash = hash.toEthSignedMessageHash();
         return messageHash.recover(signature);
     }
