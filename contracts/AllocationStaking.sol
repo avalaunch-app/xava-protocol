@@ -43,6 +43,9 @@ contract AllocationStaking is Ownable {
     // Total rewards added to farm
     uint256 public totalRewards;
 
+    // Total XAVA redistributed between stakers
+    uint256 public totalXavaRedistributed;
+
     // Address of sales factory contract
     ISalesFactory public salesFactory;
 
@@ -172,6 +175,9 @@ contract AllocationStaking is Ownable {
         if (lastTimestamp <= pool.lastRewardTimestamp) {
             return;
         }
+
+        // Increase total XAVA redistributed over time.
+        totalXavaRedistributed = totalXavaRedistributed.add(_amountToBurn);
 
         // Small amount from deposits is moved to the rewards amount
         pool.totalDeposits = pool.totalDeposits.sub(_amountToBurn);
