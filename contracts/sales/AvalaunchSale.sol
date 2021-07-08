@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "../interfaces/ISalesFactory.sol";
-
+import "../interfaces/IAllocationStaking.sol";
 
 contract AvalaunchSale {
 
@@ -14,6 +14,9 @@ contract AvalaunchSale {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+
+    // Pointer to Allocation staking contract, where burnXavaFromUser will be called.
+    IAllocationStaking allocationStakingContract;
 
     ISalesFactory factory;
 
@@ -108,10 +111,12 @@ contract AvalaunchSale {
     event RegistrationTimeSet(uint256 registrationTimeStarts, uint256 registrationTimeEnds);
     event RoundAdded(uint256 roundId, uint256 startTime, uint256 maxParticipation);
 
-    constructor(address _admin) public {
+    constructor(address _admin, address _allocationStaking) public {
         require(_admin != address(0));
+        require(_allocationStaking != address(0));
         admin = IAdmin(_admin);
         factory = ISalesFactory(msg.sender);
+        allocationStakingContract = IAllocationStaking(_allocationStaking);
     }
 
     /// @notice     Admin function to set sale parameters
