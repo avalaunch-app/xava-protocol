@@ -177,7 +177,6 @@ contract AllocationStaking is Ownable {
         }
     }
 
-
     // Update reward variables of the given pool to be up-to-date.
     function redistributeXava(uint256 _pid, address _user, uint256 _amountToBurn) external
     onlyVerifiedSales
@@ -218,6 +217,10 @@ contract AllocationStaking is Ownable {
 
     // Update reward variables of the given pool to be up-to-date.
     function updatePool(uint256 _pid) public {
+        updatePoolWithFee(_pid, 0);
+    }
+
+    function updatePoolWithFee(uint256 _pid, uint256 _depositFee) internal {
         PoolInfo storage pool = poolInfo[_pid];
         uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
 
@@ -232,7 +235,10 @@ contract AllocationStaking is Ownable {
         }
 
         uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
-        uint256 erc20Reward = nrOfSeconds.mul(rewardPerSecond).mul(pool.allocPoint).div(totalAllocPoint) ;
+
+        // Add to the reward fee taken, and distribute to all users staking at the moment.
+        uint256 reward = nrOfSeconds.mul(rewardPerSecond).add(_depositFee);
+        uint256 erc20Reward = reward.mul(pool.allocPoint).div(totalAllocPoint) ;
 
         pool.accERC20PerShare = pool.accERC20PerShare.add(erc20Reward.mul(1e36).div(lpSupply));
         pool.lastRewardTimestamp = block.timestamp;
@@ -243,7 +249,11 @@ contract AllocationStaking is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        updatePool(_pid);
+        uint depositFee = _amount.mul(depositFeePercent).div(100);
+        uint depositAmount = _amount.sub(depositFee);
+
+        // Update pool including fee for people staking
+        updatePoolWithFee(_pid, depositFee);
 
         if (user.amount > 0) {
             uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
@@ -251,11 +261,11 @@ contract AllocationStaking is Ownable {
         }
 
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-        pool.totalDeposits = pool.totalDeposits.add(_amount);
+        pool.totalDeposits = pool.totalDeposits.add(depositAmount);
 
-        user.amount = user.amount.add(_amount);
+        user.amount = user.amount.add(depositAmount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
-        emit Deposit(msg.sender, _pid, _amount);
+        emit Deposit(msg.sender, _pid, depositAmount);
     }
 
     // Withdraw LP tokens from Farm.
