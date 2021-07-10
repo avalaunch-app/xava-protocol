@@ -177,8 +177,9 @@ contract AllocationStaking is Ownable {
         }
     }
 
+
     // Update reward variables of the given pool to be up-to-date.
-    function burnXavaFromUser(uint256 _pid, address _user, uint256 _amountToBurn) external
+    function redistributeXava(uint256 _pid, address _user, uint256 _amountToBurn) external
     onlyVerifiedSales
     {
         PoolInfo storage pool = poolInfo[_pid];

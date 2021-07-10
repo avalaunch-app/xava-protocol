@@ -351,7 +351,7 @@ contract AvalaunchSale {
         });
 
         // Burn XAVA from this user.
-        allocationStakingContract.burnXavaFromUser(0, msg.sender, amountXavaToBurn);
+        allocationStakingContract.redistributeXava(0, msg.sender, amountXavaToBurn);
 
         // Add participation for user.
         userToParticipation[msg.sender] = p;
