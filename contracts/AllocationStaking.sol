@@ -178,41 +178,16 @@ contract AllocationStaking is Ownable {
     }
 
     // Update reward variables of the given pool to be up-to-date.
-    function redistributeXava(uint256 _pid, address _user, uint256 _amountToBurn) external
+    function redistributeXava(uint256 _pid, address _user, uint256 _amountToRedistribute) external
     onlyVerifiedSales
     {
-        PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
+        PoolInfo storage pool = poolInfo[_pid];
 
-        uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
-
-        if (lastTimestamp <= pool.lastRewardTimestamp) {
-            return;
-        }
-
-        // Increase total XAVA redistributed over time.
-        totalXavaRedistributed = totalXavaRedistributed.add(_amountToBurn);
-
+        updatePoolWithFee(_pid, _amountToRedistribute);
         // Small amount from deposits is moved to the rewards amount
-        pool.totalDeposits = pool.totalDeposits.sub(_amountToBurn);
-
-        // Take current deposit amount
-        uint256 lpSupply = pool.totalDeposits;
-
-        if (lpSupply == 0) {
-            pool.lastRewardTimestamp = lastTimestamp;
-            return;
-        }
-
-        // Reduce users amount for the XAVA being redistributed to the network
-        user.amount = user.amount.sub(_amountToBurn);
-
-        uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
-        uint256 erc20Reward = nrOfSeconds.mul(rewardPerSecond).mul(pool.allocPoint).div(totalAllocPoint);
-        uint256 totalErc20Reward = erc20Reward.add(_amountToBurn);
-
-        pool.accERC20PerShare = pool.accERC20PerShare.add(totalErc20Reward.mul(1e36).div(lpSupply));
-        pool.lastRewardTimestamp = block.timestamp;
+        pool.totalDeposits = pool.totalDeposits.sub(_amountToRedistribute);
+        user.amount = user.amount.sub(_amountToRedistribute);
     }
 
     // Update reward variables of the given pool to be up-to-date.
@@ -234,6 +209,11 @@ contract AllocationStaking is Ownable {
             return;
         }
 
+        if(_depositFee > 0) {
+            // Increase total XAVA redistributed over time.
+            totalXavaRedistributed = totalXavaRedistributed.add(_depositFee);
+        }
+
         uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
 
         // Add to the reward fee taken, and distribute to all users staking at the moment.
@@ -242,6 +222,9 @@ contract AllocationStaking is Ownable {
 
         pool.accERC20PerShare = pool.accERC20PerShare.add(erc20Reward.mul(1e36).div(lpSupply));
         pool.lastRewardTimestamp = block.timestamp;
+
+        // Increase total XAVA redistributed over time.
+        totalXavaRedistributed = totalXavaRedistributed.add(_depositFee);
     }
 
     // Deposit LP tokens to Farm for ERC20 allocation.
