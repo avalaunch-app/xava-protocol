@@ -43,6 +43,9 @@ contract AllocationStaking is Ownable {
     // Total rewards added to farm
     uint256 public totalRewards;
 
+    // Deposit FEE for staking contract
+    uint256 public depositFeePercent;
+
     // Total XAVA redistributed between stakers
     uint256 public totalXavaRedistributed;
 
@@ -67,6 +70,8 @@ contract AllocationStaking is Ownable {
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event DepositFeeSet(uint256 depositFeePercent);
+
 
     modifier onlyVerifiedSales {
         require(salesFactory.isSaleCreatedThroughFactory(msg.sender), "Sale not created through factory.");
@@ -74,13 +79,16 @@ contract AllocationStaking is Ownable {
     }
 
 
-    constructor(IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp, address _salesFactory) public {
+    constructor(
+        IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp, address _salesFactory, uint256 _depositFeePercent
+    ) public {
         erc20 = _erc20;
         rewardPerSecond = _rewardPerSecond;
         startTimestamp = _startTimestamp;
         endTimestamp = _startTimestamp;
         // Create sales factory contract
         salesFactory = ISalesFactory(_salesFactory);
+        depositFeePercent = _depositFeePercent;
     }
 
     // Number of LP pools
@@ -111,6 +119,12 @@ contract AllocationStaking is Ownable {
         accERC20PerShare: 0,
         totalDeposits: 0
         }));
+    }
+
+    // Set deposit fee
+    function setDepositFee(uint256 _depositFeePercent) public onlyOwner {
+        depositFeePercent = _depositFeePercent;
+        emit DepositFeeSet(_depositFeePercent);
     }
 
     // Update the given pool's ERC20 allocation point. Can only be called by the owner.
