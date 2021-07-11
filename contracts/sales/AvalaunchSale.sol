@@ -228,8 +228,7 @@ contract AvalaunchSale {
     {
         require(roundId != 0, "Round ID can not be 0.");
         require(roundId <= roundIds.length, "Invalid round id");
-        require(block.timestamp >= registration.registrationTimeStarts, "Registration gate not started yet");
-        require(block.timestamp <= registration.registrationTimeEnds, "Registration gate is closed.");
+        require(block.timestamp >= registration.registrationTimeStarts && block.timestamp <= registration.registrationTimeEnds, "Registration gate is closed.");
         require(checkRegistrationSignature(signature, msg.sender, roundId), "Invalid signature");
         require(addressToRoundRegisteredFor[msg.sender] == 0, "User can not register twice.");
 

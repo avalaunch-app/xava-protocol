@@ -383,6 +383,7 @@ describe("AvalaunchSale", function() {
       it("Should not set registration times beyond sale start", async function() {
         // Given
         await setSaleParams();
+        await setRounds();
         
         // Then
         await expect(setRegistrationTime({registrationTimeStartsDelta: 1, registrationTimeEndsDelta: ROUNDS_START_DELTAS[0]})).to.be.reverted;
@@ -493,6 +494,7 @@ describe("AvalaunchSale", function() {
         const blockTimestamp = await getCurrentBlockTimestamp();
         const startTimes = [blockTimestamp + 50];
         const maxParticipations = [125];
+        await setSaleParams();
 
         // Then
         await expect(AvalaunchSale.setRounds(startTimes, maxParticipations))
@@ -898,7 +900,7 @@ describe("AvalaunchSale", function() {
         await runFullSetup();
         expect((await AvalaunchSale.registration()).numberOfRegistrants).to.equal(0);
 
-        const roundId = 20;
+        const roundId = 2;
         const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
         
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
@@ -1292,7 +1294,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
 
-        await registerForSale();
+        await registerForSale({registerRound: 2});
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[2] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
@@ -1309,7 +1311,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
 
-        await registerForSale();
+        await registerForSale({registerRound: 3});
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");

@@ -11,8 +11,18 @@ describe("SalesFactory", function() {
   let AvalaunchSaleFactory;
   let deployer, alice, bob;
 
+  let ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+  const REWARDS_PER_SECOND = ethers.utils.parseUnits("0.1");
+  const DEPOSIT_FEE = 100;
+  const START_TIMESTAMP_DELTA = 600;
+
   // const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
   const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+  async function getCurrentBlockTimestamp() {
+    return (await ethers.provider.getBlock('latest')).timestamp;
+  }
 
   beforeEach(async function() {
     const accounts = await ethers.getSigners();
@@ -28,7 +38,15 @@ describe("SalesFactory", function() {
     Admin = await AdminFactory.deploy([deployer.address, alice.address, bob.address]);
 
     const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-    SalesFactory = await SalesFactoryFactory.deploy(Admin.address);
+    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);
+
+    AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
+    const blockTimestamp = await getCurrentBlockTimestamp();
+    startTimestamp = blockTimestamp + START_TIMESTAMP_DELTA;
+    AllocationStaking = await AllocationStakingRewardsFactory.deploy(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
+
+    await AllocationStaking.add(1, XavaToken.address, false);
+    await SalesFactory.setAllocationStaking(AllocationStaking.address);
 
     AvalaunchSaleFactory = await ethers.getContractFactory("AvalaunchSale");
   });
@@ -40,6 +58,29 @@ describe("SalesFactory", function() {
   
       // Then
       expect(admin).to.equal(Admin.address);
+    });
+
+    describe("Set allocation staking", async function() {
+      it("Should set allocation staking contract", async function() {
+        // When
+        await SalesFactory.setAllocationStaking(XavaToken.address);
+
+        // Then
+        expect(await SalesFactory.allocationStaking()).to.equal(XavaToken.address);
+      });
+
+      it("Should not set allocation staking contract to zero address", async function() {
+        // Then
+        await expect(SalesFactory.setAllocationStaking(ZERO_ADDRESS)).to.be.reverted;
+      });
+
+      it("Should not allow non-admin to set allocation staking contract", async function() {
+        // Given
+        await Admin.removeAdmin(deployer.address);
+
+        // Then
+        await expect(SalesFactory.setAllocationStaking(XavaToken.address)).to.be.reverted;
+      });
     });
   });
   
