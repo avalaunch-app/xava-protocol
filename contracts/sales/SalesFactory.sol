@@ -8,6 +8,7 @@ import "./AvalaunchSale.sol";
 contract SalesFactory {
 
     IAdmin public admin;
+    address public allocationStaking;
 
     mapping (address => bool) public isSaleCreatedThroughFactory;
 
@@ -25,15 +26,23 @@ contract SalesFactory {
         _;
     }
 
-    constructor (address _adminContract) public {
+    constructor (address _adminContract, address _allocationStaking) public {
         admin = IAdmin(_adminContract);
+        allocationStaking = _allocationStaking;
     }
+
+    // Set allocation staking contract address.
+    function setAllocationStaking(address _allocationStaking) public onlyAdmin {
+        require(allocationStaking != address(0));
+        allocationStaking = _allocationStaking;
+    }
+
 
     function deploySale()
     external
     onlyAdmin
     {
-        AvalaunchSale sale = new AvalaunchSale(address(admin));
+        AvalaunchSale sale = new AvalaunchSale(address(admin), allocationStaking);
 
         isSaleCreatedThroughFactory[address(sale)] = true;
         allSales.push(address(sale));

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/ISalesFactory.sol";
 
 
 contract AllocationStaking is Ownable {
@@ -39,6 +40,16 @@ contract AllocationStaking is Ownable {
     // Total rewards added to farm
     uint256 public totalRewards;
 
+    uint256 public depositFeePrecision = 10e6;
+
+    uint256 public depositFeePercent;
+
+    // Total XAVA redistributed between stakers
+    uint256 public totalXavaRedistributed;
+
+    // Address of sales factory contract
+    ISalesFactory public salesFactory;
+
     // Info of each pool.
     PoolInfo[] public poolInfo;
 
@@ -57,12 +68,25 @@ contract AllocationStaking is Ownable {
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event DepositFeeSet(uint256 depositFeePercent, uint256 depositFeePrecision);
 
-    constructor(IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp) public {
+
+    modifier onlyVerifiedSales {
+        require(salesFactory.isSaleCreatedThroughFactory(msg.sender), "Sale not created through factory.");
+        _;
+    }
+
+
+    constructor(
+        IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp, address _salesFactory, uint256 _depositFeePercent
+    ) public {
         erc20 = _erc20;
         rewardPerSecond = _rewardPerSecond;
         startTimestamp = _startTimestamp;
         endTimestamp = _startTimestamp;
+        // Create sales factory contract
+        salesFactory = ISalesFactory(_salesFactory);
+        depositFeePercent = _depositFeePercent;
     }
 
     // Number of LP pools
@@ -95,6 +119,13 @@ contract AllocationStaking is Ownable {
         }));
     }
 
+    // Set deposit fee
+    function setDepositFee(uint256 _depositFeePercent, uint256 _depositFeePrecision) public onlyOwner {
+        depositFeePercent = _depositFeePercent;
+        depositFeePrecision=  _depositFeePrecision;
+        emit DepositFeeSet(depositFeePercent, depositFeePrecision);
+    }
+
     // Update the given pool's ERC20 allocation point. Can only be called by the owner.
     function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
         if (_withUpdate) {
@@ -105,13 +136,13 @@ contract AllocationStaking is Ownable {
     }
 
     // View function to see deposited LP for a user.
-    function deposited(uint256 _pid, address _user) external view returns (uint256) {
+    function deposited(uint256 _pid, address _user) public view returns (uint256) {
         UserInfo storage user = userInfo[_pid][_user];
         return user.amount;
     }
 
     // View function to see pending ERC20s for a user.
-    function pending(uint256 _pid, address _user) external view returns (uint256) {
+    function pending(uint256 _pid, address _user) public view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accERC20PerShare = pool.accERC20PerShare;
@@ -146,42 +177,24 @@ contract AllocationStaking is Ownable {
     }
 
     // Update reward variables of the given pool to be up-to-date.
-    function burnXavaFromUser(uint256 _pid, address _user, uint256 _amountToBurn) public
-    //TODO: Add access modifier only to pool contracts
+    function redistributeXava(uint256 _pid, address _user, uint256 _amountToRedistribute) external
+    onlyVerifiedSales
     {
-        PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
+        PoolInfo storage pool = poolInfo[_pid];
 
-        uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
-
-        if (lastTimestamp <= pool.lastRewardTimestamp) {
-            return;
-        }
-
+        updatePoolWithFee(_pid, _amountToRedistribute);
         // Small amount from deposits is moved to the rewards amount
-        pool.totalDeposits = pool.totalDeposits.sub(_amountToBurn);
-
-        // Take current deposit amount
-        uint256 lpSupply = pool.totalDeposits;
-
-        if (lpSupply == 0) {
-            pool.lastRewardTimestamp = lastTimestamp;
-            return;
-        }
-
-        // Reduce users amount for the XAVA being redistributed to the network
-        user.amount = user.amount.sub(_amountToBurn);
-
-        uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
-        uint256 erc20Reward = nrOfSeconds.mul(rewardPerSecond).mul(pool.allocPoint).div(totalAllocPoint);
-        uint256 totalErc20Reward = erc20Reward.add(_amountToBurn);
-
-        pool.accERC20PerShare = pool.accERC20PerShare.add(totalErc20Reward.mul(1e36).div(lpSupply));
-        pool.lastRewardTimestamp = block.timestamp;
+        pool.totalDeposits = pool.totalDeposits.sub(_amountToRedistribute);
+        user.amount = user.amount.sub(_amountToRedistribute);
     }
 
     // Update reward variables of the given pool to be up-to-date.
     function updatePool(uint256 _pid) public {
+        updatePoolWithFee(_pid, 0);
+    }
+
+    function updatePoolWithFee(uint256 _pid, uint256 _depositFee) internal {
         PoolInfo storage pool = poolInfo[_pid];
         uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
         
@@ -195,11 +208,23 @@ contract AllocationStaking is Ownable {
             return;
         }
 
+        if(_depositFee > 0) {
+            // Increase total XAVA redistributed over time.
+            totalXavaRedistributed = totalXavaRedistributed.add(_depositFee);
+        }
+
         uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
-        uint256 erc20Reward = nrOfSeconds.mul(rewardPerSecond).mul(pool.allocPoint).div(totalAllocPoint) ;
+
+        // Add to the reward fee taken, and distribute to all users staking at the moment.
+        uint256 reward = nrOfSeconds.mul(rewardPerSecond).add(_depositFee);
+        uint256 erc20Reward = reward.mul(pool.allocPoint).div(totalAllocPoint) ;
 
         pool.accERC20PerShare = pool.accERC20PerShare.add(erc20Reward.mul(1e36).div(lpSupply));
+
         pool.lastRewardTimestamp = lastTimestamp;
+
+        // Increase total XAVA redistributed over time.
+        totalXavaRedistributed = totalXavaRedistributed.add(_depositFee);
     }
 
     // Deposit LP tokens to Farm for ERC20 allocation.
@@ -207,7 +232,11 @@ contract AllocationStaking is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        updatePool(_pid);
+        uint depositFee = _amount.mul(depositFeePercent).div(10e8);
+        uint depositAmount = _amount.sub(depositFee);
+
+        // Update pool including fee for people staking
+        updatePoolWithFee(_pid, depositFee);
 
         if (user.amount > 0) {
             uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
@@ -215,11 +244,11 @@ contract AllocationStaking is Ownable {
         }
 
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-        pool.totalDeposits = pool.totalDeposits.add(_amount);
+        pool.totalDeposits = pool.totalDeposits.add(depositAmount);
 
-        user.amount = user.amount.add(_amount);
+        user.amount = user.amount.add(depositAmount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
-        emit Deposit(msg.sender, _pid, _amount);
+        emit Deposit(msg.sender, _pid, depositAmount);
     }
 
     // Withdraw LP tokens from Farm.
@@ -256,4 +285,20 @@ contract AllocationStaking is Ownable {
         paidOut += _amount;
     }
 
+    // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
+    function getPendingAndDepositedForUsers(address [] memory users, uint pid)
+    external
+    view
+    returns (uint256 [] memory , uint256 [] memory)
+    {
+        uint256 [] memory deposits = new uint256[](users.length);
+        uint256 [] memory earnings = new uint256[](users.length);
+
+        for(uint i=0; i < users.length; i++) {
+            deposits[i] = deposited(pid , users[i]);
+            earnings[i] = pending(pid, users[i]);
+        }
+
+        return (deposits, earnings);
+    }
 }
