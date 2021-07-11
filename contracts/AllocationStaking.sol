@@ -19,9 +19,6 @@ contract AllocationStaking is Ownable {
         uint256 rewardDebt; // Reward debt. See explanation below.
     }
 
-    // TODO: Xava taken as deposit fee
-    // TODO: 2% distributed immediately to everyone
-
     // Info of each pool.
     struct PoolInfo {
         IERC20 lpToken;             // Address of LP token contract.
@@ -43,7 +40,8 @@ contract AllocationStaking is Ownable {
     // Total rewards added to farm
     uint256 public totalRewards;
 
-    // Deposit FEE for staking contract
+    uint256 public depositFeePrecision = 10e6;
+
     uint256 public depositFeePercent;
 
     // Total XAVA redistributed between stakers
@@ -70,7 +68,7 @@ contract AllocationStaking is Ownable {
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event DepositFeeSet(uint256 depositFeePercent);
+    event DepositFeeSet(uint256 depositFeePercent, uint256 depositFeePrecision);
 
 
     modifier onlyVerifiedSales {
@@ -122,9 +120,10 @@ contract AllocationStaking is Ownable {
     }
 
     // Set deposit fee
-    function setDepositFee(uint256 _depositFeePercent) public onlyOwner {
+    function setDepositFee(uint256 _depositFeePercent, uint256 _depositFeePrecision) public onlyOwner {
         depositFeePercent = _depositFeePercent;
-        emit DepositFeeSet(_depositFeePercent);
+        depositFeePrecision=  _depositFeePrecision;
+        emit DepositFeeSet(depositFeePercent, depositFeePrecision);
     }
 
     // Update the given pool's ERC20 allocation point. Can only be called by the owner.
@@ -232,7 +231,7 @@ contract AllocationStaking is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        uint depositFee = _amount.mul(depositFeePercent).div(100);
+        uint depositFee = _amount.mul(depositFeePercent).div(10e8);
         uint depositAmount = _amount.sub(depositFee);
 
         // Update pool including fee for people staking
