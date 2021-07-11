@@ -184,7 +184,7 @@ contract AllocationStaking is Ownable {
     function updatePool(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
-
+        
         if (lastTimestamp <= pool.lastRewardTimestamp) {
             return;
         }
@@ -199,7 +199,7 @@ contract AllocationStaking is Ownable {
         uint256 erc20Reward = nrOfSeconds.mul(rewardPerSecond).mul(pool.allocPoint).div(totalAllocPoint) ;
 
         pool.accERC20PerShare = pool.accERC20PerShare.add(erc20Reward.mul(1e36).div(lpSupply));
-        pool.lastRewardTimestamp = block.timestamp;
+        pool.lastRewardTimestamp = lastTimestamp;
     }
 
     // Deposit LP tokens to Farm for ERC20 allocation.
