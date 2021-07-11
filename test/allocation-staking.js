@@ -3,11 +3,15 @@ const { expect } = require("chai");
 
 describe("AllocationStaking", function() {
 
+  let Admin;
   let XavaToken, XavaLP1, XavaLP2;
   let AllocationStaking;
   let AllocationStakingRewardsFactory;
+  let SalesFactory;
   let deployer, alice, bob;
   let startTimestamp;
+
+  let ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
   const REWARDS_PER_SECOND = ethers.utils.parseUnits("0.1");
   const TOKENS_TO_ADD = ethers.utils.parseUnits("100000");
@@ -35,6 +39,8 @@ describe("AllocationStaking", function() {
   async function baseSetupTwoPools(params) {
     await XavaToken.approve(AllocationStaking.address, TOKENS_TO_ADD);
     await AllocationStaking.fund(TOKENS_TO_ADD);
+
+    await AllocationStaking.setDepositFee(0, 10e6);
 
     await AllocationStaking.add(ALLOC_POINT, XavaLP1.address, false);
     await AllocationStaking.add(ALLOC_POINT, XavaLP2.address, false);
@@ -66,22 +72,30 @@ describe("AllocationStaking", function() {
     alice = accounts[1];
     bob = accounts[2];
     
+    const AdminFactory = await ethers.getContractFactory("Admin");
+    Admin = await AdminFactory.deploy([deployer.address, alice.address, bob.address]);
+
     const XavaTokenFactory = await ethers.getContractFactory("XavaToken");
     XavaToken = await XavaTokenFactory.deploy("Xava", "XAVA", ethers.utils.parseUnits("100000000"), 18);
 
     XavaLP1 = await XavaTokenFactory.deploy("XavaLP1", "XAVALP1", ethers.utils.parseUnits("100000000"), 18);
     XavaLP2 = await XavaTokenFactory.deploy("XavaLP2", "XAVALP2", ethers.utils.parseUnits("100000000"), 18);
 
+    const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
+    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);    
+
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
     startTimestamp = blockTimestamp + START_TIMESTAMP_DELTA;
-    AllocationStaking = await AllocationStakingRewardsFactory.deploy(XavaToken.address, REWARDS_PER_SECOND, startTimestamp);
+    AllocationStaking = await AllocationStakingRewardsFactory.deploy(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
+
+    await SalesFactory.setAllocationStaking(AllocationStaking.address);
 
     await XavaLP1.transfer(alice.address, DEFAULT_BALANCE_ALICE);
     await XavaLP2.transfer(alice.address, DEFAULT_BALANCE_ALICE);
   });
 
-  xcontext("Setup", async function() {
+  context("Setup", async function() {
     it("Should setup the token correctly", async function() {
       // When
       let decimals = await XavaToken.decimals();
@@ -118,10 +132,40 @@ describe("AllocationStaking", function() {
 
       expect(poolLength).to.equal(1);
       expect(totalAllocPoint).to.equal(ALLOC_POINT);
-    })
+    });
+
+    describe("Deposit fee", async function() {
+      it("Should set a deposit fee and precision", async function() {
+        // When
+        await AllocationStaking.setDepositFee(10, 10e7);
+
+        // Then
+        expect(await AllocationStaking.depositFeePercent()).to.equal(10);
+        expect(await AllocationStaking.depositFeePrecision()).to.equal(10e7);
+      });
+
+      it("Should set the deposit fee to 0", async function() {
+        // When
+        await AllocationStaking.setDepositFee(0, 10e6);
+
+        // Then
+        expect(await AllocationStaking.depositFeePercent()).to.equal(0);
+      });
+
+      it("Should not allow non-owner to set deposit fee ", async function() {
+        // Then
+        await expect(AllocationStaking.connect(alice).setDepositFee(10, 10e7))
+          .to.be.reverted;
+      });
+
+      it("Should emit DepositFeeSet event", async function() {
+        await expect(AllocationStaking.setDepositFee(10, 10e7))
+          .to.emit(AllocationStaking, "DepositFeeSet").withArgs(10, 10e7);
+      });
+    });
   });
 
-  xcontext("Fund", async function() {
+  context("Fund", async function() {
     it("Should fund the farm successfully", async function() {
       // Given
       let deployerBalanceBefore = await XavaToken.balanceOf(deployer.address);
@@ -174,8 +218,8 @@ describe("AllocationStaking", function() {
     });
   });
 
-  xcontext("Pools", async function() {
-    xdescribe("Add pools", async function() {
+  context("Pools", async function() {
+    describe("Add pools", async function() {
       it("Should add pool to list", async function() {
         // When
         await AllocationStaking.add(ALLOC_POINT, XavaLP1.address, false);
@@ -232,7 +276,7 @@ describe("AllocationStaking", function() {
       });
     });
 
-    xdescribe("Set allocation point", async function() {
+    describe("Set allocation point", async function() {
       it("Should set pool's allocation point", async function() {
         // Given
         await baseSetup();
@@ -450,7 +494,7 @@ describe("AllocationStaking", function() {
   });
 
   context("Deposits", async function() {
-    xdescribe("Deposited", async function() {
+    describe("Deposited", async function() {
       it("Should return user amount deposited in pool", async function() {
         // Given
         await baseSetupTwoPools();
@@ -470,7 +514,7 @@ describe("AllocationStaking", function() {
       });
     });
 
-    xdescribe("Pending", async function() {
+    describe("Pending", async function() {
       it("Should return 0 if user deposited but staking not started", async function() {
         // Given
         await baseSetupTwoPools();
@@ -670,7 +714,7 @@ describe("AllocationStaking", function() {
       });
     });
 
-    xdescribe("Total pending", async function() {
+    describe("Total pending", async function() {
       it("Should return total amount pending", async function() {
         // Given
         await baseSetupTwoPools();
@@ -840,52 +884,338 @@ describe("AllocationStaking", function() {
 
     describe("Deposit", async function() {
       it("Should deposit LP tokens in pool if user is first to deposit", async function() {
-        
+        // Given
+        await baseSetupTwoPools();
+
+        // When
+        await AllocationStaking.deposit(1, 250);
+
+        // Then
+        const pool = await AllocationStaking.poolInfo(1);
+        const user = await AllocationStaking.userInfo(1, deployer.address);
+        expect(pool.totalDeposits).to.equal(250);
+        expect(user.amount).to.equal(250);
+      });
+
+      it("Should deposit LP tokens in pool if user is already deposited in this pool", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        // When
+        await AllocationStaking.deposit(0, 250);
+
+        // Then
+        const pool = await AllocationStaking.poolInfo(0);
+        const user = await AllocationStaking.userInfo(0, deployer.address);
+        expect(pool.totalDeposits).to.equal(DEFAULT_DEPOSIT + 250);
+        expect(user.amount).to.equal(DEFAULT_DEPOSIT + 250);
       });
 
       it("Should deposit LP tokens in pool if user is second to deposit", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        // When
+        await AllocationStaking.deposit(1, 250);
+        await AllocationStaking.connect(alice).deposit(1, 300);
+
+        // Then
+        const pool = await AllocationStaking.poolInfo(1);
+        const user = await AllocationStaking.userInfo(1, alice.address);
+        expect(pool.totalDeposits).to.equal(250 + 300);
+        expect(user.amount).to.equal(300);
       });
 
       it("Should update pool before adding LP tokens", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        // When
+        await AllocationStaking.deposit(0, 100);
+
+        // Then
+        const blockTimestamp = await getCurrentBlockTimestamp();
+        const pool = await AllocationStaking.poolInfo(0);
+        expect(pool.lastRewardTimestamp).to.equal(blockTimestamp);
+        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, DEFAULT_DEPOSIT);
+        expect(pool.accERC20PerShare).to.equal(expectedRewardsPerShare);
+        expect(pool.totalDeposits).to.equal(DEFAULT_DEPOSIT + 100);
       });
 
       it("Should not deposit into non-existent pool", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        // Then
+        await expect(AllocationStaking.deposit(5, 100)).to.be.reverted;
       });
 
       it("Should pay user pending amount before adding new deposit", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
+        await ethers.provider.send("evm_mine");
+
+        const pendingBefore = await AllocationStaking.pending(0, deployer.address);
+        const balanceLPBefore = await XavaLP1.balanceOf(deployer.address);
+        const balanceERC20Before = await XavaToken.balanceOf(deployer.address);
+
+        // When
+        await AllocationStaking.deposit(0, 100);
+
+        // Then
+        const pendingAfter = await AllocationStaking.pending(0, deployer.address);
+        const balanceLPAfter = await XavaLP1.balanceOf(deployer.address);
+        const balanceERC20After = await XavaToken.balanceOf(deployer.address);
+
+        expect(pendingAfter).to.equal(0);
+        expect(balanceLPAfter).to.equal(balanceLPBefore.sub(100));
+        expect(balanceERC20After).to.equal(balanceERC20Before.add(pendingBefore));
       });
 
       it("Should emit Deposit event", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        // Then
+        await expect(AllocationStaking.deposit(0, 100))
+          .to.emit(AllocationStaking, "Deposit").withArgs(deployer.address, 0, 100);
+      });
+    });
+
+    describe("Deposit fee", async function() {
+      it("Should only redistribute Xava once", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        await AllocationStaking.setDepositFee(DEPOSIT_FEE, 10e6);
+
+        const totalXavaRedistributedBefore = await AllocationStaking.totalXavaRedistributed();
+
+        // When
+        await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
+        await ethers.provider.send("evm_mine");
+
+        const amountToDeposit = ethers.BigNumber.from("1000000000");
+        await XavaLP1.approve(AllocationStaking.address, amountToDeposit);
+        await AllocationStaking.deposit(0, amountToDeposit);
+
+        // Then
+        const totalXavaRedistributedAfter = await AllocationStaking.totalXavaRedistributed();
+        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e8);
+        expect(totalXavaRedistributedAfter).to.equal(totalXavaRedistributedBefore.add(depositFee));
+      });
+
+      it("Should redistribute XAVA if deposit after stake ended", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        await AllocationStaking.setDepositFee(DEPOSIT_FEE, 10e6);
+
+        const totalXavaRedistributedBefore = await AllocationStaking.totalXavaRedistributed();
+
+        // When
+        await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
+        await ethers.provider.send("evm_mine");
+
+        await ethers.provider.send("evm_increaseTime", [END_TIMESTAMP_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        const amountToDeposit = ethers.BigNumber.from("1000000000");
+        await XavaLP1.approve(AllocationStaking.address, amountToDeposit);
+        await AllocationStaking.deposit(0, amountToDeposit);
+
+        // Then
+        const totalXavaRedistributedAfter = await AllocationStaking.totalXavaRedistributed();
+        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e8);
+        expect(totalXavaRedistributedAfter).to.equal(totalXavaRedistributedBefore.add(depositFee));
+      });
+
+      it("Should redistribute XAVA if deposit at same timestamp", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        await AllocationStaking.setDepositFee(DEPOSIT_FEE, 10e6);
+
+        const totalXavaRedistributedBefore = await AllocationStaking.totalXavaRedistributed();
+
+        // When
+        const amountToDeposit = ethers.BigNumber.from("1000000000");
+        await XavaLP1.approve(AllocationStaking.address, amountToDeposit);
+        await AllocationStaking.deposit(0, amountToDeposit);
+
+        // Then
+        const totalXavaRedistributedAfter = await AllocationStaking.totalXavaRedistributed();
+        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e8);
+        expect(totalXavaRedistributedAfter).to.equal(totalXavaRedistributedBefore.add(depositFee));
+      });
+
+      it("Should not redistribute XAVA if pool empty", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        await AllocationStaking.setDepositFee(DEPOSIT_FEE, 10e6);
+
+        // When
+        await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
+        await ethers.provider.send("evm_mine");
+
+        const amountToDeposit = ethers.BigNumber.from("1000000000");
+        await XavaLP2.approve(AllocationStaking.address, amountToDeposit);
+        await AllocationStaking.deposit(1, amountToDeposit);
+
+        // Then
+        const totalXavaRedistributedAfter = await AllocationStaking.totalXavaRedistributed();
+        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e8);
+        expect(totalXavaRedistributedAfter).to.equal(0);
       });
     });
   });
 
-  xcontext("Withdraws", async function() {
+  context("Withdraws", async function() {
     describe("Withdraw", async function() {
       it("Should withdraw user's deposit", async function() {
+        // Given
+        await baseSetupTwoPools();
+        const poolBefore = await AllocationStaking.poolInfo(0);
+        const balanceBefore = await XavaLP1.balanceOf(deployer.address);
+
+        // When
+        await AllocationStaking.withdraw(0, DEFAULT_DEPOSIT);
+
+        // Then
+        const poolAfter = await AllocationStaking.poolInfo(0)
+        const balanceAfter = await XavaLP1.balanceOf(deployer.address);
+        expect(balanceAfter).to.equal(balanceBefore.add(DEFAULT_DEPOSIT));
+        expect(poolBefore.totalDeposits).to.equal(DEFAULT_DEPOSIT);
+        expect(poolAfter.totalDeposits).to.equal(0);
       });
 
       it("Should withdraw part of user's deposit", async function() {
+        // Given
+        await baseSetupTwoPools();
+        const balanceBefore = await XavaLP1.balanceOf(deployer.address);
+
+        // When
+        await AllocationStaking.withdraw(0, DEFAULT_DEPOSIT / 2);
+
+        // Then
+        const balanceAfter = await XavaLP1.balanceOf(deployer.address);
+        expect(balanceAfter).to.equal(balanceBefore.add(DEFAULT_DEPOSIT / 2));
       });
 
       it("Should not withdraw more than user's deposit", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        // Then
+        await expect(AllocationStaking.withdraw(0, DEFAULT_DEPOSIT * 2)).to.be.revertedWith("withdraw: can't withdraw more than deposit");
       });
 
       it("Should transfer user's ERC20 share", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        // When
+        await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
+        await ethers.provider.send("evm_mine");
+
+        await ethers.provider.send("evm_increaseTime", [END_TIMESTAMP_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        const pendingBefore = await AllocationStaking.pending(0, deployer.address);
+        const balanceERC20Before = await XavaToken.balanceOf(deployer.address);
+
+        await AllocationStaking.withdraw(0, DEFAULT_DEPOSIT);
+
+        // Then
+        const pendingAfter = await AllocationStaking.pending(0, deployer.address);
+        const balanceERC20After = await XavaToken.balanceOf(deployer.address);
+
+        expect(balanceERC20After).to.equal(balanceERC20Before.add(pendingBefore));
+        expect(pendingAfter).to.equal(0);
+        expect(await AllocationStaking.paidOut()).to.equal(pendingBefore);
       });
 
       it("Should emit Withdraw event", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        // Then
+        await expect(AllocationStaking.withdraw(0, DEFAULT_DEPOSIT))
+          .to.emit(AllocationStaking, "Withdraw").withArgs(deployer.address, 0, DEFAULT_DEPOSIT);
       });
     });
 
     describe("emergencyWithdraw", async function() {
       it("Should withdraw user's deposit only", async function() {
+        // Given
+        await baseSetupTwoPools();
+        const poolBefore = await AllocationStaking.poolInfo(0);
+        const balanceLPBefore = await XavaLP1.balanceOf(deployer.address);
+        const balanceERC20Before = await XavaToken.balanceOf(deployer.address);
+
+        await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
+        await ethers.provider.send("evm_mine");
+
+        await ethers.provider.send("evm_increaseTime", [END_TIMESTAMP_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        // When
+        await AllocationStaking.emergencyWithdraw(0);
+
+        // Then
+        const poolAfter = await AllocationStaking.poolInfo(0)
+        const balanceLPAfter = await XavaLP1.balanceOf(deployer.address);
+        const balanceERC20After = await XavaToken.balanceOf(deployer.address);
+        expect(balanceLPAfter).to.equal(balanceLPBefore.add(DEFAULT_DEPOSIT));
+        expect(balanceERC20After).to.equal(balanceERC20Before);
+      });
+
+      it("Should update pool's total deposit", async function() {
+        // Given
+        await baseSetupTwoPools();
+        const poolBefore = await AllocationStaking.poolInfo(0);
+
+        await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
+        await ethers.provider.send("evm_mine");
+
+        await ethers.provider.send("evm_increaseTime", [END_TIMESTAMP_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        // When
+        await AllocationStaking.emergencyWithdraw(0);
+
+        // Then
+        const poolAfter = await AllocationStaking.poolInfo(0)
+        expect(poolBefore.totalDeposits).to.equal(DEFAULT_DEPOSIT);
+        expect(poolAfter.totalDeposits).to.equal(0);
       });
 
       it("Should emit EmergencyWithdraw event", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        // Then
+        await expect(AllocationStaking.emergencyWithdraw(0))
+          .to.emit(AllocationStaking, "EmergencyWithdraw").withArgs(deployer.address, 0, DEFAULT_DEPOSIT);
       });
 
       it("Should reset user's amount and debt to 0", async function() {
+        // Given
+        await baseSetupTwoPools();
+
+        // When
+        await AllocationStaking.emergencyWithdraw(0);
+
+        // Then
+        const user = await AllocationStaking.userInfo(0, deployer.address);
+        expect(user.amount).to.equal(0);
+        expect(user.rewardDebt).to.equal(0);
       });
     });
   });

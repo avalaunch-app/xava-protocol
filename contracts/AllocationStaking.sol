@@ -222,9 +222,6 @@ contract AllocationStaking is Ownable {
         pool.accERC20PerShare = pool.accERC20PerShare.add(erc20Reward.mul(1e36).div(lpSupply));
 
         pool.lastRewardTimestamp = lastTimestamp;
-
-        // Increase total XAVA redistributed over time.
-        totalXavaRedistributed = totalXavaRedistributed.add(_depositFee);
     }
 
     // Deposit LP tokens to Farm for ERC20 allocation.

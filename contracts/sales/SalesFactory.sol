@@ -33,7 +33,7 @@ contract SalesFactory {
 
     // Set allocation staking contract address.
     function setAllocationStaking(address _allocationStaking) public onlyAdmin {
-        require(allocationStaking != address(0));
+        require(_allocationStaking != address(0));
         allocationStaking = _allocationStaking;
     }
 
