@@ -27,6 +27,10 @@ contract AvalaunchSale {
         IERC20 token;
         // Is sale created
         bool isCreated;
+        // Are earnings and leftover withdrawn
+        bool earningsWithdrawn;
+        // Have tokens been deposited
+        bool tokensDeposited;
         // Address of sale owner
         address saleOwner;
         // Price of the token quoted in AVAX
@@ -67,7 +71,7 @@ contract AvalaunchSale {
     Sale public sale;
 
     // Registration
-    Registration registration;
+    Registration public registration;
 
     // Array storing IDS of rounds (IDs start from 1, so they can't be mapped as array indexes
     uint256 [] public roundIds;
@@ -160,7 +164,14 @@ contract AvalaunchSale {
     external
     onlyAdmin
     {
+        require(sale.isCreated == true);
+        require(registration.registrationTimeStarts == 0);        
         require(_registrationTimeStarts >= block.timestamp && _registrationTimeEnds > _registrationTimeStarts);
+        require(_registrationTimeEnds < sale.saleEnd);
+        
+        if (roundIds.length > 0) {
+            require(_registrationTimeEnds < roundIdToRound[roundIds[0]].startTime);
+        }
 
         registration.registrationTimeStarts = _registrationTimeStarts;
         registration.registrationTimeEnds = _registrationTimeEnds;
@@ -175,9 +186,21 @@ contract AvalaunchSale {
     external
     onlyAdmin
     {
+        require(sale.isCreated == true);
         require(startTimes.length == maxParticipations.length, "setRounds: Bad input.");
         require(roundIds.length == 0, "setRounds: Rounds are already");
+        require(startTimes.length > 0);
+
+        uint256 lastTimestamp = 0;
         for(uint i = 0; i < startTimes.length; i++) {
+            require(startTimes[i] > registration.registrationTimeEnds);
+            require(startTimes[i] < sale.saleEnd);
+            require(startTimes[i] >= block.timestamp);
+            require(maxParticipations[i] > 0);
+            
+            require(startTimes[i] > lastTimestamp);
+            lastTimestamp = startTimes[i];
+
             // Compute round Id
             uint roundId = i+1;
 
@@ -204,7 +227,8 @@ contract AvalaunchSale {
     external
     {
         require(roundId != 0, "Round ID can not be 0.");
-        require(block.timestamp <= registration.registrationTimeEnds, "Registration gate is closed.");
+        require(roundId <= roundIds.length, "Invalid round id");
+        require(block.timestamp >= registration.registrationTimeStarts && block.timestamp <= registration.registrationTimeEnds, "Registration gate is closed.");
         require(checkRegistrationSignature(signature, msg.sender, roundId), "Invalid signature");
         require(addressToRoundRegisteredFor[msg.sender] == 0, "User can not register twice.");
 
@@ -276,10 +300,12 @@ contract AvalaunchSale {
     public
     onlyAdmin
     {
-        require(block.timestamp < roundIdToRound[rounds[0]].startTime, "1st round already started.");
+        require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "1st round already started.");
         require(rounds.length == caps.length, "Arrays length is different.");
 
         for(uint i = 0; i < rounds.length; i++) {
+            require(caps[i] > 0, "Can't set max participation to 0");
+
             Round storage round = roundIdToRound[rounds[i]];
             round.maxParticipation = caps[i];
 
@@ -297,6 +323,7 @@ contract AvalaunchSale {
         require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "Deposit too late. Round already started.");
 
         sale.token.safeTransferFrom(msg.sender, address(this), sale.amountOfTokensToSell);
+        sale.tokensDeposited = true;
     }
 
 
@@ -310,10 +337,15 @@ contract AvalaunchSale {
     external
     payable
     {
+        // Disallow participation if no tokens deposited
+        require(sale.tokensDeposited == true, "Tokens not deposited yet");
 
         require(roundId != 0, "Round can not be 0.");
 
         require(amount <= roundIdToRound[roundId].maxParticipation, "Overflowing maximal participation for this round.");
+
+        // User must have registered for the round in advance
+        require(addressToRoundRegisteredFor[msg.sender] == roundId, "Not registered for this round");
 
         // Verify the signature
         require(checkParticipationSignature(signature, msg.sender, amount, amountXavaToBurn, roundId), "Invalid signature. Verification failed");
@@ -331,7 +363,10 @@ contract AvalaunchSale {
         require(roundId == currentRound, "You can not participate in this round.");
 
         // Compute the amount of tokens user is buying
-        uint256 amountOfTokensBuying = (msg.value).mul(one).div(sale.tokenPriceInAVAX);
+        uint256 amountOfTokensBuying = (msg.value).div(sale.tokenPriceInAVAX);
+
+        // Must buy more than 0 tokens
+        require(amountOfTokensBuying > 0, "Can't buy 0 tokens");
 
         // Check in terms of user allo
         require(amountOfTokensBuying <= amount, "Trying to buy more than allowed.");
@@ -367,7 +402,7 @@ contract AvalaunchSale {
     function withdrawTokens() public {
         require(block.timestamp >= sale.tokensUnlockTime, "Tokens can not be withdrawn yet.");
 
-        Participation memory p = userToParticipation[msg.sender];
+        Participation storage p = userToParticipation[msg.sender];
 
         if(!p.isWithdrawn) {
             p.isWithdrawn = true;
@@ -402,6 +437,10 @@ contract AvalaunchSale {
         // Make sure sale ended
         require(block.timestamp >= sale.saleEnd);
 
+        // Make sure owner can't withdraw twice
+        require(sale.earningsWithdrawn == false);
+        sale.earningsWithdrawn = true;
+
         // Earnings amount of the owner in AVAX
         uint totalProfit = address(this).balance;
 
@@ -427,15 +466,16 @@ contract AvalaunchSale {
         if(block.timestamp < roundIdToRound[roundIds[0]].startTime) {
             return 0; // Sale didn't start yet.
         }
-        while(block.timestamp < roundIdToRound[roundIds[i]].startTime && i < roundIds.length) {
+
+        while((i+1) < roundIds.length && block.timestamp > roundIdToRound[roundIds[i+1]].startTime) {
             i++;
         }
 
-        if(i == roundIds.length) {
+        if(block.timestamp >= sale.saleEnd) {
             return 0; // Means sale is ended
         }
 
-        return i;
+        return roundIds[i];
     }
 
     /// @notice     Check signature user submits for registration.

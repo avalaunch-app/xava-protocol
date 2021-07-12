@@ -159,6 +159,9 @@ contract AllocationStaking is Ownable {
     }
 
     // View function for total reward the farm has yet to pay out.
+    // NOTE: this is not necessarily the sum of all pending sums on all pools and users
+    //      example 1: when tokens have been wiped by emergency withdraw
+    //      example 2: when one pool has no LP supply
     function totalPending() external view returns (uint256) {
         if (block.timestamp <= startTimestamp) {
             return 0;
@@ -197,9 +200,9 @@ contract AllocationStaking is Ownable {
     function updatePoolWithFee(uint256 _pid, uint256 _depositFee) internal {
         PoolInfo storage pool = poolInfo[_pid];
         uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
-
+        
         if (lastTimestamp <= pool.lastRewardTimestamp) {
-            return;
+            lastTimestamp = pool.lastRewardTimestamp;
         }
         uint256 lpSupply = pool.totalDeposits;
 
@@ -220,10 +223,8 @@ contract AllocationStaking is Ownable {
         uint256 erc20Reward = reward.mul(pool.allocPoint).div(totalAllocPoint) ;
 
         pool.accERC20PerShare = pool.accERC20PerShare.add(erc20Reward.mul(1e36).div(lpSupply));
-        pool.lastRewardTimestamp = block.timestamp;
 
-        // Increase total XAVA redistributed over time.
-        totalXavaRedistributed = totalXavaRedistributed.add(_depositFee);
+        pool.lastRewardTimestamp = lastTimestamp;
     }
 
     // Deposit LP tokens to Farm for ERC20 allocation.
@@ -274,6 +275,7 @@ contract AllocationStaking is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
+        pool.totalDeposits = pool.totalDeposits.sub(user.amount);
         user.amount = 0;
         user.rewardDebt = 0;
     }
