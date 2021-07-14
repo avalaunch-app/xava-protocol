@@ -46,6 +46,12 @@ module.exports = {
       chainId: 43114,
       accounts: [process.env.PK]
     },
+    mainnetStaging: {
+      url: 'https://api.avax.network/ext/bc/C/rpc',
+      gasPrice: 225000000000,
+      chainId: 43114,
+      accounts: [process.env.PK]
+    },
     local: {
       url: 'http://localhost:8545',
     },

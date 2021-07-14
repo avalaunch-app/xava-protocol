@@ -41,7 +41,7 @@ async function main() {
     const allocationStaking = await AllocationStaking.deploy(
         token.address,
         ethers.utils.parseEther("0.01"),
-        currentTimestamp + 500,
+        currentTimestamp + 1000,
         salesFactory.address,
         ethers.utils.parseEther("3",6) //3 %s
     );

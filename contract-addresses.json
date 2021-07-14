@@ -17,5 +17,15 @@
         "ParticipationVestingPrivate": "0x4f579b76B9413D3C4a7981A7eA0BbBB7A0D54332",
         "DevToken": "0xBf838Ffffd86805933d8C1F971acfD59bbaE5026",
         "FarmingXava": "0xE82AAE7fc62547BdFC36689D0A83dE36FF034A68"
+    },
+    "local": {
+        "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
+        "Admin": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE"
+    },
+    "mainnetStaging": {
+        "MOCK-XAVA": "0xa3C0d3BF2f0ca82502c85C2979356A0494706756",
+        "Admin": "0x2c9491f5924Eac15773a6d5CDb3C73db9F78841f",
+        "SalesFactory": "0xd599E0d2F67268cCF4E41fE228214DA1e2fBEEFc",
+        "AllocationStaking": "0x948D44414d9821FbB02B671bC99f5c39d94fABca"
     }
 }
