@@ -15,9 +15,9 @@ contract AvalaunchSale {
     using SafeERC20 for IERC20;
 
     // Pointer to Allocation staking contract, where burnXavaFromUser will be called.
-    IAllocationStaking allocationStakingContract;
+    IAllocationStaking public allocationStakingContract;
 
-    ISalesFactory factory;
+    ISalesFactory public factory;
 
     // Admin contract
     IAdmin public admin;
@@ -80,7 +80,8 @@ contract AvalaunchSale {
     // Mapping user to his participation
     mapping (address => Participation) public userToParticipation;
     // User to round for which he registered
-    mapping (address => uint256) addressToRoundRegisteredFor;
+    mapping (address => uint256) public addressToRoundRegisteredFor;
+
     // mapping if user is participated or not
     mapping (address => bool) public isParticipated;
     // One ether in weis
@@ -165,10 +166,10 @@ contract AvalaunchSale {
     onlyAdmin
     {
         require(sale.isCreated == true);
-        require(registration.registrationTimeStarts == 0);        
+        require(registration.registrationTimeStarts == 0);
         require(_registrationTimeStarts >= block.timestamp && _registrationTimeEnds > _registrationTimeStarts);
         require(_registrationTimeEnds < sale.saleEnd);
-        
+
         if (roundIds.length > 0) {
             require(_registrationTimeEnds < roundIdToRound[roundIds[0]].startTime);
         }
@@ -196,8 +197,7 @@ contract AvalaunchSale {
             require(startTimes[i] > registration.registrationTimeEnds);
             require(startTimes[i] < sale.saleEnd);
             require(startTimes[i] >= block.timestamp);
-            require(maxParticipations[i] > 0);
-            
+
             require(startTimes[i] > lastTimestamp);
             lastTimestamp = startTimes[i];
 

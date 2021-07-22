@@ -33,7 +33,7 @@ describe("AvalaunchSale", function() {
   const PARTICIPATION_VALUE = 80;
   const AMOUNT_OF_XAVA_TO_BURN = 0;
 
-  const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
+  const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
   function firstOrDefault(first, key, def) {
     if (first && first[key] !== undefined) {
@@ -51,7 +51,7 @@ describe("AvalaunchSale", function() {
     const {v, r, s} = ethUtil.ecsign(prefixedHash, Buffer.from(privateKey, 'hex'))
 
     // generate signature by concatenating r(32), s(32), v(1) in this order
-    // Reference: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/76fe1548aee183dfcc395364f0745fe153a56141/contracts/ECRecovery.sol#L39-L43 
+    // Reference: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/76fe1548aee183dfcc395364f0745fe153a56141/contracts/ECRecovery.sol#L39-L43
     const vb = Buffer.from([v]);
     const signature = Buffer.concat([r, s, vb]);
 
@@ -105,7 +105,7 @@ describe("AvalaunchSale", function() {
     const saleOwner = firstOrDefault(params, 'saleOwner', deployer.address);
     const tokenPriceInAVAX = firstOrDefault(params, 'tokenPriceInAVAX', TOKEN_PRICE_IN_AVAX);
     const amountOfTokensToSell = firstOrDefault(params, 'amountOfTokensToSell', AMOUNT_OF_TOKENS_TO_SELL);
-    const saleEnd = blockTimestamp + firstOrDefault(params, 'saleEndDelta', SALE_END_DELTA); 
+    const saleEnd = blockTimestamp + firstOrDefault(params, 'saleEndDelta', SALE_END_DELTA);
     const tokensUnlockTime = blockTimestamp + firstOrDefault(params, 'tokensUnlockTimeDelta', TOKENS_UNLOCK_TIME_DELTA);
 
     return AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
@@ -114,7 +114,7 @@ describe("AvalaunchSale", function() {
   async function setRegistrationTime(params) {
     const blockTimestamp = await getCurrentBlockTimestamp();
 
-    const registrationTimeStarts = blockTimestamp + firstOrDefault(params, 'registrationTimeStartsDelta', REGISTRATION_TIME_STARTS_DELTA); 
+    const registrationTimeStarts = blockTimestamp + firstOrDefault(params, 'registrationTimeStartsDelta', REGISTRATION_TIME_STARTS_DELTA);
     const registrationTimeEnds = blockTimestamp + firstOrDefault(params, 'registrationTimeEndsDelta', REGISTRATION_TIME_ENDS_DELTA);
 
     return AvalaunchSale.setRegistrationTime(registrationTimeStarts, registrationTimeEnds);
@@ -149,10 +149,10 @@ describe("AvalaunchSale", function() {
 
   async function registerForSale(params) {
     const registrant = firstOrDefault(params, 'sender', deployer);
-    
+
     const roundId = firstOrDefault(params, 'registerRound', FIRST_ROUND)
     const sig = signRegistration(registrant.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-    
+
     await AvalaunchSale.connect(registrant).registerForSale(sig, roundId);
   }
 
@@ -170,7 +170,7 @@ describe("AvalaunchSale", function() {
     Admin = await AdminFactory.deploy([deployer.address, alice.address, bob.address]);
 
     const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);    
+    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);
 
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
@@ -189,7 +189,7 @@ describe("AvalaunchSale", function() {
     it("Should setup the token correctly", async function() {
       // Given
       let admin = await AvalaunchSale.admin();
-  
+
       // Then
       expect(admin).to.equal(Admin.address);
     });
@@ -202,7 +202,7 @@ describe("AvalaunchSale", function() {
         const saleOwner = deployer.address;
         const tokenPriceInAVAX = TOKEN_PRICE_IN_AVAX;
         const amountOfTokensToSell = AMOUNT_OF_TOKENS_TO_SELL;
-        const saleEnd = blockTimestamp + SALE_END_DELTA; 
+        const saleEnd = blockTimestamp + SALE_END_DELTA;
         const tokensUnlockTime = blockTimestamp + TOKENS_UNLOCK_TIME_DELTA;
 
         // When
@@ -237,7 +237,7 @@ describe("AvalaunchSale", function() {
         const saleOwner = deployer.address;
         const tokenPriceInAVAX = TOKEN_PRICE_IN_AVAX;
         const amountOfTokensToSell = AMOUNT_OF_TOKENS_TO_SELL;
-        const saleEnd = blockTimestamp + SALE_END_DELTA; 
+        const saleEnd = blockTimestamp + SALE_END_DELTA;
         const tokensUnlockTime = blockTimestamp + TOKENS_UNLOCK_TIME_DELTA;
 
         // Then
@@ -291,7 +291,7 @@ describe("AvalaunchSale", function() {
         await setSaleParams();
         const blockTimestamp = await getCurrentBlockTimestamp();
 
-        const registrationTimeStarts = blockTimestamp + REGISTRATION_TIME_STARTS_DELTA; 
+        const registrationTimeStarts = blockTimestamp + REGISTRATION_TIME_STARTS_DELTA;
         const registrationTimeEnds = blockTimestamp + REGISTRATION_TIME_ENDS_DELTA;
 
         // When
@@ -317,7 +317,7 @@ describe("AvalaunchSale", function() {
         await setSaleParams();
         const blockTimestamp = await getCurrentBlockTimestamp();
 
-        const registrationTimeStarts = blockTimestamp + REGISTRATION_TIME_STARTS_DELTA; 
+        const registrationTimeStarts = blockTimestamp + REGISTRATION_TIME_STARTS_DELTA;
         const registrationTimeEnds = blockTimestamp + REGISTRATION_TIME_ENDS_DELTA;
 
         // Then
@@ -338,7 +338,7 @@ describe("AvalaunchSale", function() {
       it("Should not set registration times if registration start time is in the past", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRegistrationTime({registrationTimeStartsDelta: -100})).to.be.reverted;
       });
@@ -346,7 +346,7 @@ describe("AvalaunchSale", function() {
       it("Should not set registration times if registration end time is in the past", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRegistrationTime({registrationTimeEndsDelta: -100})).to.be.reverted;
       });
@@ -354,7 +354,7 @@ describe("AvalaunchSale", function() {
       it("Should not set registration times if registration end time is before start time", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRegistrationTime({registrationTimeStartsDelta: 30, registrationTimeEndsDelta: 20})).to.be.reverted;
       });
@@ -362,7 +362,7 @@ describe("AvalaunchSale", function() {
       it("Should not set registration times if registration end time is equal to start time", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRegistrationTime({registrationTimeStartsDelta: 30, registrationTimeEndsDelta: 30})).to.be.reverted;
       });
@@ -375,7 +375,7 @@ describe("AvalaunchSale", function() {
       it("Should not set registration times beyond sale end", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRegistrationTime({registrationTimeStartsDelta: 20, registrationTimeEndsDelta: SALE_END_DELTA + 100})).to.be.reverted;
       });
@@ -384,7 +384,7 @@ describe("AvalaunchSale", function() {
         // Given
         await setSaleParams();
         await setRounds();
-        
+
         // Then
         await expect(setRegistrationTime({registrationTimeStartsDelta: 1, registrationTimeEndsDelta: ROUNDS_START_DELTAS[0]})).to.be.reverted;
       });
@@ -422,7 +422,7 @@ describe("AvalaunchSale", function() {
         // Given
         await setSaleParams();
         await setRounds();
-        
+
         // Then
         await expect(setRounds()).to.be.revertedWith("setRounds: Rounds are already");
       });
@@ -430,7 +430,7 @@ describe("AvalaunchSale", function() {
       it("Should not set sale rounds if times and participation arrays lengths don't match", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRounds({maxParticipations: [10, 100]})).to.be.revertedWith("setRounds: Bad input.");
       });
@@ -438,7 +438,7 @@ describe("AvalaunchSale", function() {
       it("Should not set sale rounds if round start times are not sorted", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRounds({startTimes: [50, 45, 60]})).to.be.reverted;
       });
@@ -446,7 +446,7 @@ describe("AvalaunchSale", function() {
       it("Should not set sale rounds if 0 rounds are provided", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRounds({startTimes: [], maxParticipations: []})).to.be.reverted;
       });
@@ -454,7 +454,7 @@ describe("AvalaunchSale", function() {
       it("Should not set sale rounds if one round's max participation is 0", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRounds({maxParticipations: [10, 0, 1000]})).to.be.reverted;
       });
@@ -462,7 +462,7 @@ describe("AvalaunchSale", function() {
       it("Should not set sale rounds if start times are in the past", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRounds({startTimes: [-20, 0, 10], maxParticipations: [10, 10, 10]})).to.be.reverted;
       });
@@ -470,7 +470,7 @@ describe("AvalaunchSale", function() {
       it("Should not set sale rounds if start times are after sale end date", async function() {
         // Given
         await setSaleParams();
-        
+
         // Then
         await expect(setRounds({startTimes: [SALE_END_DELTA-10, SALE_END_DELTA, SALE_END_DELTA+10], maxParticipations: [10, 10, 10]})).to.be.reverted;
       });
@@ -479,7 +479,7 @@ describe("AvalaunchSale", function() {
         // Given
         await setSaleParams();
         await setRegistrationTime();
-        
+
         // Then
         await expect(setRounds({startTimes: [REGISTRATION_TIME_ENDS_DELTA-10, REGISTRATION_TIME_ENDS_DELTA, REGISTRATION_TIME_ENDS_DELTA+10], maxParticipations: [10, 10, 10]})).to.be.reverted;
       });
@@ -580,7 +580,7 @@ describe("AvalaunchSale", function() {
         const currentStartRound1 = parseInt((await AvalaunchSale.roundIdToRound(1)).startTime);
         const currentStartRound2 = parseInt((await AvalaunchSale.roundIdToRound(2)).startTime);
         const currentStartRound3 = parseInt((await AvalaunchSale.roundIdToRound(3)).startTime);
-        
+
         // When
         await AvalaunchSale.postponeSale(timeToShift);
 
@@ -630,7 +630,7 @@ describe("AvalaunchSale", function() {
         const timeToAdd = 10;
         await runFullSetup();
         const currentRegistrationEnd = parseInt((await AvalaunchSale.registration()).registrationTimeEnds);
-        
+
         // When
         await AvalaunchSale.extendRegistrationPeriod(timeToAdd);
 
@@ -692,7 +692,7 @@ describe("AvalaunchSale", function() {
         const caps = [20, 30];
         await runFullSetup();
         await Admin.removeAdmin(deployer.address);
-        
+
         // Then
         await expect(AvalaunchSale.setCapPerRound(rounds, caps)).to.be.revertedWith("Only admin can call this function.");
       });
@@ -789,7 +789,7 @@ describe("AvalaunchSale", function() {
 
         const roundId = 1;
         const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-        
+
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
 
@@ -807,7 +807,7 @@ describe("AvalaunchSale", function() {
 
         const roundId = 0;
         const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-        
+
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
 
@@ -815,7 +815,7 @@ describe("AvalaunchSale", function() {
         await expect(AvalaunchSale.registerForSale(sig, roundId))
           .to.be.revertedWith("Round ID can not be 0.");
       });
-      
+
       it("Should not register after registration ends", async function() {
         // Given
         await runFullSetup();
@@ -823,7 +823,7 @@ describe("AvalaunchSale", function() {
 
         const roundId = 1;
         const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-        
+
         // When
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_ENDS_DELTA + 1]);
         await ethers.provider.send("evm_mine");
@@ -840,7 +840,7 @@ describe("AvalaunchSale", function() {
 
         const roundId = 1;
         const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-        
+
         // Then
         await expect(AvalaunchSale.registerForSale(sig, roundId))
           .to.be.revertedWith("Registration gate is closed.");
@@ -853,10 +853,10 @@ describe("AvalaunchSale", function() {
 
         const roundId = 1;
         const sig = signRegistration(alice.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-        
+
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // Then
         await expect(AvalaunchSale.registerForSale(sig, roundId))
           .to.be.revertedWith("Invalid signature");
@@ -869,7 +869,7 @@ describe("AvalaunchSale", function() {
 
         const roundId = 1;
         const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-        
+
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
 
@@ -887,7 +887,7 @@ describe("AvalaunchSale", function() {
 
         const roundId = 20;
         const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-        
+
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
 
@@ -902,7 +902,7 @@ describe("AvalaunchSale", function() {
 
         const roundId = 2;
         const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-        
+
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
 
@@ -1161,7 +1161,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // When
         await participate();
 
@@ -1190,7 +1190,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // When
         await participate();
         await participate({sender: alice});
@@ -1225,7 +1225,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // Then
         await expect(participate({participationRound: 0}))
           .to.be.revertedWith("Round can not be 0.");
@@ -1242,7 +1242,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // Then
         await expect(participate({participationAmount: ROUNDS_MAX_PARTICIPATIONS[0]+1}))
           .to.be.revertedWith("Overflowing maximal participation for this round.");
@@ -1259,7 +1259,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // When
         const sig = signParticipation(alice.address, PARTICIPATION_AMOUNT, PARTICIPATION_ROUND, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
@@ -1279,7 +1279,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         await participate();
 
         // Then
@@ -1298,7 +1298,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[2] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // Then
         await expect(participate({participationRound: 2}))
           .to.be.revertedWith("You can not participate in this round.");
@@ -1315,7 +1315,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // Then
         await expect(participate({participationRound: 3}))
           .to.be.revertedWith("You can not participate in this round.");
@@ -1332,7 +1332,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // Then
         await expect(participate({participationValue: (PARTICIPATION_AMOUNT+5) * TOKEN_PRICE_IN_AVAX}))
           .to.be.revertedWith("Trying to buy more than allowed.");
@@ -1363,7 +1363,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // Then
         await expect(participate()).to.be.reverted;
       });
@@ -1397,7 +1397,7 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
-        
+
         // Then
         await expect(participate({participationValue: 0})).to.be.reverted;
       });
@@ -1539,7 +1539,7 @@ describe("AvalaunchSale", function() {
 
         const previousBalance = await ethers.provider.getBalance(deployer.address);
         const previousTokenBalance = await XavaToken.balanceOf(deployer.address);
-        
+
         // When
         await AvalaunchSale.withdrawEarningsAndLeftover(false, {gasPrice: 0});
 
@@ -1577,7 +1577,7 @@ describe("AvalaunchSale", function() {
         // Then
         await expect(AvalaunchSale.withdrawEarningsAndLeftover(false, {gasPrice: 0})).to.be.reverted;
       });
-      
+
       it("Should not withdraw before sale ended", async function() {
         // Given
         await runFullSetup();
@@ -1639,7 +1639,7 @@ describe("AvalaunchSale", function() {
 
         const previousBalance = await ethers.provider.getBalance(deployer.address);
         const previousTokenBalance = await XavaToken.balanceOf(deployer.address);
-        
+
         // When
         await AvalaunchSale.withdrawEarningsAndLeftover(true, {gasPrice: 0});
 
@@ -1676,7 +1676,7 @@ describe("AvalaunchSale", function() {
 
         const previousBalance = await ethers.provider.getBalance(deployer.address);
         const previousTokenBalance = await XavaToken.balanceOf(deployer.address);
-        
+
         // When
         await AvalaunchSale.withdrawEarningsAndLeftover(false, {gasPrice: 0});
 
@@ -1711,7 +1711,7 @@ describe("AvalaunchSale", function() {
 
         const previousBalance = await ethers.provider.getBalance(deployer.address);
         const previousTokenBalance = await XavaToken.balanceOf(deployer.address);
-        
+
         // When
         await AvalaunchSale.withdrawEarningsAndLeftover(true, {gasPrice: 0});
 
@@ -1744,7 +1744,7 @@ describe("AvalaunchSale", function() {
 
         const previousBalance = await ethers.provider.getBalance(deployer.address);
         const previousTokenBalance = await XavaToken.balanceOf(deployer.address);
-        
+
         // When
         await AvalaunchSale.withdrawEarningsAndLeftover(false, {gasPrice: 0});
 
@@ -1775,7 +1775,7 @@ describe("AvalaunchSale", function() {
 
         const previousBalance = await ethers.provider.getBalance(deployer.address);
         const previousTokenBalance = await XavaToken.balanceOf(deployer.address);
-        
+
         // When
         await AvalaunchSale.withdrawEarningsAndLeftover(true, {gasPrice: 0});
 

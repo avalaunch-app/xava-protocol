@@ -11,6 +11,22 @@ function getSavedContractAddresses() {
     const addrs = JSON.parse(json)
     return addrs
 }
+function getSavedContractABI() {
+    let json
+    try {
+        json = fs.readFileSync(path.join(__dirname, `../contract-abis.json`))
+    } catch (err) {
+        json = '{}'
+    }
+    return JSON.parse(json)
+}
+
+function saveContractAbi(network, contract, abi) {
+    const abis = getSavedContractABI()
+    abis[network] = abis[network] || {}
+    abis[network][contract] = abi
+    fs.writeFileSync(path.join(__dirname, `../contract-abis.json`), JSON.stringify(abis, null, '    '))
+}
 
 function saveContractAddress(network, contract, address) {
     const addrs = getSavedContractAddresses()
@@ -22,4 +38,6 @@ function saveContractAddress(network, contract, address) {
 module.exports = {
     getSavedContractAddresses,
     saveContractAddress,
+    saveContractAbi,
+    getSavedContractABI
 }

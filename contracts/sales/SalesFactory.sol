@@ -69,6 +69,15 @@ contract SalesFactory {
         return allSales.length;
     }
 
+    // Function
+    function getLastDeployedSale() external view returns (address) {
+        //
+        if(allSales.length > 0) {
+            return allSales[allSales.length - 1];
+        }
+        return address(0);
+    }
+
 
     // Function to get all sales
     function getAllSales(uint startIndex, uint endIndex) external view returns (address[] memory) {

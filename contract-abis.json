@@ -223,6 +223,19 @@
             },
             {
                 "inputs": [],
+                "name": "getLastDeployedSale",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
                 "name": "getNumberOfSalesDeployed",
                 "outputs": [
                     {
@@ -1173,11 +1186,43 @@
                 "type": "event"
             },
             {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "name": "addressToRoundRegisteredFor",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
                 "inputs": [],
                 "name": "admin",
                 "outputs": [
                     {
                         "internalType": "contract IAdmin",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "allocationStakingContract",
+                "outputs": [
+                    {
+                        "internalType": "contract IAllocationStaking",
                         "name": "",
                         "type": "address"
                     }
@@ -1271,6 +1316,19 @@
                 "name": "extendRegistrationPeriod",
                 "outputs": [],
                 "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "factory",
+                "outputs": [
+                    {
+                        "internalType": "contract ISalesFactory",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
                 "type": "function"
             },
             {
