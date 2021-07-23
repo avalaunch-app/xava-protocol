@@ -73,6 +73,8 @@ contract AvalaunchSale {
     // Registration
     Registration public registration;
 
+    // Number of users participated in the sale.
+    uint256 public numberOfParticipants;
     // Array storing IDS of rounds (IDs start from 1, so they can't be mapped as array indexes
     uint256 [] public roundIds;
     // Mapping round Id to round
@@ -393,6 +395,9 @@ contract AvalaunchSale {
 
         // Mark user is participated
         isParticipated[msg.sender] = true;
+
+        // Increment number of participants in the Sale.
+        numberOfParticipants ++;
 
         emit TokensSold(msg.sender, amountOfTokensBuying);
     }
