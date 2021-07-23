@@ -183,13 +183,16 @@ contract AllocationStaking is Ownable {
     function redistributeXava(uint256 _pid, address _user, uint256 _amountToRedistribute) external
     onlyVerifiedSales
     {
-        UserInfo storage user = userInfo[_pid][_user];
-        PoolInfo storage pool = poolInfo[_pid];
+        if(_amountToRedistribute > 0) {
+            UserInfo storage user = userInfo[_pid][_user];
+            PoolInfo storage pool = poolInfo[_pid];
 
-        updatePoolWithFee(_pid, _amountToRedistribute);
-        // Small amount from deposits is moved to the rewards amount
-        pool.totalDeposits = pool.totalDeposits.sub(_amountToRedistribute);
-        user.amount = user.amount.sub(_amountToRedistribute);
+
+            updatePoolWithFee(_pid, _amountToRedistribute);
+            // Small amount from deposits is moved to the rewards amount
+            pool.totalDeposits = pool.totalDeposits.sub(_amountToRedistribute);
+            user.amount = user.amount.sub(_amountToRedistribute);
+        }
     }
 
     // Update reward variables of the given pool to be up-to-date.
