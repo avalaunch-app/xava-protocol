@@ -200,7 +200,7 @@ contract AllocationStaking is Ownable {
     function updatePoolWithFee(uint256 _pid, uint256 _depositFee) internal {
         PoolInfo storage pool = poolInfo[_pid];
         uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
-        
+
         if (lastTimestamp <= pool.lastRewardTimestamp) {
             lastTimestamp = pool.lastRewardTimestamp;
         }
@@ -232,7 +232,7 @@ contract AllocationStaking is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        uint depositFee = _amount.mul(depositFeePercent).div(10e8);
+        uint depositFee = _amount.mul(depositFeePercent).div(depositFeePrecision);
         uint depositAmount = _amount.sub(depositFee);
 
         // Update pool including fee for people staking
