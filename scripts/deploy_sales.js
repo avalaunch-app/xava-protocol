@@ -11,24 +11,25 @@ async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
 
     const salesFactory = await hre.ethers.getContractAt('SalesFactory', contracts['SalesFactory']);
-
-    const tx0 = await salesFactory.setAllocationStaking(contracts['AllocationStaking']);
     const tx = await salesFactory.deploySale();
+    console.log('Sale deployed.');
 
-    console.log('Here');
-
-    let lastDeployedSale = await salesFactory.getAllSales(0,1);
-    lastDeployedSale = lastDeployedSale[0];
+    const lastDeployedSale = await salesFactory.getLastDeployedSale();
     console.log('Deployed Sale is: ', lastDeployedSale);
 
+    const numberOfSales = await salesFactory.getNumberOfSalesDeployed();
+
+    const Token = await hre.ethers.getContractFactory("XavaToken");
+    const token = await Token.deploy(`MOCK-SALE-${numberOfSales.toString()}`, `MOCK-SALE-${numberOfSales.toString()}`, ethers.utils.parseEther('5000000'), 18);
+    await token.deployed();
+    console.log("Sale Token deployed to: ", token.address);
 
     const sale = await hre.ethers.getContractAt('AvalaunchSale', lastDeployedSale);
-
     const currentTimestamp = await getCurrentBlockTimestamp();
 
 
     const totalTokens = ethers.utils.parseEther('50000');
-    const tokenPriceInAvax = ethers.utils.parseEther("0.5");
+    const tokenPriceInAvax = ethers.utils.parseEther("0.2");
     const saleOwner = '0x0c3e4509ee2EdD1BE61230BdE49b2FfC7a8ca88b';
     const saleEndTime = currentTimestamp + 86400;
     const tokensUnlockTime = currentTimestamp + 89600;
@@ -39,13 +40,14 @@ async function main() {
     const publicRound = stakingRound + 7200; // Staking round 2 hours
 
     await sale.setSaleParams(
-        contracts['MOCK-XAVA'],
+        token.address,
         saleOwner,
         tokenPriceInAvax,
         totalTokens,
         saleEndTime,
         tokensUnlockTime
     );
+
     console.log('Params set.');
 
     await sale.setRegistrationTime(
@@ -76,8 +78,7 @@ async function main() {
     });
 
 
-    const xavaMock = await hre.ethers.getContractAt('XavaToken',contracts['MOCK-XAVA']);
-    await xavaMock.approve(sale.address, totalTokens);
+    await token.approve(sale.address, totalTokens);
     await sale.depositTokens();
 }
 
