@@ -10,6 +10,7 @@ async function main() {
 
     const contracts = getSavedContractAddresses()[hre.network.name];
 
+
     const salesFactory = await hre.ethers.getContractAt('SalesFactory', contracts['SalesFactory']);
     const tx = await salesFactory.deploySale();
     console.log('Sale deployed.');
@@ -31,13 +32,13 @@ async function main() {
     const totalTokens = ethers.utils.parseEther('50000');
     const tokenPriceInAvax = ethers.utils.parseEther("0.2");
     const saleOwner = '0x0c3e4509ee2EdD1BE61230BdE49b2FfC7a8ca88b';
-    const saleEndTime = currentTimestamp + 86400;
-    const tokensUnlockTime = currentTimestamp + 89600;
+    const saleEndTime = currentTimestamp + 10800;
+    const tokensUnlockTime = currentTimestamp + 11100;
     const registrationStart = currentTimestamp + 600;
-    const registrationEnd = registrationStart + 7200
-    const validatorRound = registrationEnd + 10800; //
-    const stakingRound = validatorRound + 1800; // validator round 30 mins
-    const publicRound = stakingRound + 7200; // Staking round 2 hours
+    const registrationEnd = registrationStart + 1800;
+    const validatorRound = registrationEnd + 300; //
+    const stakingRound = validatorRound + 600; // validator round 30 mins
+    const publicRound = stakingRound + 2400; // Staking round 2 hours
 
     await sale.setSaleParams(
         token.address,
@@ -66,8 +67,8 @@ async function main() {
 
     console.log({
         saleOwner,
-        tokenPriceInAvax,
-        totalTokens,
+        tokenPriceInAvax: tokenPriceInAvax.toString(),
+        totalTokens: totalTokens.toString(),
         saleEndTime,
         tokensUnlockTime,
         registrationStart,
