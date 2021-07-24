@@ -58,6 +58,8 @@ async function main() {
 
     await allocationStaking.fund(totalRewards);
     console.log('Funded Allocation Staking contract.');
+
+    salesFactory.setAllocationStaking(allocationStaking.address);
 }
 
 
