@@ -49,9 +49,9 @@ contract AvalaunchSale {
 
     // Participation structure
     struct Participation {
-        uint256 amount;
+        uint256 amountBought;
         uint256 amountAVAXPaid;
-        uint256 timestamp;
+        uint256 timeParticipated;
         uint256 roundId;
         bool isWithdrawn;
     }
@@ -375,9 +375,9 @@ contract AvalaunchSale {
 
         // Create participation object
         Participation memory p = Participation({
-            amount: amountOfTokensBuying,
+            amountBought: amountOfTokensBuying,
             amountAVAXPaid: msg.value,
-            timestamp: block.timestamp,
+            timeParticipated: block.timestamp,
             roundId: roundId,
             isWithdrawn: false
         });
@@ -406,9 +406,9 @@ contract AvalaunchSale {
 
         if(!p.isWithdrawn) {
             p.isWithdrawn = true;
-            sale.token.safeTransfer(msg.sender, p.amount);
+            sale.token.safeTransfer(msg.sender, p.amountBought);
             // Emit event that tokens are withdrawn
-            emit TokensWithdrawn(msg.sender, p.amount);
+            emit TokensWithdrawn(msg.sender, p.amountBought);
         } else {
             revert("Tokens already withdrawn.");
         }
@@ -538,9 +538,9 @@ contract AvalaunchSale {
     function getParticipation(address _user) external view returns (uint256, uint256, uint256, uint256, bool) {
         Participation memory p = userToParticipation[_user];
         return (
-            p.amount,
+            p.amountBought,
             p.amountAVAXPaid,
-            p.timestamp,
+            p.timeParticipated,
             p.roundId,
             p.isWithdrawn
         );
