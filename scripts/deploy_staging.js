@@ -43,7 +43,7 @@ async function main() {
         ethers.utils.parseEther("0.01"),
         currentTimestamp + 1000,
         salesFactory.address,
-        ethers.utils.parseUnits("0.3", 8) //3 %s
+        ethers.utils.parseUnits("300000", "10000000") //3 %s
     );
     await allocationStaking.deployed();
     saveContractAddress(hre.network.name, "AllocationStaking", allocationStaking.address);

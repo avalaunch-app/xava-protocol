@@ -29,16 +29,16 @@ async function main() {
     const currentTimestamp = await getCurrentBlockTimestamp();
 
 
-    const totalTokens = ethers.utils.parseEther('50000');
-    const tokenPriceInAvax = ethers.utils.parseEther("0.2");
+    const totalTokens = ethers.utils.parseEther('40000');
+    const tokenPriceInAvax = ethers.utils.parseEther("0.000015");
     const saleOwner = '0x0c3e4509ee2EdD1BE61230BdE49b2FfC7a8ca88b';
-    const saleEndTime = currentTimestamp + 10800;
-    const tokensUnlockTime = currentTimestamp + 11100;
-    const registrationStart = currentTimestamp + 600;
-    const registrationEnd = registrationStart + 1800;
-    const validatorRound = registrationEnd + 300; //
-    const stakingRound = validatorRound + 600; // validator round 30 mins
-    const publicRound = stakingRound + 2400; // Staking round 2 hours
+    const saleEndTime = currentTimestamp + 3300;
+    const tokensUnlockTime = currentTimestamp + 3700;
+    const registrationStart = currentTimestamp + 300;
+    const registrationEnd = registrationStart + 1200;
+    const validatorRound = registrationEnd + 600; //
+    const stakingRound = validatorRound + 300; // validator round 30 mins
+    const publicRound = stakingRound + 600; // Staking round 2 hours
 
     await sale.setSaleParams(
         token.address,
@@ -60,7 +60,7 @@ async function main() {
 
     await sale.setRounds(
         [validatorRound, stakingRound, publicRound],
-        [0,0,0]
+        [ethers.utils.parseEther('10000'),ethers.utils.parseEther('10000'),ethers.utils.parseEther('10000')]
     );
 
     console.log('Rounds set.');
