@@ -50,6 +50,7 @@ contract AvalaunchSale {
     // Participation structure
     struct Participation {
         uint256 amount;
+        uint256 amountAVAXPaid;
         uint256 timestamp;
         uint256 roundId;
         bool isWithdrawn;
@@ -83,7 +84,6 @@ contract AvalaunchSale {
     mapping (address => Participation) public userToParticipation;
     // User to round for which he registered
     mapping (address => uint256) public addressToRoundRegisteredFor;
-
     // mapping if user is participated or not
     mapping (address => bool) public isParticipated;
     // One ether in weis
@@ -100,12 +100,6 @@ contract AvalaunchSale {
         _;
     }
 
-    modifier saleSet {
-        // TODO: Iterate and make sure all the caps are set
-        // TODO: Check that price is updated
-        // TODO: Extend registration period, making sure it ends at least 24 hrs before 1st round start
-        _;
-    }
 
     event TokensSold(address user, uint256 amount);
     event UserRegistered(address user, uint256 roundId);
@@ -382,6 +376,7 @@ contract AvalaunchSale {
         // Create participation object
         Participation memory p = Participation({
             amount: amountOfTokensBuying,
+            amountAVAXPaid: msg.value,
             timestamp: block.timestamp,
             roundId: roundId,
             isWithdrawn: false
@@ -540,10 +535,11 @@ contract AvalaunchSale {
     }
 
     /// @notice     Function to get participation for passed user address
-    function getParticipation(address _user) external view returns (uint256, uint256, uint256, bool) {
+    function getParticipation(address _user) external view returns (uint256, uint256, uint256, uint256, bool) {
         Participation memory p = userToParticipation[_user];
         return (
             p.amount,
+            p.amountAVAXPaid,
             p.timestamp,
             p.roundId,
             p.isWithdrawn
