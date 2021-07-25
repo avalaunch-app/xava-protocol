@@ -129,7 +129,8 @@ contract FarmingXava is Ownable {
 
         if (block.timestamp > pool.lastRewardTimestamp && lpSupply != 0) {
             uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
-            uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
+            uint256 timestampToCompare = pool.lastRewardTimestamp < endTimestamp ? pool.lastRewardTimestamp : endTimestamp;
+            uint256 nrOfSeconds = lastTimestamp.sub(timestampToCompare);
             uint256 erc20Reward = nrOfSeconds.mul(rewardPerSecond).mul(pool.allocPoint).div(totalAllocPoint);
             accERC20PerShare = accERC20PerShare.add(erc20Reward.mul(1e36).div(lpSupply));
         }
