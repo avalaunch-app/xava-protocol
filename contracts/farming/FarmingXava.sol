@@ -46,7 +46,7 @@ contract FarmingXava is Ownable {
     // Address of the ERC20 Token contract.
     IERC20 public erc20;
     // The total amount of ERC20 that's paid out as reward.
-    uint256 public paidOut = 0;
+    uint256 public paidOut;
     // ERC20 tokens rewarded per second.
     uint256 public rewardPerSecond;
     // Total rewards added to farm
@@ -56,7 +56,7 @@ contract FarmingXava is Ownable {
     // Info of each user that stakes LP tokens.
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
-    uint256 public totalAllocPoint = 0;
+    uint256 public totalAllocPoint;
 
     // The timestamp when farming starts.
     uint256 public startTimestamp;
