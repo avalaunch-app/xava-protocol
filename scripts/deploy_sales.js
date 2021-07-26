@@ -12,6 +12,7 @@ async function main() {
 
 
     const salesFactory = await hre.ethers.getContractAt('SalesFactory', contracts['SalesFactory']);
+    await salesFactory.setAllocationStaking(contracts['AllocationStaking']);
     const tx = await salesFactory.deploySale();
     console.log('Sale deployed.');
 
@@ -29,16 +30,17 @@ async function main() {
     const currentTimestamp = await getCurrentBlockTimestamp();
 
 
-    const totalTokens = ethers.utils.parseEther('40000');
-    const tokenPriceInAvax = ethers.utils.parseEther("0.000015");
-    const saleOwner = '0x0c3e4509ee2EdD1BE61230BdE49b2FfC7a8ca88b';
-    const saleEndTime = currentTimestamp + 3300;
-    const tokensUnlockTime = currentTimestamp + 3700;
+    const totalTokens = ethers.utils.parseEther('25000');
+    const tokenPriceInAvax = ethers.utils.parseEther("0.001");
+    const saleOwner = '0x2655D93eF7FfBF780aB9259825A8bF2b3d8A703A';
+
     const registrationStart = currentTimestamp + 300;
-    const registrationEnd = registrationStart + 1200;
-    const validatorRound = registrationEnd + 600; //
-    const stakingRound = validatorRound + 300; // validator round 30 mins
-    const publicRound = stakingRound + 600; // Staking round 2 hours
+    const registrationEnd = registrationStart + 300;
+    const validatorRound = registrationEnd + 120; //
+    const stakingRound = validatorRound + 180; // validator round 30 mins
+    const publicRound = stakingRound + 180; // Staking round 2 hours
+    const saleEndTime = currentTimestamp + 1250;
+    const tokensUnlockTime = currentTimestamp + 1350;
 
     await sale.setSaleParams(
         token.address,
@@ -60,7 +62,7 @@ async function main() {
 
     await sale.setRounds(
         [validatorRound, stakingRound, publicRound],
-        [ethers.utils.parseEther('10000'),ethers.utils.parseEther('10000'),ethers.utils.parseEther('10000')]
+        [ethers.utils.parseEther('8300'),ethers.utils.parseEther('8300'),ethers.utils.parseEther('8300')]
     );
 
     console.log('Rounds set.');
