@@ -43,7 +43,7 @@ async function main() {
         ethers.utils.parseEther("0.01"),
         currentTimestamp + 1000,
         salesFactory.address,
-        ethers.utils.parseUnits("300000", "10000000") //3 %s
+        "100"
     );
     await allocationStaking.deployed();
     saveContractAddress(hre.network.name, "AllocationStaking", allocationStaking.address);
@@ -53,13 +53,14 @@ async function main() {
     await token.approve(allocationStaking.address, totalRewards);
     console.log('Approval for allocation staking contract done properly.');
 
+    await allocationStaking.setDepositFee(200000, 10000000);
     await allocationStaking.add(100, token.address, true);
     console.log('Create farming / staking pool.');
 
     await allocationStaking.fund(totalRewards);
     console.log('Funded Allocation Staking contract.');
 
-    salesFactory.setAllocationStaking(allocationStaking.address);
+
 }
 
 
