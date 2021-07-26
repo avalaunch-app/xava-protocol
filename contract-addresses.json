@@ -16,7 +16,8 @@
         "ParticipationVestingSeed": "0xB53E0fa6898C97A477F9c05733bdc10B78e10d6A",
         "ParticipationVestingPrivate": "0x4f579b76B9413D3C4a7981A7eA0BbBB7A0D54332",
         "DevToken": "0xBf838Ffffd86805933d8C1F971acfD59bbaE5026",
-        "FarmingXava": "0xE82AAE7fc62547BdFC36689D0A83dE36FF034A68"
+        "FarmingXava": "0xE82AAE7fc62547BdFC36689D0A83dE36FF034A68",
+        "FarmingXavaV2": "0x6E125b68F0f1963b09add1b755049e66f53CC1EA"
     },
     "local": {
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",

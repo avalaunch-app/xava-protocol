@@ -5,7 +5,7 @@ const { ethers, web3 } = hre
 async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
 
-    const rewardsToAdd = ethers.utils.parseEther("500");
+    const rewardsToAdd = ethers.utils.parseEther("50000");
 
     // Get instance of Farm V2
     const farm = await hre.ethers.getContractAt('FarmingXava', contracts['FarmingXavaV2']);
