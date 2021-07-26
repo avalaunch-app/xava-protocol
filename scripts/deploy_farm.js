@@ -7,13 +7,13 @@ async function main() {
 
     const contracts = getSavedContractAddresses()[hre.network.name];
 
-    const startSecond = 1622314800;
+    const startSecond = 1627309218;
 
-    const rewardsPerSecond = ethers.utils.parseEther("0.5");
+    const rewardsPerSecond = ethers.utils.parseEther("0.1");
 
     const allocPoints = {
-        lp: 200,
-        placeHolder: 2850
+        lp: 400,
+        placeHolder: 800
     };
 
     const FarmingXava = await hre.ethers.getContractFactory('FarmingXava');
@@ -33,7 +33,7 @@ async function main() {
     const xava = await hre.ethers.getContractAt('XavaToken', contracts['XavaToken']);
     const devToken = await hre.ethers.getContractAt('DevToken', contracts['DevToken']);
 
-    let totalRewards = ethers.utils.parseEther("500000");
+    let totalRewards = ethers.utils.parseEther("5000");
     await xava.approve(farmingXava.address, totalRewards);
     console.log('Approval for farm done properly.');
 
@@ -41,7 +41,7 @@ async function main() {
     await devToken.approve(farmingXava.address, totalSupplyDevToken);
     console.log('Dev token successfully approved.');
 
-    await farmingXava.deposit(2, totalSupplyDevToken);
+    await farmingXava.deposit(1, totalSupplyDevToken);
     console.log('Dev token deposited amount: ', totalSupplyDevToken);
 
     await farmingXava.fund(totalRewards);
