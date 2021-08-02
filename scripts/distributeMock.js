@@ -1,10 +1,7 @@
 const hre = require("hardhat");
-const { saveContractAddress, getSavedContractAddresses } = require('./utils')
+const { getSavedContractAddresses } = require('./utils')
 const { ethers, web3 } = hre
 
-async function getCurrentBlockTimestamp() {
-    return (await ethers.provider.getBlock('latest')).timestamp;
-}
 
 
 async function main() {
