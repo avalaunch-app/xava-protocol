@@ -39,7 +39,7 @@ async function main() {
     const stakingRound = validatorRound + 28800; // validator round 30 mins
     const publicRound = stakingRound + 28800; // Staking round 2 hours
     const saleEndTime = publicRound + 28800;
-    const tokensUnlockTime = sale + 600;
+    const tokensUnlockTime = saleEndTime + 600;
 
     await sale.setSaleParams(
         token.address,
