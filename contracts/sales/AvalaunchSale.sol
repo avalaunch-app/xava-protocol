@@ -88,6 +88,8 @@ contract AvalaunchSale {
     mapping (address => bool) public isParticipated;
     // One ether in weis
     uint256 public constant one = 10**18;
+    // Mapping address to amount user staked at the moment of registration for staking round
+    mapping (address => uint256) public addressToStakeAtRegistration;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner {
@@ -230,6 +232,11 @@ contract AvalaunchSale {
 
         // Rounds are 1,2,3
         addressToRoundRegisteredFor[msg.sender] = roundId;
+
+        if(roundId == 2) {
+            // Snapshot staked amount during registration time
+            addressToStakeAtRegistration[msg.sender] = allocationStakingContract.deposited(0, msg.sender);
+        }
 
         // Increment number of registered users
         registration.numberOfRegistrants++;
@@ -382,8 +389,15 @@ contract AvalaunchSale {
             isWithdrawn: false
         });
 
-        // Burn XAVA from this user.
-        allocationStakingContract.redistributeXava(0, msg.sender, amountXavaToBurn);
+        // Staking round only.
+        if(roundId == 2) {
+            // Require that user's stake is either equal or greater to than it was when he registered
+            require(addressToStakeAtRegistration[msg.sender] <= allocationStakingContract.deposited(0, msg.sender),
+                "User is not staking enough XAVA to participate.");
+
+            // Burn XAVA from this user.
+            allocationStakingContract.redistributeXava(0, msg.sender, amountXavaToBurn);
+        }
 
         // Add participation for user.
         userToParticipation[msg.sender] = p;
