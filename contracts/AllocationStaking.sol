@@ -40,7 +40,7 @@ contract AllocationStaking is Ownable {
     // Total rewards added to farm
     uint256 public totalRewards;
 
-    uint256 public depositFeePrecision = 10e6;
+    uint256 public depositFeePrecision = 100;
 
     uint256 public depositFeePercent;
 
@@ -200,13 +200,20 @@ contract AllocationStaking is Ownable {
         updatePoolWithFee(_pid, 0);
     }
 
-    function updatePoolWithFee(uint256 _pid, uint256 _depositFee) internal {
+    // Function to update pool with fee to redistribute amount between other stakers
+    function updatePoolWithFee(
+        uint256 _pid,
+        uint256 _depositFee
+    )
+    internal
+    {
         PoolInfo storage pool = poolInfo[_pid];
         uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
 
         if (lastTimestamp <= pool.lastRewardTimestamp) {
             lastTimestamp = pool.lastRewardTimestamp;
         }
+
         uint256 lpSupply = pool.totalDeposits;
 
         if (lpSupply == 0) {
@@ -223,7 +230,7 @@ contract AllocationStaking is Ownable {
 
         // Add to the reward fee taken, and distribute to all users staking at the moment.
         uint256 reward = nrOfSeconds.mul(rewardPerSecond).add(_depositFee);
-        uint256 erc20Reward = reward.mul(pool.allocPoint).div(totalAllocPoint) ;
+        uint256 erc20Reward = reward.mul(pool.allocPoint).div(totalAllocPoint);
 
         pool.accERC20PerShare = pool.accERC20PerShare.add(erc20Reward.mul(1e36).div(lpSupply));
 
