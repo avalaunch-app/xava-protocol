@@ -40,7 +40,7 @@ contract AllocationStaking is OwnableUpgradeable {
     // Total rewards added to farm
     uint256 public totalRewards;
 
-    uint256 public depositFeePrecision = 100;
+    uint256 public depositFeePrecision = 10e8;
 
     uint256 public depositFeePercent;
 
