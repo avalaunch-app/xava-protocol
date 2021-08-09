@@ -133,11 +133,11 @@ contract AvalaunchSale {
     external
     onlyAdmin
     {
-        require(!sale.isCreated, "setSaleParams: Sale is already created.");
-        require(_token != address(0), "setSaleParams: Token address can not be 0.");
-        require(_saleOwner != address(0), "setSaleParams: Sale owner address can not be 0.");
+        require(!sale.isCreated);
+        require(_token != address(0));
+        require(_saleOwner != address(0));
         require(_tokenPriceInAVAX != 0 && _amountOfTokensToSell != 0 && _saleEnd > block.timestamp &&
-            _tokensUnlockTime > block.timestamp, "setSaleParams: Bad input");
+            _tokensUnlockTime > block.timestamp);
 
         // Set params
         sale.token = IERC20(_token);
@@ -186,8 +186,8 @@ contract AvalaunchSale {
     onlyAdmin
     {
         require(sale.isCreated == true);
-        require(startTimes.length == maxParticipations.length, "setRounds: Bad input.");
-        require(roundIds.length == 0, "setRounds: Rounds are already");
+        require(startTimes.length == maxParticipations.length);
+        require(roundIds.length == 0);
         require(startTimes.length > 0);
 
         uint256 lastTimestamp = 0;
