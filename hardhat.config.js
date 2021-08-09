@@ -56,6 +56,14 @@ module.exports = {
       url: 'http://localhost:8545',
     },
   },
-  solidity: "0.6.12",
+  solidity: {
+    version: "0.6.12",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+    },
+  },
 };
 
