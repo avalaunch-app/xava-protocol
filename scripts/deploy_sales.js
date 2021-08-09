@@ -11,7 +11,6 @@ async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
 
     const salesFactory = await hre.ethers.getContractAt('SalesFactory', contracts['SalesFactory']);
-    await salesFactory.setAllocationStaking(contracts['AllocationStaking']);
 
     const tx = await salesFactory.deploySale();
     console.log('Sale deployed.');

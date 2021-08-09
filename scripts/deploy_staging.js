@@ -29,7 +29,6 @@ async function main() {
     saveContractAddress(hre.network.name, "Admin", admin.address);
 
 
-
     const SalesFactory = await hre.ethers.getContractFactory("SalesFactory");
     const salesFactory = await SalesFactory.deploy(admin.address, ZERO_ADDRESS);
     await salesFactory.deployed();
@@ -50,6 +49,8 @@ async function main() {
     await allocationStaking.deployed();
     saveContractAddress(hre.network.name, "AllocationStaking", allocationStaking.address);
 
+
+    await salesFactory.setAllocationStaking(allocationStaking.address);
 
     const totalRewards = ethers.utils.parseEther(c.initialRewardsAllocationStaking);
     await token.approve(allocationStaking.address, totalRewards);
