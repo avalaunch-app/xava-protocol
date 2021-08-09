@@ -24,9 +24,9 @@
         "Admin": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE"
     },
     "mainnetStaging": {
-        "MOCK-XAVA": "0xf903c7e1EC4B336b070239f96c3Be5f336Ca5b8a",
-        "Admin": "0xEfd593035c5CfB1a86d41E2ac842E613DF2B8d8D",
-        "SalesFactory": "0xB0E37AE1532e331175B2cE67543fbE61e6Eaa155",
-        "AllocationStaking": "0xa46D336b809a0ba9369C207d93759482E466F5E4"
+        "MOCK-XAVA": "0x037B3B7923E251a4FF1Fc336AAfF13A591f99aFF",
+        "Admin": "0xb890d8735ADa7081bdba8AC9a69DCe0e84C3824e",
+        "SalesFactory": "0x8153d98A09B6B00601FD0D33b217bF8AdBf67782",
+        "AllocationStaking": "0xCc5A85091B7205Fd0089D7dDb6c2a2EF0c8876f0"
     }
 }
