@@ -1,5 +1,6 @@
-const { ethers } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 const { expect } = require("chai");
+const hre = require("hardhat");
 
 describe("AllocationStaking", function() {
 
@@ -71,7 +72,7 @@ describe("AllocationStaking", function() {
     deployer = accounts[0];
     alice = accounts[1];
     bob = accounts[2];
-    
+
     const AdminFactory = await ethers.getContractFactory("Admin");
     Admin = await AdminFactory.deploy([deployer.address, alice.address, bob.address]);
 
@@ -82,13 +83,16 @@ describe("AllocationStaking", function() {
     XavaLP2 = await XavaTokenFactory.deploy("XavaLP2", "XAVALP2", ethers.utils.parseUnits("100000000"), 18);
 
     const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);    
+    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);
 
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
     startTimestamp = blockTimestamp + START_TIMESTAMP_DELTA;
-    AllocationStaking = await AllocationStakingRewardsFactory.deploy(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
 
+    AllocationStaking = await AllocationStakingRewardsFactory.deploy();
+    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
+
+    await AllocationStaking.setDepositFee(DEPOSIT_FEE , 1000000000)
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
 
     await XavaLP1.transfer(alice.address, DEFAULT_BALANCE_ALICE);
@@ -101,7 +105,7 @@ describe("AllocationStaking", function() {
       let decimals = await XavaToken.decimals();
       let totalSupply = await XavaToken.totalSupply();
       let deployerBalance = await XavaToken.balanceOf(deployer.address);
-  
+
       // Then
       expect(decimals).to.equal(18);
       expect(totalSupply).to.equal(ethers.utils.parseUnits("100000000"));
@@ -210,7 +214,8 @@ describe("AllocationStaking", function() {
     it("Should not fund the farm if reward per second is 0", async function() {
       // Given
       const blockTimestamp = await getCurrentBlockTimestamp();
-      AllocationStaking = await AllocationStakingRewardsFactory.deploy(XavaToken.address, 0, blockTimestamp + START_TIMESTAMP_DELTA, SalesFactory.address, DEPOSIT_FEE);
+      AllocationStaking = await AllocationStakingRewardsFactory.deploy();
+      AllocationStaking.initialize(XavaToken.address, 0, blockTimestamp + START_TIMESTAMP_DELTA, SalesFactory.address, DEPOSIT_FEE);
       await XavaToken.approve(AllocationStaking.address, TOKENS_TO_ADD);
 
       // Then
@@ -547,7 +552,7 @@ describe("AllocationStaking", function() {
         await ethers.provider.send("evm_mine");
 
         // When
-        const blockTimestamp = await getCurrentBlockTimestamp();        
+        const blockTimestamp = await getCurrentBlockTimestamp();
         const pending = await AllocationStaking.pending(0, deployer.address);
 
         // Then
@@ -711,7 +716,7 @@ describe("AllocationStaking", function() {
         await ethers.provider.send("evm_mine");
 
         // When
-        const blockTimestamp = await getCurrentBlockTimestamp();        
+        const blockTimestamp = await getCurrentBlockTimestamp();
         const totalPending = await AllocationStaking.totalPending();
 
         // Then
@@ -724,12 +729,12 @@ describe("AllocationStaking", function() {
         await baseSetupTwoPools();
 
         await AllocationStaking.deposit(1, 250);
-      
+
         await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
         await ethers.provider.send("evm_mine");
 
         // When
-        const blockTimestamp = await getCurrentBlockTimestamp();        
+        const blockTimestamp = await getCurrentBlockTimestamp();
         const totalPending = await AllocationStaking.totalPending();
 
         const pending0 = await AllocationStaking.pending(0, deployer.address);
@@ -746,12 +751,12 @@ describe("AllocationStaking", function() {
 
         await XavaLP1.connect(alice).approve(AllocationStaking.address, DEFAULT_LP_APPROVAL);
         await AllocationStaking.connect(alice).deposit(0, 250);
-      
+
         await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
         await ethers.provider.send("evm_mine");
 
         // When
-        const blockTimestamp = await getCurrentBlockTimestamp();        
+        const blockTimestamp = await getCurrentBlockTimestamp();
         const totalPending = await AllocationStaking.totalPending();
 
         const pendingDeployer = await AllocationStaking.pending(0, deployer.address);
@@ -769,7 +774,7 @@ describe("AllocationStaking", function() {
         await AllocationStaking.deposit(0, 100);
         await AllocationStaking.connect(alice).deposit(0, 250);
         await AllocationStaking.connect(alice).deposit(1, 2500);
-      
+
         await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
         await ethers.provider.send("evm_mine");
 
@@ -779,7 +784,7 @@ describe("AllocationStaking", function() {
         await ethers.provider.send("evm_mine");
 
         // When
-        const blockTimestamp = await getCurrentBlockTimestamp();        
+        const blockTimestamp = await getCurrentBlockTimestamp();
         const totalPending = await AllocationStaking.totalPending();
 
         const pendingDeployer0 = await AllocationStaking.pending(0, deployer.address);
@@ -808,7 +813,7 @@ describe("AllocationStaking", function() {
         await baseSetupTwoPools();
 
         await AllocationStaking.deposit(1, 250);
-      
+
         await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
         await ethers.provider.send("evm_mine");
 
@@ -819,7 +824,7 @@ describe("AllocationStaking", function() {
         await AllocationStaking.withdraw(1, 250);
 
         // When
-        const blockTimestamp = await getCurrentBlockTimestamp();        
+        const blockTimestamp = await getCurrentBlockTimestamp();
         const totalPending = await AllocationStaking.totalPending();
 
         // Then
@@ -831,7 +836,7 @@ describe("AllocationStaking", function() {
         await baseSetupTwoPools();
 
         await AllocationStaking.deposit(1, 250);
-      
+
         await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
         await ethers.provider.send("evm_mine");
 
@@ -842,7 +847,7 @@ describe("AllocationStaking", function() {
         await AllocationStaking.emergencyWithdraw(1);
 
         // When
-        const blockTimestamp = await getCurrentBlockTimestamp();        
+        const blockTimestamp = await getCurrentBlockTimestamp();
         const totalPending = await AllocationStaking.totalPending();
 
         // Then
@@ -852,12 +857,12 @@ describe("AllocationStaking", function() {
       xit("Should return correct amount if one pool is empty", async function() {
         // Given
         await baseSetupTwoPools();
-      
+
         await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
         await ethers.provider.send("evm_mine");
 
         // When
-        const blockTimestamp = await getCurrentBlockTimestamp();        
+        const blockTimestamp = await getCurrentBlockTimestamp();
         const totalPending = await AllocationStaking.totalPending();
         const pendingInPool0 = await AllocationStaking.pending(0, deployer.address);
         const pendingInPool1 = await AllocationStaking.pending(1, deployer.address);
@@ -997,7 +1002,7 @@ describe("AllocationStaking", function() {
 
         // Then
         const totalXavaRedistributedAfter = await AllocationStaking.totalXavaRedistributed();
-        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e8);
+        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e6);
         expect(totalXavaRedistributedAfter).to.equal(totalXavaRedistributedBefore.add(depositFee));
       });
 
@@ -1022,7 +1027,7 @@ describe("AllocationStaking", function() {
 
         // Then
         const totalXavaRedistributedAfter = await AllocationStaking.totalXavaRedistributed();
-        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e8);
+        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e6);
         expect(totalXavaRedistributedAfter).to.equal(totalXavaRedistributedBefore.add(depositFee));
       });
 
@@ -1041,7 +1046,7 @@ describe("AllocationStaking", function() {
 
         // Then
         const totalXavaRedistributedAfter = await AllocationStaking.totalXavaRedistributed();
-        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e8);
+        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e6);
         expect(totalXavaRedistributedAfter).to.equal(totalXavaRedistributedBefore.add(depositFee));
       });
 
@@ -1239,7 +1244,7 @@ describe("AllocationStaking", function() {
     });
 
     xit("Should pay rewards over time", async function() {
-      
+
       // fund
       const TOKENS_TO_ADD = ethers.utils.parseUnits("100000");
       const ALLOC_POINT = 1000;
@@ -1423,7 +1428,7 @@ describe("AllocationStaking", function() {
       let poolInfo = await AllocationStaking.poolInfo("0");
       expect((await ethers.provider.getBlock(txReceiptForBob.blockNumber)).timestamp).to.be.eq(parseInt(poolInfo.lastRewardTimestamp));
       expect((await ethers.provider.getBlock(txReceiptForAlice.blockNumber)).timestamp).to.eq((await ethers.provider.getBlock(txReceiptForBob.blockNumber)).timestamp);
-      
+
       let aliceUserInfoAfter = await AllocationStaking.userInfo("0", alice.address);
       let bobUserInfoAfter = await AllocationStaking.userInfo("0", bob.address);
       let poolInfoAfter = await AllocationStaking.poolInfo("0");
