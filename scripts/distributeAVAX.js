@@ -18,11 +18,12 @@ async function main() {
 
         const tx = await signer.sendTransaction({
             to: ethers.provider._getAddress(wallets[i]),
-            value: ethers.utils.parseEther("0.25")
+            value: ethers.utils.parseEther(amountETH)
         });
 
-        console.log(`${i}. TxHash: ${tx.hash}`);
-        console.log(`${i}. Receiver: ${wallets[i]}`);
+        console.log(`${i+1}. TxHash: ${tx.hash}`);
+        console.log(`${i+1}. Receiver: ${wallets[i]}`);
+        console.log('--------------------------------------------------------------------------------');
     }
 
 }
