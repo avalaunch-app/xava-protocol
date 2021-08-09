@@ -4,11 +4,11 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/ISalesFactory.sol";
 
 
-contract AllocationStaking is Ownable {
+contract AllocationStaking is OwnableUpgradeable {
 
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -77,9 +77,14 @@ contract AllocationStaking is Ownable {
     }
 
 
-    constructor(
+    function initialize(
         IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp, address _salesFactory, uint256 _depositFeePercent
-    ) public {
+    )
+    initializer
+    public
+    {
+        __Ownable_init();
+
         erc20 = _erc20;
         rewardPerSecond = _rewardPerSecond;
         startTimestamp = _startTimestamp;
