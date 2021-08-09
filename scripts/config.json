@@ -1,8 +1,8 @@
 {
   "staging" : {
     "token": {
-      "tokenName": "Avalaunch Mock Token",
-      "symbol": "MOCK-XAVA",
+      "tokenName": "Avalaunch Mock Token - V2",
+      "symbol": "MCK-V2",
       "totalSupply": "100000000000000000000000000",
       "decimals": 18
     },
