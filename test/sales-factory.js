@@ -43,7 +43,8 @@ describe("SalesFactory", function() {
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
     startTimestamp = blockTimestamp + START_TIMESTAMP_DELTA;
-    AllocationStaking = await AllocationStakingRewardsFactory.deploy(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
+    AllocationStaking = await AllocationStakingRewardsFactory.deploy();
+    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
 
     await AllocationStaking.add(1, XavaToken.address, false);
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
@@ -55,7 +56,7 @@ describe("SalesFactory", function() {
     it("Should setup the factory correctly", async function() {
       // Given
       let admin = await SalesFactory.admin();
-  
+
       // Then
       expect(admin).to.equal(Admin.address);
     });
@@ -83,13 +84,13 @@ describe("SalesFactory", function() {
       });
     });
   });
-  
+
   context("Sales", async function() {
     describe("Deploy sale", async function() {
       it("Should deploy sale", async function() {
         // When
         await SalesFactory.deploySale();
-        
+
         // Then
         expect(await SalesFactory.getNumberOfSalesDeployed()).to.equal(1);
         const saleAddress = await SalesFactory.allSales(0);
@@ -147,7 +148,7 @@ describe("SalesFactory", function() {
         // When
         await SalesFactory.deploySale();
         const AvalaunchSale2 = AvalaunchSaleFactory.attach(await SalesFactory.allSales(1));
-        
+
         // Then
         await expect(AvalaunchSale2.setSaleParams(XavaToken2.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10))
           .to.be.revertedWith("Sale owner already set.");

@@ -175,7 +175,8 @@ describe("AvalaunchSale", function() {
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
     startTimestamp = blockTimestamp + START_TIMESTAMP_DELTA;
-    AllocationStaking = await AllocationStakingRewardsFactory.deploy(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
+    AllocationStaking = await AllocationStakingRewardsFactory.deploy();
+    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
 
     await AllocationStaking.add(1, XavaToken.address, false);
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
