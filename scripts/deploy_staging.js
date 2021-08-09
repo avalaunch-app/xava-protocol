@@ -39,17 +39,19 @@ async function main() {
     const currentTimestamp = await getCurrentBlockTimestamp();
 
     const AllocationStaking = await hre.ethers.getContractFactory("AllocationStaking");
-    const allocationStaking = await AllocationStaking.deploy(
-        token.address,
-        ethers.utils.parseEther(c.allocationStakingRPS),
-        currentTimestamp + c.delayBeforeStart,
-        salesFactory.address,
-        c.depositFeePercent
+    const allocationStaking = await upgrades.deployProxy(AllocationStaking, [
+            token.address,
+            ethers.utils.parseEther(c.allocationStakingRPS),
+            currentTimestamp + c.delayBeforeStart,
+            salesFactory.address,
+            c.depositFeePercent
+        ]
     );
-    await allocationStaking.deployed();
-    saveContractAddress(hre.network.name, "AllocationStaking", allocationStaking.address);
+    await allocationStaking.deployed()
+    console.log('AllocationStaking Proxy deployed to:', allocationStaking.address);
+    saveContractAddress(hre.network.name, 'AllocationStaking', allocationStaking.address);
 
-
+    
     await salesFactory.setAllocationStaking(allocationStaking.address);
 
     const totalRewards = ethers.utils.parseEther(c.initialRewardsAllocationStaking);
