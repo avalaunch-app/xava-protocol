@@ -300,7 +300,7 @@ contract AvalaunchSale {
         uint256[] calldata rounds,
         uint256[] calldata caps
     )
-    public
+    external
     onlyAdmin
     {
         require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "1st round already started.");
@@ -319,7 +319,7 @@ contract AvalaunchSale {
 
     // Function for owner to deposit tokens, can be called only once.
     function depositTokens()
-    public
+    external
     onlySaleOwner
     {
         require(sale.totalTokensSold == 0 && sale.token.balanceOf(address(this)) == 0, "Deposit can be done only once");
@@ -413,7 +413,7 @@ contract AvalaunchSale {
 
 
     /// Users can claim their participation
-    function withdrawTokens() public {
+    function withdrawTokens() external {
         require(block.timestamp >= sale.tokensUnlockTime, "Tokens can not be withdrawn yet.");
 
         Participation storage p = userToParticipation[msg.sender];
@@ -501,7 +501,7 @@ contract AvalaunchSale {
         address user,
         uint256 roundId
     )
-    public
+    internal
     view
     returns (bool)
     {
@@ -519,7 +519,7 @@ contract AvalaunchSale {
         uint256 amountXavaToBurn,
         uint256 round
     )
-    public
+    internal
     view
     returns (bool)
     {
@@ -539,7 +539,7 @@ contract AvalaunchSale {
         uint256 amountXavaToBurn,
         uint256 roundId
     )
-    public
+    internal
     view
     returns (address)
     {
