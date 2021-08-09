@@ -21,24 +21,27 @@ async function main() {
     const numberOfSales = await salesFactory.getNumberOfSalesDeployed();
 
     const Token = await hre.ethers.getContractFactory("XavaToken");
-    const token = await Token.deploy(`MOCK-SALE-${numberOfSales.toString()}`, `MOCK-SALE-${numberOfSales.toString()}`, ethers.utils.parseEther('200000'), 18);
+    const token = await Token.deploy(`MOCK-TEST-${numberOfSales.toString()}`, `MCK-${numberOfSales.toString()}`, ethers.utils.parseEther('200000'), 18);
     await token.deployed();
     console.log("Sale Token deployed to: ", token.address);
 
     const sale = await hre.ethers.getContractAt('AvalaunchSale', lastDeployedSale);
 
     const totalTokens = ethers.utils.parseEther('2000');
-    const tokenPriceInAvax = ethers.utils.parseEther("0.005");
+    const tokenPriceInAvax = ethers.utils.parseEther("0.002");
 
-    const saleOwner = '0x094028E04c1FADf12F5a4Fe6C1b9D2062a252a17';
+    const signer = await ethers.provider.getSigner();
 
-    const registrationStart = 1627936200;
-    const registrationEnd = registrationStart + 86400; // Registration 24 hours
-    const validatorRound = registrationEnd + 43200; // 12 hours delay
-    const stakingRound = validatorRound + 28800; // validator round 30 mins
-    const publicRound = stakingRound + 28800; // Staking round 2 hours
-    const saleEndTime = publicRound + 28800;
-    const tokensUnlockTime = saleEndTime + 600;
+    const saleOwner = await signer.getAddress();
+
+    const registrationStart = 1628542800;
+
+    const registrationEnd = registrationStart + 43200; // Registration 24 hours
+    const validatorRound = registrationEnd + 14400; // 4 hours to give allocations
+    const stakingRound = validatorRound + 28800; // 8 hours round
+    const publicRound = stakingRound + 28800; // 8 hours round
+    const saleEndTime = publicRound + 28800; // 8 hours round
+    const tokensUnlockTime = saleEndTime + 1200; // 20 mins after sale ends
 
     await sale.setSaleParams(
         token.address,
