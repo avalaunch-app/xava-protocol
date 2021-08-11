@@ -280,8 +280,6 @@ contract AllocationStaking is OwnableUpgradeable {
 
     // Withdraw LP tokens from Farm.
     function withdraw(uint256 _pid, uint256 _amount) public {
-        require(_amount > 0, "Can not do basic harvest without withdrawing tokens.");
-
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
