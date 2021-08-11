@@ -65,12 +65,15 @@ contract AllocationStaking is OwnableUpgradeable {
     // The timestamp when farming ends.
     uint256 public endTimestamp;
 
+    // Total amount of tokens burned from the wallet
+    mapping (address => uint256) public totalBurnedFromUser;
+
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event DepositFeeSet(uint256 depositFeePercent, uint256 depositFeePrecision);
     event CompoundedEarnings(address indexed user, uint256 indexed pid, uint256 amountAdded, uint256 totalDeposited);
-    event ParticipationFeeTaken(address indexed user, uint256 indexed pid, uint256 amount);
+    event FeeTaken(address indexed user, uint256 indexed pid, uint256 amount);
 
     modifier onlyVerifiedSales {
         require(salesFactory.isSaleCreatedThroughFactory(msg.sender), "Sale not created through factory.");
@@ -209,7 +212,7 @@ contract AllocationStaking is OwnableUpgradeable {
             // Account how much is redistributed
             totalXavaRedistributed = totalXavaRedistributed.add(_amountToRedistribute);
             // How much was participation fee
-            emit ParticipationFeeTaken(_user, _pid, _amountToRedistribute);
+            emit FeeTaken(_user, _pid, _amountToRedistribute);
         }
     }
 
@@ -263,6 +266,9 @@ contract AllocationStaking is OwnableUpgradeable {
         uint depositFee = _amount.mul(depositFeePercent).div(depositFeePrecision);
         uint depositAmount = _amount.sub(depositFee);
 
+        // Emit event that deposit fee is taken from the user.
+        emit FeeTaken(msg.sender, _pid, depositFee);
+
         // Update pool including fee for people staking
         updatePoolWithFee(_pid, depositFee);
 
@@ -296,6 +302,32 @@ contract AllocationStaking is OwnableUpgradeable {
 
         emit Withdraw(msg.sender, _pid, _amount);
     }
+
+    // Function to compound earnings into deposit
+    function compound(uint256 _pid) public {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+
+        require(user.amount >= 0, "User does not have anything staked.");
+
+        // Update pool
+        updatePool(_pid);
+
+        uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
+        uint256 fee = pendingAmount.mul(depositFeePercent).div(depositFeePrecision);
+        uint256 amountCompounding = pendingAmount.sub(fee);
+
+        // Update pool including fee for people currently staking
+        updatePoolWithFee(_pid, fee);
+
+        // Increase amount user is staking
+        user.amount = user.amount.add(amountCompounding);
+        user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
+
+        pool.totalDeposits = pool.totalDeposits.add(amountCompounding);
+        emit CompoundedEarnings(msg.sender, _pid, amountCompounding, user.amount);
+    }
+
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw(uint256 _pid) public {
