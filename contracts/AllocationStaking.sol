@@ -69,7 +69,8 @@ contract AllocationStaking is OwnableUpgradeable {
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event DepositFeeSet(uint256 depositFeePercent, uint256 depositFeePrecision);
-
+    event CompoundedEarnings(address indexed user, uint256 indexed pid, uint256 amountAdded, uint256 totalDeposited);
+    event ParticipationFeeTaken(address indexed user, uint256 indexed pid, uint256 amount);
 
     modifier onlyVerifiedSales {
         require(salesFactory.isSaleCreatedThroughFactory(msg.sender), "Sale not created through factory.");
@@ -191,12 +192,24 @@ contract AllocationStaking is OwnableUpgradeable {
         if(_amountToRedistribute > 0) {
             UserInfo storage user = userInfo[_pid][_user];
             PoolInfo storage pool = poolInfo[_pid];
-
-
+            // Update pool
             updatePoolWithFee(_pid, _amountToRedistribute);
-            // Small amount from deposits is moved to the rewards amount
-            pool.totalDeposits = pool.totalDeposits.sub(_amountToRedistribute);
+            // Compute currently how much pending user has
+            uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
+            // Do auto-compound for user, adding his pending rewards to his deposit
+            user.amount = user.amount.add(pendingAmount);
+            // Now reduce fee from his initial deposit
             user.amount = user.amount.sub(_amountToRedistribute);
+            // Emit event that earnings are compounded
+            emit CompoundedEarnings(_user, _pid, pendingAmount, user.amount);
+            // Compute new reward debt
+            user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
+            // Compute new total deposits
+            pool.totalDeposits = pool.totalDeposits.add(pendingAmount).sub(_amountToRedistribute);
+            // Account how much is redistributed
+            totalXavaRedistributed = totalXavaRedistributed.add(_amountToRedistribute);
+            // How much was participation fee
+            emit ParticipationFeeTaken(_user, _pid, _amountToRedistribute);
         }
     }
 
@@ -317,4 +330,5 @@ contract AllocationStaking is OwnableUpgradeable {
 
         return (deposits, earnings);
     }
+
 }
