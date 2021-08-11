@@ -209,10 +209,8 @@ contract AllocationStaking is OwnableUpgradeable {
             user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
             // Compute new total deposits
             pool.totalDeposits = pool.totalDeposits.add(pendingAmount).sub(_amountToRedistribute);
-            // Account how much is redistributed
-            totalXavaRedistributed = totalXavaRedistributed.add(_amountToRedistribute);
-            // How much was participation fee
-            emit FeeTaken(_user, _pid, _amountToRedistribute);
+            // Update accounting
+            burnFromUser(_user, _pid, _amountToRedistribute);
         }
     }
 
@@ -242,11 +240,6 @@ contract AllocationStaking is OwnableUpgradeable {
             return;
         }
 
-        if(_depositFee > 0) {
-            // Increase total XAVA redistributed over time.
-            totalXavaRedistributed = totalXavaRedistributed.add(_depositFee);
-        }
-
         uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
 
         // Add to the reward fee taken, and distribute to all users staking at the moment.
@@ -266,8 +259,8 @@ contract AllocationStaking is OwnableUpgradeable {
         uint depositFee = _amount.mul(depositFeePercent).div(depositFeePrecision);
         uint depositAmount = _amount.sub(depositFee);
 
-        // Emit event that deposit fee is taken from the user.
-        emit FeeTaken(msg.sender, _pid, depositFee);
+        // Update accounting around burning
+        burnFromUser(msg.sender, _pid, depositFee);
 
         // Update pool including fee for people staking
         updatePoolWithFee(_pid, depositFee);
@@ -287,8 +280,11 @@ contract AllocationStaking is OwnableUpgradeable {
 
     // Withdraw LP tokens from Farm.
     function withdraw(uint256 _pid, uint256 _amount) public {
+        require(_amount > 0, "Can not do basic harvest without withdrawing tokens.");
+
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
+
         require(user.amount >= _amount, "withdraw: can't withdraw more than deposit");
         updatePool(_pid);
 
@@ -317,6 +313,8 @@ contract AllocationStaking is OwnableUpgradeable {
         uint256 fee = pendingAmount.mul(depositFeePercent).div(depositFeePrecision);
         uint256 amountCompounding = pendingAmount.sub(fee);
 
+        // Update accounting around burns
+        burnFromUser(msg.sender, _pid, fee);
         // Update pool including fee for people currently staking
         updatePoolWithFee(_pid, fee);
 
@@ -345,6 +343,14 @@ contract AllocationStaking is OwnableUpgradeable {
         erc20.transfer(_to, _amount);
         paidOut += _amount;
     }
+
+    // Internal function to burn amount from user and do accounting
+    function burnFromUser(address user, uint256 _pid, uint256 amount) internal {
+        totalBurnedFromUser[user] = totalBurnedFromUser[user].add(amount);
+        totalXavaRedistributed = totalXavaRedistributed.add(amount);
+        emit FeeTaken(user, _pid, amount);
+    }
+
 
     // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
     function getPendingAndDepositedForUsers(address [] memory users, uint pid)
