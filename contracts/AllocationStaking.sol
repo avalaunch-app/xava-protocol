@@ -18,6 +18,7 @@ contract AllocationStaking is OwnableUpgradeable {
         uint256 amount;     // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         uint256 tokensUnlockTime; // If user registered for sale, returns when tokens are getting unlocked
+        address [] salesRegistered;
     }
 
     // Info of each pool.
@@ -189,9 +190,13 @@ contract AllocationStaking is OwnableUpgradeable {
         }
     }
 
-    function setTokensUnlockTime(uint256 _pid, address _user, address _tokensUnlockTime) external onlyVerifiedSales {
+    function setTokensUnlockTime(uint256 _pid, address _user, uint256 _tokensUnlockTime) external onlyVerifiedSales {
         UserInfo storage user = userInfo[_pid][_user];
+        // Require that tokens are currently unlocked
+        require(user.tokensUnlockTime <= block.timestamp);
         user.tokensUnlockTime = _tokensUnlockTime;
+        // Add sale to the array of sales user registered for.
+        user.salesRegistered.push(msg.sender);
     }
 
     // Update reward variables of the given pool to be up-to-date.
@@ -299,6 +304,8 @@ contract AllocationStaking is OwnableUpgradeable {
         erc20Transfer(msg.sender, pendingAmount);
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
+        // Reset the tokens unlock time
+        user.tokensUnlockTime = 0;
         pool.lpToken.safeTransfer(address(msg.sender), _amount);
         pool.totalDeposits = pool.totalDeposits.sub(_amount);
 
@@ -344,6 +351,7 @@ contract AllocationStaking is OwnableUpgradeable {
         pool.totalDeposits = pool.totalDeposits.sub(user.amount);
         user.amount = 0;
         user.rewardDebt = 0;
+        user.tokensUnlockTime = 0;
     }
 
     // Transfer ERC20 and update the required ERC20 to payout all rewards
