@@ -17,6 +17,7 @@ contract AllocationStaking is OwnableUpgradeable {
     struct UserInfo {
         uint256 amount;     // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
+        uint256 tokensUnlockTime; // If user registered for sale, returns when tokens are getting unlocked
     }
 
     // Info of each pool.
@@ -188,6 +189,11 @@ contract AllocationStaking is OwnableUpgradeable {
         }
     }
 
+    function setTokensUnlockTime(uint256 _pid, address _user, address _tokensUnlockTime) external onlyVerifiedSales {
+        UserInfo storage user = userInfo[_pid][_user];
+        user.tokensUnlockTime = _tokensUnlockTime;
+    }
+
     // Update reward variables of the given pool to be up-to-date.
     function redistributeXava(uint256 _pid, address _user, uint256 _amountToRedistribute) external
     onlyVerifiedSales
@@ -283,7 +289,9 @@ contract AllocationStaking is OwnableUpgradeable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
+        require(user.tokensUnlockTime <= block.timestamp, "Last sale you registered for is not finished yet.");
         require(user.amount >= _amount, "withdraw: can't withdraw more than deposit");
+
         updatePool(_pid);
 
         uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
@@ -329,6 +337,8 @@ contract AllocationStaking is OwnableUpgradeable {
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
+        require(user.tokensUnlockTime <= block.timestamp, "Last sale you registered for is not finished yet.");
+
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
         pool.totalDeposits = pool.totalDeposits.sub(user.amount);
@@ -348,6 +358,7 @@ contract AllocationStaking is OwnableUpgradeable {
         totalXavaRedistributed = totalXavaRedistributed.add(amount);
         emit FeeTaken(user, _pid, amount);
     }
+
 
 
     // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
