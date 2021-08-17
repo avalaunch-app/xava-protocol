@@ -11,7 +11,7 @@ async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
 
     const allocationStaking = await hre.ethers.getContractAt('AllocationStaking', contracts['AllocationStaking']);
-    await allocationStaking.setDepositFee(20000000, 1000000000);
+    await allocationStaking.setDepositFee(2, 100);
 }
 
 
