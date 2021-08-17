@@ -338,35 +338,35 @@
         ],
         "AllocationStaking": [
             {
+                "anonymous": false,
                 "inputs": [
                     {
-                        "internalType": "contract IERC20",
-                        "name": "_erc20",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "_rewardPerSecond",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "_startTimestamp",
-                        "type": "uint256"
-                    },
-                    {
+                        "indexed": true,
                         "internalType": "address",
-                        "name": "_salesFactory",
+                        "name": "user",
                         "type": "address"
                     },
                     {
+                        "indexed": true,
                         "internalType": "uint256",
-                        "name": "_depositFeePercent",
+                        "name": "pid",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amountAdded",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "totalDeposited",
                         "type": "uint256"
                     }
                 ],
-                "stateMutability": "nonpayable",
-                "type": "constructor"
+                "name": "CompoundedEarnings",
+                "type": "event"
             },
             {
                 "anonymous": false,
@@ -443,6 +443,31 @@
                     {
                         "indexed": true,
                         "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": true,
+                        "internalType": "uint256",
+                        "name": "pid",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "FeeTaken",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
                         "name": "previousOwner",
                         "type": "address"
                     },
@@ -500,6 +525,19 @@
                     }
                 ],
                 "name": "add",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_pid",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "compound",
                 "outputs": [],
                 "stateMutability": "nonpayable",
                 "type": "function"
@@ -651,6 +689,39 @@
                     }
                 ],
                 "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "contract IERC20",
+                        "name": "_erc20",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_rewardPerSecond",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_startTimestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "_salesFactory",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_depositFeePercent",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "initialize",
+                "outputs": [],
+                "stateMutability": "nonpayable",
                 "type": "function"
             },
             {
@@ -860,6 +931,29 @@
                 "type": "function"
             },
             {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_pid",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "_user",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_tokensUnlockTime",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "setTokensUnlockTime",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
                 "inputs": [],
                 "name": "startTimestamp",
                 "outputs": [
@@ -875,6 +969,25 @@
             {
                 "inputs": [],
                 "name": "totalAllocPoint",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "name": "totalBurnedFromUser",
                 "outputs": [
                     {
                         "internalType": "uint256",
@@ -973,6 +1086,11 @@
                     {
                         "internalType": "uint256",
                         "name": "rewardDebt",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "tokensUnlockTime",
                         "type": "uint256"
                     }
                 ],
@@ -1370,6 +1488,11 @@
                         "type": "uint256"
                     },
                     {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    },
+                    {
                         "internalType": "bool",
                         "name": "",
                         "type": "bool"
@@ -1449,6 +1572,19 @@
                         "internalType": "bool",
                         "name": "",
                         "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "numberOfParticipants",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
                     }
                 ],
                 "stateMutability": "view",
@@ -1772,12 +1908,17 @@
                 "outputs": [
                     {
                         "internalType": "uint256",
-                        "name": "amount",
+                        "name": "amountBought",
                         "type": "uint256"
                     },
                     {
                         "internalType": "uint256",
-                        "name": "timestamp",
+                        "name": "amountAVAXPaid",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "timeParticipated",
                         "type": "uint256"
                     },
                     {
