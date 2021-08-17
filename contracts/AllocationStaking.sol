@@ -34,7 +34,7 @@ contract AllocationStaking is OwnableUpgradeable {
     IERC20 public erc20;
 
     // The total amount of ERC20 that's paid out as reward.
-    uint256 public paidOut = 0;
+    uint256 public paidOut;
 
     // ERC20 tokens rewarded per second.
     uint256 public rewardPerSecond;
@@ -42,7 +42,7 @@ contract AllocationStaking is OwnableUpgradeable {
     // Total rewards added to farm
     uint256 public totalRewards;
 
-    uint256 public depositFeePrecision = 10e8;
+    uint256 public depositFeePrecision;
 
     uint256 public depositFeePercent;
 
@@ -59,7 +59,7 @@ contract AllocationStaking is OwnableUpgradeable {
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
 
     // Total allocation points. Must be the sum of all allocation points in all pools.
-    uint256 public totalAllocPoint = 0;
+    uint256 public totalAllocPoint;
 
     // The timestamp when farming starts.
     uint256 public startTimestamp;
@@ -98,6 +98,7 @@ contract AllocationStaking is OwnableUpgradeable {
         // Create sales factory contract
         salesFactory = ISalesFactory(_salesFactory);
         depositFeePercent = _depositFeePercent;
+        depositFeePrecision = 10**8;
     }
 
     // Number of LP pools
