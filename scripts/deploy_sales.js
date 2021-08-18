@@ -34,14 +34,14 @@ async function main() {
 
     const saleOwner = await signer.getAddress();
 
-    const registrationStart = 1628542800;
+    const registrationStart = 1629277200;
 
-    const registrationEnd = registrationStart + 43200; // Registration 24 hours
-    const validatorRound = registrationEnd + 14400; // 4 hours to give allocations
-    const stakingRound = validatorRound + 28800; // 8 hours round
-    const publicRound = stakingRound + 28800; // 8 hours round
-    const saleEndTime = publicRound + 28800; // 8 hours round
-    const tokensUnlockTime = saleEndTime + 1200; // 20 mins after sale ends
+    const registrationEnd = registrationStart + 21600; //6hrs
+    const validatorRound = registrationEnd + 7200; // 2hrs
+    const stakingRound = validatorRound + 10800; //
+    const publicRound = stakingRound + 21600;
+    const saleEndTime = publicRound + 10800;
+    const tokensUnlockTime = saleEndTime + 600;
 
     await sale.setSaleParams(
         token.address,
