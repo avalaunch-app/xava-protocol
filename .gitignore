@@ -6,4 +6,4 @@ yarn.lock
 .idea
 package-lock.json
 .openzeppelin/
-.bin/
+bin/
