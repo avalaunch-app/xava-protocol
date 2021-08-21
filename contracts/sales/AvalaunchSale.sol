@@ -53,7 +53,7 @@ contract AvalaunchSale {
         uint256 amountAVAXPaid;
         uint256 timeParticipated;
         uint256 roundId;
-        bool isWithdrawn;
+        bool [] isPortionWithdrawn;
     }
 
     // Round structure
@@ -88,6 +88,10 @@ contract AvalaunchSale {
     mapping (address => bool) public isParticipated;
     // One ether in weis
     uint256 public constant one = 10**18;
+    // Times when portions are getting unlocked
+    uint256 [] public vestingPortionsUnlockTime;
+    // Percent of the participation user can withdraw
+    uint256 [] public vestingPercentPerPortion;
 
 
     // Restricting calls only to sale owner
@@ -118,6 +122,21 @@ contract AvalaunchSale {
         admin = IAdmin(_admin);
         factory = ISalesFactory(msg.sender);
         allocationStakingContract = IAllocationStaking(_allocationStaking);
+    }
+
+    /// @notice         Function to set vesting params
+    function setVestingParams(uint256 [] memory _unlockingTimes, uint256 [] memory _percents)
+    external
+    onlyAdmin
+    {
+        require(vestingPercentPerPortion.length == 0 && vestingPortionsUnlockTime.length == 0);
+        require(_unlockingTimes.length == _percents.length);
+
+        for(uint256 i = 0; i < _unlockingTimes.length; i++) {
+            vestingPortionsUnlockTime.push(_unlockingTimes[i]);
+            vestingPercentPerPortion.push(_percents[i]);
+        }
+
     }
 
     /// @notice     Admin function to set sale parameters
@@ -381,13 +400,11 @@ contract AvalaunchSale {
         sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
 
         // Create participation object
-        Participation memory p = Participation({
-            amountBought: amountOfTokensBuying,
-            amountAVAXPaid: msg.value,
-            timeParticipated: block.timestamp,
-            roundId: roundId,
-            isWithdrawn: false
-        });
+        Participation memory p;
+        p.amountBought = amountOfTokensBuying;
+        p.amountAVAXPaid = msg.value;
+        p.timeParticipated = block.timestamp;
+        p.roundId = roundId;
 
         // Staking round only.
         if(roundId == 2) {
@@ -409,16 +426,18 @@ contract AvalaunchSale {
 
 
     /// Users can claim their participation
-    function withdrawTokens() external {
+    function withdrawTokens(uint portionId) external {
         require(block.timestamp >= sale.tokensUnlockTime, "Tokens can not be withdrawn yet.");
+        require(portionId < vestingPercentPerPortion.length);
 
         Participation storage p = userToParticipation[msg.sender];
 
-        if(!p.isWithdrawn) {
-            p.isWithdrawn = true;
-            sale.token.safeTransfer(msg.sender, p.amountBought);
-            // Emit event that tokens are withdrawn
-            emit TokensWithdrawn(msg.sender, p.amountBought);
+        if(!p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] >= block.timestamp) {
+            p.isPortionWithdrawn[portionId];
+            uint256 amountWithdrawing = p.amountBought.mul(vestingPercentPerPortion[portionId]).div(100);
+            // Withdraw percent which is unlocked at that portion
+            sale.token.safeTransfer(msg.sender, amountWithdrawing);
+            emit TokensWithdrawn(msg.sender, amountWithdrawing);
         } else {
             revert("Tokens already withdrawn.");
         }
@@ -545,14 +564,14 @@ contract AvalaunchSale {
     }
 
     /// @notice     Function to get participation for passed user address
-    function getParticipation(address _user) external view returns (uint256, uint256, uint256, uint256, bool) {
+    function getParticipation(address _user) external view returns (uint256, uint256, uint256, uint256, bool[] memory) {
         Participation memory p = userToParticipation[_user];
         return (
             p.amountBought,
             p.amountAVAXPaid,
             p.timeParticipated,
             p.roundId,
-            p.isWithdrawn
+            p.isPortionWithdrawn
         );
     }
 
