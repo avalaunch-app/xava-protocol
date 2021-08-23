@@ -132,10 +132,14 @@ contract AvalaunchSale {
         require(vestingPercentPerPortion.length == 0 && vestingPortionsUnlockTime.length == 0);
         require(_unlockingTimes.length == _percents.length);
 
+        uint256 sum;
         for(uint256 i = 0; i < _unlockingTimes.length; i++) {
             vestingPortionsUnlockTime.push(_unlockingTimes[i]);
             vestingPercentPerPortion.push(_percents[i]);
+            sum += _percents[i];
         }
+
+        require(sum == 100, "Percent distribution issue.");
 
     }
 
