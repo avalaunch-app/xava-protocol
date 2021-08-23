@@ -255,8 +255,8 @@ contract AllocationStaking is OwnableUpgradeable {
         uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
 
         // Add to the reward fee taken, and distribute to all users staking at the moment.
-        uint256 reward = nrOfSeconds.mul(rewardPerSecond).add(_depositFee);
-        uint256 erc20Reward = reward.mul(pool.allocPoint).div(totalAllocPoint);
+        uint256 reward = nrOfSeconds.mul(rewardPerSecond);
+        uint256 erc20Reward = reward.mul(pool.allocPoint).div(totalAllocPoint).add(_depositFee);
 
         pool.accERC20PerShare = pool.accERC20PerShare.add(erc20Reward.mul(1e36).div(lpSupply));
 
