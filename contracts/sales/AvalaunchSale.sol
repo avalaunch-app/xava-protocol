@@ -403,12 +403,15 @@ contract AvalaunchSale {
         // Increase amount of AVAX raised
         sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
 
+        bool [] memory isPortionWithdrawn = new bool [](vestingPortionsUnlockTime.length);
+
         // Create participation object
         Participation memory p;
         p.amountBought = amountOfTokensBuying;
         p.amountAVAXPaid = msg.value;
         p.timeParticipated = block.timestamp;
         p.roundId = roundId;
+        p.isPortionWithdrawn = isPortionWithdrawn;
 
         // Staking round only.
         if(roundId == 2) {
@@ -437,7 +440,7 @@ contract AvalaunchSale {
         Participation storage p = userToParticipation[msg.sender];
 
         if(!p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] >= block.timestamp) {
-            p.isPortionWithdrawn[portionId];
+            p.isPortionWithdrawn[portionId] = true;
             uint256 amountWithdrawing = p.amountBought.mul(vestingPercentPerPortion[portionId]).div(100);
             // Withdraw percent which is unlocked at that portion
             sale.token.safeTransfer(msg.sender, amountWithdrawing);
