@@ -439,7 +439,7 @@ contract AvalaunchSale {
 
         Participation storage p = userToParticipation[msg.sender];
 
-        if(!p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] >= block.timestamp) {
+        if(!p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] <= block.timestamp) {
             p.isPortionWithdrawn[portionId] = true;
             uint256 amountWithdrawing = p.amountBought.mul(vestingPercentPerPortion[portionId]).div(100);
             // Withdraw percent which is unlocked at that portion
