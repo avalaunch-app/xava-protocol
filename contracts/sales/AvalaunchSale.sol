@@ -389,7 +389,7 @@ contract AvalaunchSale {
         require(roundId == currentRound, "You can not participate in this round.");
 
         // Compute the amount of tokens user is buying
-        uint256 amountOfTokensBuying = (msg.value).mul(10**18).div(sale.tokenPriceInAVAX);
+        uint256 amountOfTokensBuying = (msg.value).mul(one).div(sale.tokenPriceInAVAX);
 
         // Must buy more than 0 tokens
         require(amountOfTokensBuying > 0, "Can't buy 0 tokens");
