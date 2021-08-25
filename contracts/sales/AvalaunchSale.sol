@@ -593,4 +593,12 @@ contract AvalaunchSale {
         );
     }
 
+    /// @notice     Function to get all info about vesting.
+    function getVestingInfo() external view returns (uint256[] memory, uint256[] memory) {
+        return (
+            vestingPortionsUnlockTime,
+            vestingPercentPerPortion
+        );
+    }
+
 }
