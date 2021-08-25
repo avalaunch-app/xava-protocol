@@ -43,7 +43,8 @@ async function main() {
             ethers.utils.parseEther(c.allocationStakingRPS),
             currentTimestamp + c.delayBeforeStart,
             salesFactory.address,
-            c.depositFeePercent
+            c.depositFeePercent,
+            c.depositFeePrecision
         ]
     );
     await allocationStaking.deployed()

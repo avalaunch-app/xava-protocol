@@ -66,6 +66,11 @@ async function main() {
         [ethers.utils.parseEther('2000'),ethers.utils.parseEther('2000'),ethers.utils.parseEther('2000')]
     );
 
+    const unlockingTimes = [1629898200, 1629898500, 1629898800, 1629899100, 1629899400, 1629899700, 1629899800];
+    const percents = [30,20,20,10,10,5,5];
+
+    await sale.setVestingParams(unlockingTimes, percents);
+
     console.log('Rounds set.');
 
     console.log({
