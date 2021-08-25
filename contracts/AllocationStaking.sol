@@ -133,6 +133,7 @@ contract AllocationStaking is OwnableUpgradeable {
 
     // Set deposit fee
     function setDepositFee(uint256 _depositFeePercent, uint256 _depositFeePrecision) public onlyOwner {
+        require(_depositFeePercent >= _depositFeePrecision.div(100)  && _depositFeePercent <= _depositFeePrecision);
         depositFeePercent = _depositFeePercent;
         depositFeePrecision=  _depositFeePrecision;
         emit DepositFeeSet(depositFeePercent, depositFeePrecision);
