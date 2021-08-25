@@ -345,7 +345,7 @@ contract AvalaunchSale {
     external
     onlySaleOwner
     {
-        require(sale.totalTokensSold == 0 && sale.token.balanceOf(address(this)) == 0, "Deposit can be done only once");
+        require(sale.totalTokensSold == 0 && !sale.tokensDeposited, "Deposit can be done only once");
         require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "Deposit too late. Round already started.");
 
         sale.token.safeTransferFrom(msg.sender, address(this), sale.amountOfTokensToSell);
