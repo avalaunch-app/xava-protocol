@@ -28,20 +28,20 @@ async function main() {
     const sale = await hre.ethers.getContractAt('AvalaunchSale', lastDeployedSale);
 
     const totalTokens = ethers.utils.parseEther('2000');
-    const tokenPriceInAvax = ethers.utils.parseEther("0.002");
+    const tokenPriceInAvax = ethers.utils.parseEther("0.001");
 
     const signer = await ethers.provider.getSigner();
 
     const saleOwner = await signer.getAddress();
 
-    const registrationStart = 1629277200;
+    const registrationStart = 1629906000;
 
-    const registrationEnd = registrationStart + 21600; //6hrs
-    const validatorRound = registrationEnd + 7200; // 2hrs
-    const stakingRound = validatorRound + 10800; //
-    const publicRound = stakingRound + 21600;
-    const saleEndTime = publicRound + 10800;
-    const tokensUnlockTime = saleEndTime + 600;
+    const registrationEnd = registrationStart + 360; //6hrs
+    const validatorRound = registrationEnd + 360; // 2hrs
+    const stakingRound = validatorRound + 360; //
+    const publicRound = stakingRound + 360;
+    const saleEndTime = publicRound + 360;
+    const tokensUnlockTime = saleEndTime + 360;
 
     await sale.setSaleParams(
         token.address,
@@ -53,6 +53,8 @@ async function main() {
     );
 
     console.log('Params set.');
+
+    console.log(registrationStart, registrationEnd);
 
     await sale.setRegistrationTime(
         registrationStart,
@@ -66,8 +68,8 @@ async function main() {
         [ethers.utils.parseEther('2000'),ethers.utils.parseEther('2000'),ethers.utils.parseEther('2000')]
     );
 
-    const unlockingTimes = [1629898200, 1629898500, 1629898800, 1629899100, 1629899400, 1629899700, 1629899800];
-    const percents = [30,20,20,10,10,5,5];
+    const unlockingTimes = [1629908160, 1629908260, 1629908360, 1629908460, 1629908560, 1629908660, 1629908860];
+    const percents = [30,20,17,13,10,5,5];
 
     await sale.setVestingParams(unlockingTimes, percents);
 

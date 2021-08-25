@@ -37,7 +37,6 @@ async function main() {
     const currentTimestamp = await getCurrentBlockTimestamp();
 
     const AllocationStaking = await ethers.getContractFactory("AllocationStaking");
-
     const allocationStaking = await upgrades.deployProxy(AllocationStaking, [
             token.address,
             ethers.utils.parseEther(c.allocationStakingRPS),
