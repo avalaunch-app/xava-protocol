@@ -37,7 +37,8 @@ async function main() {
             ethers.utils.parseEther(c.allocationStakingRPS),
             currentTimestamp + c.delayBeforeStart,
             salesFactory.address,
-            c.depositFeePercent
+            c.depositFeePercent,
+            c.depositFeePrecision
         ]
     );
     await allocationStaking.deployed()
@@ -69,7 +70,7 @@ async function main() {
     console.log('Successfully deposited total supply for dev token to the farm.');
 
     // Fund only 5000 tokens, for testing
-    await allocationStaking.fund(ethers.utils.parseEther('5000'));
+    await allocationStaking.fund(ethers.utils.parseEther('500'));
 }
 
 
