@@ -133,6 +133,7 @@ contract AvalaunchSale {
         require(_unlockingTimes.length == _percents.length);
 
         uint256 sum;
+
         for(uint256 i = 0; i < _unlockingTimes.length; i++) {
             vestingPortionsUnlockTime.push(_unlockingTimes[i]);
             vestingPercentPerPortion.push(_percents[i]);
@@ -403,15 +404,17 @@ contract AvalaunchSale {
         // Increase amount of AVAX raised
         sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
 
-        bool [] memory isPortionWithdrawn = new bool [](vestingPortionsUnlockTime.length);
+        bool [] memory _isPortionWithdrawn = new bool [](vestingPortionsUnlockTime.length);
+
 
         // Create participation object
-        Participation memory p;
-        p.amountBought = amountOfTokensBuying;
-        p.amountAVAXPaid = msg.value;
-        p.timeParticipated = block.timestamp;
-        p.roundId = roundId;
-        p.isPortionWithdrawn = isPortionWithdrawn;
+        Participation memory p = Participation({
+            amountBought: amountOfTokensBuying,
+            amountAVAXPaid: msg.value,
+            timeParticipated: block.timestamp,
+            roundId: roundId,
+            isPortionWithdrawn: _isPortionWithdrawn
+        });
 
         // Staking round only.
         if(roundId == 2) {
