@@ -47,7 +47,7 @@ contract Admin {
     {
         // Admin has to exist
         require(isAdmin[_adminAddress] == true);
-
+        require(admins.length > 1, "Can not remove all admins since contract becomes unusable.");
         uint i = 0;
 
         while(admins[i] != _adminAddress) {
