@@ -269,11 +269,16 @@ contract AllocationStaking is OwnableUpgradeable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        uint depositFee = _amount.mul(depositFeePercent).div(depositFeePrecision);
-        uint depositAmount = _amount.sub(depositFee);
+        uint256 depositFee = 0;
+        uint256 depositAmount = _amount;
 
-        // Update accounting around burning
-        burnFromUser(msg.sender, _pid, depositFee);
+        // Only for the main pool take fees
+        if(_pid == 0) {
+            depositFee = _amount.mul(depositFeePercent).div(depositFeePrecision);
+            depositAmount = _amount.sub(depositFee);
+            // Update accounting around burning
+            burnFromUser(msg.sender, _pid, depositFee);
+        }
 
         // Update pool including fee for people staking
         updatePoolWithFee(_pid, depositFee);
