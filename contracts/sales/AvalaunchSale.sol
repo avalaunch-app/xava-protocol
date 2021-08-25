@@ -209,7 +209,7 @@ contract AvalaunchSale {
     {
         require(sale.isCreated == true);
         require(startTimes.length == maxParticipations.length, "setRounds: Bad input.");
-        require(roundIds.length == 0, "setRounds: Rounds are already");
+        require(roundIds.length == 0, "setRounds: Rounds are set already.");
         require(startTimes.length > 0);
 
         uint256 lastTimestamp = 0;
