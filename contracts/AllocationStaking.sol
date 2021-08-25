@@ -16,7 +16,7 @@ contract AllocationStaking is OwnableUpgradeable {
     // Info of each user.
     struct UserInfo {
         uint256 amount;     // How many LP tokens the user has provided.
-        uint256 rewardDebt; // Reward debt. See explanation below.
+        uint256 rewardDebt; // Reward debt. Current reward debt when user joined farm.
         uint256 tokensUnlockTime; // If user registered for sale, returns when tokens are getting unlocked
         address [] salesRegistered;
     }
@@ -32,44 +32,34 @@ contract AllocationStaking is OwnableUpgradeable {
 
     // Address of the ERC20 Token contract.
     IERC20 public erc20;
-
     // The total amount of ERC20 that's paid out as reward.
     uint256 public paidOut;
-
     // ERC20 tokens rewarded per second.
     uint256 public rewardPerSecond;
-
     // Total rewards added to farm
     uint256 public totalRewards;
-
+    // Precision of deposit fee
     uint256 public depositFeePrecision;
-
+    // Percent of deposit fee, must be >= depositFeePrecision.div(100) and less than depositFeePrecision
     uint256 public depositFeePercent;
-
-    // Total XAVA redistributed between stakers
+    // Total XAVA redistributed between people staking
     uint256 public totalXavaRedistributed;
-
     // Address of sales factory contract
     ISalesFactory public salesFactory;
-
     // Info of each pool.
     PoolInfo[] public poolInfo;
-
     // Info of each user that stakes LP tokens.
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
-
     // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint;
-
     // The timestamp when farming starts.
     uint256 public startTimestamp;
-
     // The timestamp when farming ends.
     uint256 public endTimestamp;
-
     // Total amount of tokens burned from the wallet
     mapping (address => uint256) public totalBurnedFromUser;
 
+    // Events
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -77,14 +67,19 @@ contract AllocationStaking is OwnableUpgradeable {
     event CompoundedEarnings(address indexed user, uint256 indexed pid, uint256 amountAdded, uint256 totalDeposited);
     event FeeTaken(address indexed user, uint256 indexed pid, uint256 amount);
 
+    // Restricting calls to only verified sales
     modifier onlyVerifiedSales {
         require(salesFactory.isSaleCreatedThroughFactory(msg.sender), "Sale not created through factory.");
         _;
     }
 
-
     function initialize(
-        IERC20 _erc20, uint256 _rewardPerSecond, uint256 _startTimestamp, address _salesFactory, uint256 _depositFeePercent
+        IERC20 _erc20,
+        uint256 _rewardPerSecond,
+        uint256 _startTimestamp,
+        address _salesFactory,
+        uint256 _depositFeePercent,
+        uint256 _depositFeePrecision
     )
     initializer
     public
@@ -97,8 +92,8 @@ contract AllocationStaking is OwnableUpgradeable {
         endTimestamp = _startTimestamp;
         // Create sales factory contract
         salesFactory = ISalesFactory(_salesFactory);
-        depositFeePercent = _depositFeePercent;
-        depositFeePrecision = 10**8;
+
+        setDepositFeeInternal(_depositFeePercent, _depositFeePrecision);
     }
 
     // Number of LP pools
@@ -133,6 +128,11 @@ contract AllocationStaking is OwnableUpgradeable {
 
     // Set deposit fee
     function setDepositFee(uint256 _depositFeePercent, uint256 _depositFeePrecision) public onlyOwner {
+        setDepositFeeInternal(_depositFeePercent, _depositFeePrecision);
+    }
+
+    // Set deposit fee internal
+    function setDepositFeeInternal(uint256 _depositFeePercent, uint256 _depositFeePrecision) internal {
         require(_depositFeePercent >= _depositFeePrecision.div(100)  && _depositFeePercent <= _depositFeePrecision);
         depositFeePercent = _depositFeePercent;
         depositFeePrecision=  _depositFeePrecision;
