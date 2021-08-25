@@ -377,7 +377,7 @@ contract AvalaunchSale {
         require(checkParticipationSignature(signature, msg.sender, amount, amountXavaToBurn, roundId), "Invalid signature. Verification failed");
 
         // Check user haven't participated before
-        require(isParticipated[msg.sender] == false, "User can participate only once.");
+        require(!isParticipated[msg.sender], "User can participate only once.");
 
         // Disallow contract calls.
         require(msg.sender == tx.origin, "Only direct contract calls.");
@@ -474,7 +474,7 @@ contract AvalaunchSale {
         require(block.timestamp >= sale.saleEnd);
 
         // Make sure owner can't withdraw twice
-        require(sale.earningsWithdrawn == false);
+        require(!sale.earningsWithdrawn);
         sale.earningsWithdrawn = true;
 
         // Earnings amount of the owner in AVAX
