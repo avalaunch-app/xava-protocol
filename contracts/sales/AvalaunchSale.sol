@@ -295,12 +295,12 @@ contract AvalaunchSale {
     onlyAdmin
     {
         require(block.timestamp < roundIdToRound[roundIds[0]].startTime, "1st round already started.");
-        require(round.startTime + timeToShift < sale.saleEnd, "Start time can not be greater than end time.");
         // Iterate through all registered rounds and postpone them
         for(uint i = 0; i < roundIds.length; i++) {
             Round storage round = roundIdToRound[roundIds[i]];
             // Postpone sale
             round.startTime = round.startTime.add(timeToShift);
+            require(round.startTime + timeToShift < sale.saleEnd, "Start time can not be greater than end time.");
         }
     }
 

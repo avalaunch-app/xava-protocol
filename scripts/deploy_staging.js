@@ -48,9 +48,11 @@ async function main() {
         ]
     );
     await allocationStaking.deployed()
-    console.log('AllocationStaking Proxy deployed to:', allocationStaking.address);
-    saveContractAddress(hre.network.name, 'AllocationStaking', allocationStaking.address);
+    console.log('AllocationStakingProxy deployed to:', allocationStaking.address);
+    saveContractAddress(hre.network.name, 'AllocationStakingProxy', allocationStaking.address);
 
+    let proxyAdminContract = await upgrades.admin.getInstance();
+    saveContractAddress(hre.network.name, 'ProxyAdmin', proxyAdminContract.address);
 
     await salesFactory.setAllocationStaking(allocationStaking.address);
 
