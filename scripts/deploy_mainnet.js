@@ -44,15 +44,32 @@ async function main() {
     console.log('AllocationStaking Proxy deployed to:', allocationStaking.address);
     saveContractAddress(hre.network.name, 'AllocationStaking', allocationStaking.address);
 
-
     await salesFactory.setAllocationStaking(allocationStaking.address);
+    console.log(`salesFactory.setAllocationStaking ${allocationStaking.address} done.;`);
 
     const totalRewards = ethers.utils.parseEther(c.initialRewardsAllocationStaking);
 
     const token = await hre.ethers.getContractAt('XavaToken', contracts['XavaToken']);
+    const devToken = await hre.ethers.getContractAt('DevToken', contracts['DevTokenAlloStaking']);
+
     await token.approve(allocationStaking.address, totalRewards);
+    console.log(`token.approve(${allocationStaking.address}, ${totalRewards.toString()});`)
+
     await allocationStaking.add(c.xavaPoolAllocPoints, token.address, true);
-    await allocationStaking.fund(totalRewards);
+    console.log(`allocationStaking.add(${c.xavaPoolAllocPoints}, ${token.address}, true);`)
+
+    await allocationStaking.add(c.placeholderPoolAllocPoints, contracts["DevTokenAlloStaking"], true);
+    console.log(`allocationStaking.add(${c.placeholderPoolAllocPoints}, ${contracts["DevTokenAlloStaking"]}, true)`)
+
+    const totalSupplyDevToken = ethers.utils.parseEther('10000');
+    await devToken.approve(allocationStaking.address, totalSupplyDevToken);
+    console.log('Dev token successfully approved.');
+
+    await allocationStaking.deposit(1, totalSupplyDevToken);
+    console.log('Successfully deposited total supply for dev token to the farm.');
+
+    // Fund only 5000 tokens, for testing
+    await allocationStaking.fund(ethers.utils.parseEther('5000'));
 }
 
 
