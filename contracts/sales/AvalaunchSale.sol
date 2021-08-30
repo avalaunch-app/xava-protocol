@@ -58,14 +58,14 @@ contract AvalaunchSale {
 
     // Round structure
     struct Round {
-        uint startTime;
-        uint maxParticipation;
+        uint256 startTime;
+        uint256 maxParticipation;
     }
 
     struct Registration {
-        uint256 registrationTimeStarts;
-        uint256 registrationTimeEnds;
-        uint256 numberOfRegistrants;
+        uint128 registrationTimeStarts;
+        uint128 registrationTimeEnds;
+        uint128 numberOfRegistrants;
     }
 
     // Sale
