@@ -89,7 +89,7 @@ contract ParticipationVestingPrivate {
 
         totalTokensToDistribute = totalTokensToDistribute.add(participationAmount);
 
-        require(hasParticipated[participant] == false, "User already registered as participant.");
+        require(!hasParticipated[participant], "User already registered as participant.");
 
         uint initialPortionAmount = participationAmount.mul(20).div(100);
         // Vested 80%
@@ -127,7 +127,7 @@ contract ParticipationVestingPrivate {
         uint256 totalToWithdraw = 0;
 
         // Initial portion can be withdrawn
-        if(p.initialPortionWithdrawn == false && block.timestamp >= initialPortionUnlockingTime) {
+        if(!p.initialPortionWithdrawn && block.timestamp >= initialPortionUnlockingTime) {
             totalToWithdraw = totalToWithdraw.add(p.initialPortion);
             // Mark initial portion as withdrawn
             p.initialPortionWithdrawn = true;

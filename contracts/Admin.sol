@@ -11,7 +11,7 @@ contract Admin {
 
     // Modifier restricting access to only admin
     modifier onlyAdmin {
-        require(isAdmin[msg.sender] == true, "not admin");
+        require(isAdmin[msg.sender], "Only admin can call.");
         _;
     }
 
@@ -32,7 +32,7 @@ contract Admin {
         // Can't add 0x address as an admin
         require(_adminAddress != address(0x0), "[RBAC] : Admin must be != than 0x0 address");
         // Can't add existing admin
-        require(isAdmin[_adminAddress] == false, "[RBAC] : Admin already exists.");
+        require(!isAdmin[_adminAddress], "[RBAC] : Admin already exists.");
         // Add admin to array of admins
         admins.push(_adminAddress);
         // Set mapping
@@ -46,7 +46,7 @@ contract Admin {
     onlyAdmin
     {
         // Admin has to exist
-        require(isAdmin[_adminAddress] == true);
+        require(isAdmin[_adminAddress]);
         require(admins.length > 1, "Can not remove all admins since contract becomes unusable.");
         uint i = 0;
 

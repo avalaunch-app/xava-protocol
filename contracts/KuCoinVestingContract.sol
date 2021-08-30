@@ -50,7 +50,7 @@ contract KuCoinVestingContract {
     {
         uint256 totalToPay;
         for(uint i=0; i<unlockingAmounts.length; i++) {
-            if(isWithdrawn[i] == false && block.timestamp > unlockingTimes[i]) {
+            if(!isWithdrawn[i] && block.timestamp > unlockingTimes[i]) {
                 totalToPay = totalToPay.add(unlockingAmounts[i]);
                 isWithdrawn[i] = true;
             }
