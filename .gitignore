@@ -1,4 +1,5 @@
 artifacts
+.DS_Store
 node_modules
 cache
 yarn.lock
