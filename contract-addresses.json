@@ -17,8 +17,7 @@
         "ParticipationVestingPrivate": "0x4f579b76B9413D3C4a7981A7eA0BbBB7A0D54332",
         "DevToken": "0xBf838Ffffd86805933d8C1F971acfD59bbaE5026",
         "FarmingXava": "0xE82AAE7fc62547BdFC36689D0A83dE36FF034A68",
-        "FarmingXavaV2": "0x6E125b68F0f1963b09add1b755049e66f53CC1EA",
-        "DevTokenAlloStaking": "0xb3E0526B3a942Ddd3EF1fD0DA6808D41418FfCAE"
+        "FarmingXavaV2": "0x6E125b68F0f1963b09add1b755049e66f53CC1EA"
     },
     "local": {
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
