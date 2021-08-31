@@ -63,9 +63,9 @@ contract AvalaunchSale {
     }
 
     struct Registration {
-        uint128 registrationTimeStarts;
-        uint128 registrationTimeEnds;
-        uint128 numberOfRegistrants;
+        uint256 registrationTimeStarts;
+        uint256 registrationTimeEnds;
+        uint256 numberOfRegistrants;
     }
 
     // Sale
