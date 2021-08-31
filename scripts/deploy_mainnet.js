@@ -29,9 +29,9 @@ async function main() {
 
 
     const currentTimestamp = await getCurrentBlockTimestamp();
+    console.log('Farming starts at: ', currentTimestamp);
 
     const AllocationStaking = await ethers.getContractFactory("AllocationStaking");
-
     const allocationStaking = await upgrades.deployProxy(AllocationStaking, [
             contracts["XavaToken"],
             ethers.utils.parseEther(c.allocationStakingRPS),
@@ -47,6 +47,7 @@ async function main() {
 
     let proxyAdminContract = await upgrades.admin.getInstance();
     saveContractAddress(hre.network.name, 'ProxyAdmin', proxyAdminContract.address);
+    console.log('Proxy Admin address is : ', proxyAdminContract.address);
 
     await salesFactory.setAllocationStaking(allocationStaking.address);
     console.log(`salesFactory.setAllocationStaking ${allocationStaking.address} done.;`);
@@ -73,7 +74,7 @@ async function main() {
     console.log('Successfully deposited total supply for dev token to the farm.');
 
     // Fund only 5000 tokens, for testing
-    await allocationStaking.fund(ethers.utils.parseEther('500'));
+    await allocationStaking.fund(ethers.utils.parseEther('4500'));
 }
 
 
