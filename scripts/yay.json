@@ -1,0 +1,37 @@
+{
+  "mainnet": {
+    "tokenAddress": "0x01c2086facfd7aa38f69a6bd8c91bef3bb5adfca",
+    "totalTokens": "36363636",
+    "tokenPriceInAvax": "0.000253281",
+    "saleOwner": "0x86f8467832C01a96AA90f33Fa69f41D0f363fE36",
+    "registrationStartAt": 1630605600,
+    "registrationLength": 129600,
+    "delayBetweenRegistrationAndSale": 36000,
+    "roundLength": 10800,
+    "TGE": 1631112300,
+    "portionVestingPrecision": 10000,
+    "unlockingTimes": [
+      1631112300,
+      1631717100,
+      1632321900,
+      1632926700,
+      1633531500,
+      1634136300,
+      1634741100,
+      1635345900,
+      1635954300
+    ],
+    "portionPercents": [
+      3000,
+      875,
+      875,
+      875,
+      875,
+      875,
+      875,
+      875,
+      875,
+      875
+    ]
+  }
+}
