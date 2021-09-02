@@ -57,7 +57,7 @@ _The first protocol, exclusively for the Avalanche ecosystem, to offer promising
 ### Sales
 1. Yay Games:
    1. Sale Contract address: https://cchain.explorer.avax.network/address/0x4437c4ca026f08380812D545e26679EB8404E26b/contracts
-   2. URL: https://launchpad.avalaunch.app/project-details?id=1
+   2. URL: https://launchpad.avalaunch.app/project-details?id=3
    3. Website: https://yay.games
    
 ---
