@@ -2,7 +2,7 @@
   "mainnet": {
     "tokenAddress": "0x01c2086facfd7aa38f69a6bd8c91bef3bb5adfca",
     "totalTokens": "36363636",
-    "tokenPriceInAvax": "0.000253281",
+    "tokenPriceInAvax": "00002535",
     "saleOwner": "0x86f8467832C01a96AA90f33Fa69f41D0f363fE36",
     "registrationStartAt": 1630605600,
     "registrationLength": 129600,
@@ -23,7 +23,6 @@
     ],
     "portionPercents": [
       3000,
-      875,
       875,
       875,
       875,
