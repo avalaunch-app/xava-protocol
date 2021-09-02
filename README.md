@@ -22,12 +22,12 @@ _The first protocol, exclusively for the Avalanche ecosystem, to offer promising
 
 ### Launchpad
 **Admin**
-- Address: 0x0cE58B15874cb9AA3E64C0aE95615C6112004A32
-- Verified: https://cchain.explorer.avax.network/address/0x0cE58B15874cb9AA3E64C0aE95615C6112004A32/contracts
+- Address: 0x68c58e1107bcE9be240aF941151d42101086AF56
+- Verified: https://cchain.explorer.avax.network/address/0x68c58e1107bcE9be240aF941151d42101086AF56/contracts
 
 **Sales Factory**
-- Address:0xb9dB9e6A5943E3a21CE87D61A1F5D0b59a2c3aF6
-- Verified: https://cchain.explorer.avax.network/address/0xb9dB9e6A5943E3a21CE87D61A1F5D0b59a2c3aF6/contracts
+- Address:0x23a391BFc5599f8c02AE121125536E3D72D19179
+- Verified: https://cchain.explorer.avax.network/address/0x23a391BFc5599f8c02AE121125536E3D72D19179/contracts
 
 **AllocationStaking Implementation v0**
 - Address: 0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6
