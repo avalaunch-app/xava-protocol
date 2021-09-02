@@ -96,6 +96,12 @@ contract AllocationStaking is OwnableUpgradeable {
         setDepositFeeInternal(_depositFeePercent, _depositFeePrecision);
     }
 
+    // Function where owner can set sales factory in case of upgrading some of smart-contracts
+    function setSalesFactory(address _salesFactory) external onlyOwner {
+        require(_salesFactory != 0);
+        salesFactory = ISalesFactory(_salesFactory);
+    }
+
     // Number of LP pools
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
