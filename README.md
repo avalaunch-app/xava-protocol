@@ -29,9 +29,14 @@ _The first protocol, exclusively for the Avalanche ecosystem, to offer promising
 - Address:0xb9dB9e6A5943E3a21CE87D61A1F5D0b59a2c3aF6
 - Verified: https://cchain.explorer.avax.network/address/0xb9dB9e6A5943E3a21CE87D61A1F5D0b59a2c3aF6/contracts
 
-**AllocationStaking Implementation**
+**AllocationStaking Implementation v0**
 - Address: 0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6
 - Verified: https://cchain.explorer.avax.network/address/0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6/contracts
+
+**AllocationStaking Implementation v1**
+- Address: 0xfbCEA5AF909e798CffC7653968ddF01b9Cb1A6EA
+- Verified: https://cchain.explorer.avax.network/address/0xfbCEA5AF909e798CffC7653968ddF01b9Cb1A6EA/contracts
+- ChangeLog: Added one more setter, supporting system improvements and migration. 
 
 **AllocationStakingProxy**
 - Address: 0xA6A01f4b494243d84cf8030d982D7EeB2AeCd329
