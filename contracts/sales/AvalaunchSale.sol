@@ -92,7 +92,8 @@ contract AvalaunchSale {
     uint256 [] public vestingPortionsUnlockTime;
     // Percent of the participation user can withdraw
     uint256 [] public vestingPercentPerPortion;
-
+    //Precision for percent for portion vesting
+    uint256 public portionVestingPrecision;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner {
@@ -140,8 +141,7 @@ contract AvalaunchSale {
             sum += _percents[i];
         }
 
-        require(sum == 100, "Percent distribution issue.");
-
+        require(sum == portionVestingPrecision, "Percent distribution issue.");
     }
 
     /// @notice     Admin function to set sale parameters
@@ -151,7 +151,8 @@ contract AvalaunchSale {
         uint256 _tokenPriceInAVAX,
         uint256 _amountOfTokensToSell,
         uint256 _saleEnd,
-        uint256 _tokensUnlockTime
+        uint256 _tokensUnlockTime,
+        uint256 _portionVestingPrecision
     )
     external
     onlyAdmin
@@ -161,7 +162,7 @@ contract AvalaunchSale {
         require(_saleOwner != address(0), "setSaleParams: Sale owner address can not be 0.");
         require(_tokenPriceInAVAX != 0 && _amountOfTokensToSell != 0 && _saleEnd > block.timestamp &&
             _tokensUnlockTime > block.timestamp, "setSaleParams: Bad input");
-
+        require(_portionVestingPrecision > 100, "Should be at least 100");
         // Set params
         sale.token = IERC20(_token);
         sale.isCreated = true;
@@ -171,6 +172,7 @@ contract AvalaunchSale {
         sale.saleEnd = _saleEnd;
         sale.tokensUnlockTime = _tokensUnlockTime;
 
+        portionVestingPrecision = _portionVestingPrecision;
         // Mark in factory
         factory.setSaleOwnerAndToken(sale.saleOwner, address(sale.token));
 
@@ -444,7 +446,7 @@ contract AvalaunchSale {
 
         if(!p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] <= block.timestamp) {
             p.isPortionWithdrawn[portionId] = true;
-            uint256 amountWithdrawing = p.amountBought.mul(vestingPercentPerPortion[portionId]).div(100);
+            uint256 amountWithdrawing = p.amountBought.mul(vestingPercentPerPortion[portionId]).div(portionVestingPrecision);
             // Withdraw percent which is unlocked at that portion
             sale.token.safeTransfer(msg.sender, amountWithdrawing);
             emit TokensWithdrawn(msg.sender, amountWithdrawing);
