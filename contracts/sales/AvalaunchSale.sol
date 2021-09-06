@@ -70,10 +70,8 @@ contract AvalaunchSale {
 
     // Sale
     Sale public sale;
-
     // Registration
     Registration public registration;
-
     // Number of users participated in the sale.
     uint256 public numberOfParticipants;
     // Array storing IDS of rounds (IDs start from 1, so they can't be mapped as array indexes
@@ -229,6 +227,7 @@ contract AvalaunchSale {
 
             // Push id to array of ids
             roundIds.push(roundId);
+
             // Create round
             Round memory round = Round(startTimes[i], maxParticipations[i]);
 
