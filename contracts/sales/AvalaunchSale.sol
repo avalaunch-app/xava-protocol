@@ -94,6 +94,8 @@ contract AvalaunchSale {
     uint256 public portionVestingPrecision;
     // Added configurable round ID for staking round
     uint256 public stakingRoundId;
+    // Max vesting time shift
+    uint256 public maxVestingTimeShift;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner {
@@ -126,12 +128,19 @@ contract AvalaunchSale {
     }
 
     /// @notice         Function to set vesting params
-    function setVestingParams(uint256 [] memory _unlockingTimes, uint256 [] memory _percents)
+    function setVestingParams(
+        uint256 [] memory _unlockingTimes,
+        uint256 [] memory _percents,
+        uint256 _maxVestingTimeShift
+    )
     external
     onlyAdmin
     {
         require(vestingPercentPerPortion.length == 0 && vestingPortionsUnlockTime.length == 0);
         require(_unlockingTimes.length == _percents.length);
+
+        // Set max vesting time shift
+        maxVestingTimeShift = _maxVestingTimeShift;
 
         uint256 sum;
 
@@ -142,6 +151,19 @@ contract AvalaunchSale {
         }
 
         require(sum == portionVestingPrecision, "Percent distribution issue.");
+    }
+
+    function shiftVestingUnlockingTimes(
+        uint256 timeToShift
+    )
+    external
+    onlyAdmin
+    {
+        require(timeToShift > 0 && timeToShift < maxVestingTimeShift, "Shift can not be greater than 10 days.");
+
+        for(uint256 i=0; i < vestingPortionsUnlockTime.length; i++) {
+            vestingPortionsUnlockTime[i] = vestingPortionsUnlockTime[i].add(timeToShift);
+        }
     }
 
     /// @notice     Admin function to set sale parameters
