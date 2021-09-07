@@ -360,15 +360,9 @@ contract AvalaunchSale {
 
     /// @notice     Admin function, to update token price before sale to match the closest $ desired rate.
     function updateTokenPriceInAVAX(uint256 price) external onlyAdmin {
-        require(
-            block.timestamp < roundIdToRound[roundIds[0]].startTime,
-            "1st round already started."
-        );
         require(price > 0, "Price can not be 0.");
-
         // Set new price in AVAX
         sale.tokenPriceInAVAX = price;
-
         // Emit event token price is set
         emit TokenPriceSet(price);
     }
