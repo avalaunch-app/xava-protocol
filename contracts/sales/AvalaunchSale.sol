@@ -92,6 +92,8 @@ contract AvalaunchSale {
     uint256 [] public vestingPercentPerPortion;
     //Precision for percent for portion vesting
     uint256 public portionVestingPrecision;
+    // Added configurable round ID for staking round
+    uint256 public stakingRoundId;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner {
@@ -150,7 +152,8 @@ contract AvalaunchSale {
         uint256 _amountOfTokensToSell,
         uint256 _saleEnd,
         uint256 _tokensUnlockTime,
-        uint256 _portionVestingPrecision
+        uint256 _portionVestingPrecision,
+        uint256 _stakingRoundId
     )
     external
     onlyAdmin
@@ -161,6 +164,8 @@ contract AvalaunchSale {
         require(_tokenPriceInAVAX != 0 && _amountOfTokensToSell != 0 && _saleEnd > block.timestamp &&
             _tokensUnlockTime > block.timestamp, "setSaleParams: Bad input");
         require(_portionVestingPrecision > 100, "Should be at least 100");
+        require(_stakingRoundId > 0, "Staking round ID can not be 0.");
+
         // Set params
         sale.token = IERC20(_token);
         sale.isCreated = true;
@@ -170,10 +175,12 @@ contract AvalaunchSale {
         sale.saleEnd = _saleEnd;
         sale.tokensUnlockTime = _tokensUnlockTime;
 
+        // Set portion vesting precision
         portionVestingPrecision = _portionVestingPrecision;
+        // Set staking round id
+        stakingRoundId = _stakingRoundId;
         // Mark in factory
         factory.setSaleOwnerAndToken(sale.saleOwner, address(sale.token));
-
         // Emit event
         emit SaleCreated(sale.saleOwner, sale.tokenPriceInAVAX, sale.amountOfTokensToSell, sale.saleEnd, sale.tokensUnlockTime);
     }
@@ -258,7 +265,7 @@ contract AvalaunchSale {
         addressToRoundRegisteredFor[msg.sender] = roundId;
 
         // Special cases for staking round
-        if(roundId == 2) {
+        if(roundId == stakingRoundId) {
             // Lock users stake
             allocationStakingContract.setTokensUnlockTime(0, msg.sender, sale.saleEnd);
         }
