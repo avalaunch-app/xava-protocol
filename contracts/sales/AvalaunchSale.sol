@@ -16,9 +16,8 @@ contract AvalaunchSale {
 
     // Pointer to Allocation staking contract, where burnXavaFromUser will be called.
     IAllocationStaking public allocationStakingContract;
-
+    // Pointer to sales factory contract
     ISalesFactory public factory;
-
     // Admin contract
     IAdmin public admin;
 
@@ -96,6 +95,10 @@ contract AvalaunchSale {
     uint256 public stakingRoundId;
     // Max vesting time shift
     uint256 public maxVestingTimeShift;
+    // Registration deposit AVAX, which will be paid during the registration, and returned back during the participation.
+    uint256 public registrationDepositAVAX;
+    // Accounting total AVAX collected, after sale admin can withdraw this
+    uint256 public registrationFees;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner {
@@ -108,6 +111,7 @@ contract AvalaunchSale {
         _;
     }
 
+    // EVENTS
 
     event TokensSold(address user, uint256 amount);
     event UserRegistered(address user, uint256 roundId);
@@ -119,6 +123,8 @@ contract AvalaunchSale {
     event RegistrationTimeSet(uint256 registrationTimeStarts, uint256 registrationTimeEnds);
     event RoundAdded(uint256 roundId, uint256 startTime, uint256 maxParticipation);
 
+
+    // Constructor, always initialized through SalesFactory
     constructor(address _admin, address _allocationStaking) public {
         require(_admin != address(0));
         require(_allocationStaking != address(0));
@@ -175,7 +181,8 @@ contract AvalaunchSale {
         uint256 _saleEnd,
         uint256 _tokensUnlockTime,
         uint256 _portionVestingPrecision,
-        uint256 _stakingRoundId
+        uint256 _stakingRoundId,
+        uint256 _registrationDepositAVAX
     )
     external
     onlyAdmin
@@ -197,6 +204,8 @@ contract AvalaunchSale {
         sale.saleEnd = _saleEnd;
         sale.tokensUnlockTime = _tokensUnlockTime;
 
+        // Deposit in AVAX, sent during the registration
+        registrationDepositAVAX = _registrationDepositAVAX;
         // Set portion vesting precision
         portionVestingPrecision = _portionVestingPrecision;
         // Set staking round id
@@ -276,7 +285,9 @@ contract AvalaunchSale {
         uint roundId
     )
     external
+    payable
     {
+        require(msg.value == registrationDepositAVAX, "Registration deposit does not match.");
         require(roundId != 0, "Round ID can not be 0.");
         require(roundId <= roundIds.length, "Invalid round id");
         require(block.timestamp >= registration.registrationTimeStarts && block.timestamp <= registration.registrationTimeEnds, "Registration gate is closed.");
@@ -285,16 +296,15 @@ contract AvalaunchSale {
 
         // Rounds are 1,2,3
         addressToRoundRegisteredFor[msg.sender] = roundId;
-
         // Special cases for staking round
         if(roundId == stakingRoundId) {
             // Lock users stake
             allocationStakingContract.setTokensUnlockTime(0, msg.sender, sale.saleEnd);
         }
-
         // Increment number of registered users
         registration.numberOfRegistrants++;
-
+        // Increase earnings from registration fees
+        registrationFees = registrationFees.add(msg.value);
         // Emit Registration event
         emit UserRegistered(msg.sender, roundId);
     }
@@ -436,7 +446,6 @@ contract AvalaunchSale {
 
         bool [] memory _isPortionWithdrawn = new bool [](vestingPortionsUnlockTime.length);
 
-
         // Create participation object
         Participation memory p = Participation({
             amountBought: amountOfTokensBuying,
@@ -454,12 +463,14 @@ contract AvalaunchSale {
 
         // Add participation for user.
         userToParticipation[msg.sender] = p;
-
         // Mark user is participated
         isParticipated[msg.sender] = true;
-
         // Increment number of participants in the Sale.
         numberOfParticipants ++;
+        // Decrease of available registration fees
+        registrationFees = registrationFees.sub(registrationDepositAVAX);
+        // Transfer registration deposit amount in AVAX back to the users.
+        safeTransferAVAX(msg.sender, registrationDepositAVAX);
 
         emit TokensSold(msg.sender, amountOfTokensBuying);
     }
@@ -511,7 +522,7 @@ contract AvalaunchSale {
         sale.earningsWithdrawn = true;
 
         // Earnings amount of the owner in AVAX
-        uint totalProfit = address(this).balance;
+        uint totalProfit = sale.totalAVAXRaised;
 
         // Amount of tokens which are not sold
         uint leftover = sale.amountOfTokensToSell.sub(sale.totalTokensSold);
@@ -526,6 +537,19 @@ contract AvalaunchSale {
         if(withBurn) {
             sale.token.safeTransfer(address(1), leftover);
         }
+    }
+
+    // Function after sale for admin to withdraw registration fees if there are any left.
+    function withdrawRegistrationFees()
+    external
+    onlyAdmin
+    {
+        require(block.timestamp >= sale.saleEnd);
+        require(registrationFees > 0, "No earnings from registration fees.");
+        // Set registration fees to be 0
+        registrationFees = 0;
+        // Transfer AVAX to the admin wallet.
+        safeTransferAVAX(msg.sender, registrationFees);
     }
 
     /// @notice     Get current round in progress.
@@ -615,12 +639,9 @@ contract AvalaunchSale {
         );
     }
 
-    /// @notice     Function to get info about the registration
-    function getRegistrationInfo() external view returns (uint256, uint256) {
-        return (
-            registration.registrationTimeEnds,
-            registration.numberOfRegistrants
-        );
+    /// @notice     Function to get number of registered users for sale
+    function getNumberOfRegisteredUsers() external view returns (uint256) {
+        return registration.numberOfRegistrants;
     }
 
     /// @notice     Function to get all info about vesting.
