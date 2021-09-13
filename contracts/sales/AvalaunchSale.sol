@@ -155,10 +155,10 @@ contract AvalaunchSale {
     ) external onlyAdmin {
         require(
             vestingPercentPerPortion.length == 0 &&
-                vestingPortionsUnlockTime.length == 0
+            vestingPortionsUnlockTime.length == 0
         );
         require(_unlockingTimes.length == _percents.length);
-
+        require(portionVestingPrecision > 0, "Safeguard for making sure setSaleParams get first called.");
         require(_maxVestingTimeShift <= 30 days, "Maximal shift is 30 days.");
 
         // Set max vesting time shift
@@ -219,7 +219,7 @@ contract AvalaunchSale {
                 _tokensUnlockTime > block.timestamp,
             "setSaleParams: Bad input"
         );
-        require(_portionVestingPrecision > 100, "Should be at least 100");
+        require(_portionVestingPrecision >= 100, "Should be at least 100");
         require(_stakingRoundId > 0, "Staking round ID can not be 0.");
 
         // Set params
