@@ -426,12 +426,7 @@ contract AvalaunchSale {
     // Function for owner to deposit tokens, can be called only once.
     function depositTokens() external onlySaleOwner {
         require(
-            sale.totalTokensSold == 0 && !sale.tokensDeposited,
-            "Deposit can be done only once"
-        );
-        require(
-            block.timestamp < roundIdToRound[roundIds[0]].startTime,
-            "Deposit too late. Round already started."
+            !sale.tokensDeposited, "Deposit can be done only once"
         );
 
         sale.token.safeTransferFrom(
@@ -449,8 +444,6 @@ contract AvalaunchSale {
         uint256 amountXavaToBurn,
         uint256 roundId
     ) external payable {
-        // Disallow participation if no tokens deposited
-        require(sale.tokensDeposited == true, "Tokens not deposited yet");
 
         require(roundId != 0, "Round can not be 0.");
 
