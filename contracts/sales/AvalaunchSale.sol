@@ -359,11 +359,12 @@ contract AvalaunchSale {
     }
 
     /// @notice     Admin function, to update token price before sale to match the closest $ desired rate.
+    /// @dev        This will be updated with an oracle during the sale every N minutes, so the users will always
+    ///             pay initialy set $ value of the token. This is to reduce reliance on the AVAX volatility.
     function updateTokenPriceInAVAX(uint256 price) external onlyAdmin {
         require(price > 0, "Price can not be 0.");
-        // Set new price in AVAX
+        // Allowing oracle to run and change the sale value
         sale.tokenPriceInAVAX = price;
-        // Emit event token price is set
         emit TokenPriceSet(price);
     }
 
