@@ -70,6 +70,7 @@ contract AvalaunchSale {
     Sale public sale;
     // Registration
     Registration public registration;
+
     // Number of users participated in the sale.
     uint256 public numberOfParticipants;
     // Array storing IDS of rounds (IDs start from 1, so they can't be mapped as array indexes
@@ -158,6 +159,8 @@ contract AvalaunchSale {
         );
         require(_unlockingTimes.length == _percents.length);
 
+        require(_maxVestingTimeShift <= 30 days, "Maximal shift is 30 days.");
+
         // Set max vesting time shift
         maxVestingTimeShift = _maxVestingTimeShift;
 
@@ -178,7 +181,7 @@ contract AvalaunchSale {
     {
         require(
             timeToShift > 0 && timeToShift < maxVestingTimeShift,
-            "Shift can not be greater than 10 days."
+            "Shift can not be greater than 30 days."
         );
 
         for (uint256 i = 0; i < vestingPortionsUnlockTime.length; i++) {
