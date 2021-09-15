@@ -15,23 +15,29 @@ describe("AvalaunchSale", function() {
 
   const REWARDS_PER_SECOND = ethers.utils.parseUnits("0.1");
   const DEPOSIT_FEE = 100;
+  const DEPOSIT_FEE_PRECISION = 1000;
   const START_TIMESTAMP_DELTA = 600;
 
   const TOKEN_PRICE_IN_AVAX = 10;
-  const AMOUNT_OF_TOKENS_TO_SELL = 1000;
   const SALE_END_DELTA = 100;
   const TOKENS_UNLOCK_TIME_DELTA = 150;
   const REGISTRATION_TIME_STARTS_DELTA = 10;
   const REGISTRATION_TIME_ENDS_DELTA = 40;
   const ROUNDS_START_DELTAS = [50, 70, 90];
-  const ROUNDS_MAX_PARTICIPATIONS = [120, 1000, 10000];
   const FIRST_ROUND = 1;
   const MIDDLE_ROUND = 2;
   const LAST_ROUND = 3;
-  const PARTICIPATION_AMOUNT = 100;
+  const PARTICIPATION_AMOUNT = ethers.BigNumber.from(10).pow(18).mul(100);
+  const ROUNDS_MAX_PARTICIPATIONS = [PARTICIPATION_AMOUNT.add(20), PARTICIPATION_AMOUNT.mul(10), PARTICIPATION_AMOUNT.mul(100)];
+  const AMOUNT_OF_TOKENS_TO_SELL = PARTICIPATION_AMOUNT.mul(200);
   const PARTICIPATION_ROUND = 1;
   const PARTICIPATION_VALUE = 80;
   const AMOUNT_OF_XAVA_TO_BURN = 0;
+
+  const PORTION_VESTING_PRECISION = 1000;
+  const STAKING_ROUND_ID = 3;
+  const REGISTRATION_DEPOSIT_AVAX = 20;
+  const PORTION_ID = 0;
 
   const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
@@ -107,8 +113,11 @@ describe("AvalaunchSale", function() {
     const amountOfTokensToSell = firstOrDefault(params, 'amountOfTokensToSell', AMOUNT_OF_TOKENS_TO_SELL);
     const saleEnd = blockTimestamp + firstOrDefault(params, 'saleEndDelta', SALE_END_DELTA);
     const tokensUnlockTime = blockTimestamp + firstOrDefault(params, 'tokensUnlockTimeDelta', TOKENS_UNLOCK_TIME_DELTA);
+    const portionVestingPrecision = firstOrDefault(params, 'portionVestingPrecision', PORTION_VESTING_PRECISION);
+    const stakingRoundId = firstOrDefault(params, 'stakingRoundId', STAKING_ROUND_ID);
+    const registrationDepositAVAX = firstOrDefault(params, 'registrationDepositAVAX', REGISTRATION_DEPOSIT_AVAX);
 
-    return AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
+    return AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime, portionVestingPrecision, stakingRoundId, registrationDepositAVAX);
   }
 
   async function setRegistrationTime(params) {
@@ -145,6 +154,9 @@ describe("AvalaunchSale", function() {
     await setRegistrationTime(params);
     await setRounds(params);
     await depositTokens();
+
+    const blockTimestamp = await getCurrentBlockTimestamp();
+    await AvalaunchSale.setVestingParams([blockTimestamp, blockTimestamp], [500, 500], 100)
   }
 
   async function registerForSale(params) {
@@ -153,7 +165,9 @@ describe("AvalaunchSale", function() {
     const roundId = firstOrDefault(params, 'registerRound', FIRST_ROUND)
     const sig = signRegistration(registrant.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
-    await AvalaunchSale.connect(registrant).registerForSale(sig, roundId);
+    const value = firstOrDefault(params, 'value', REGISTRATION_DEPOSIT_AVAX);
+
+    await AvalaunchSale.connect(registrant).registerForSale(sig, roundId, {value});
   }
 
   beforeEach(async function() {
@@ -176,7 +190,7 @@ describe("AvalaunchSale", function() {
     const blockTimestamp = await getCurrentBlockTimestamp();
     startTimestamp = blockTimestamp + START_TIMESTAMP_DELTA;
     AllocationStaking = await AllocationStakingRewardsFactory.deploy();
-    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
+    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE, DEPOSIT_FEE_PRECISION);
 
     await AllocationStaking.add(1, XavaToken.address, false);
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
@@ -207,7 +221,7 @@ describe("AvalaunchSale", function() {
         const tokensUnlockTime = blockTimestamp + TOKENS_UNLOCK_TIME_DELTA;
 
         // When
-        await AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
+        await AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime, PORTION_VESTING_PRECISION, STAKING_ROUND_ID, REGISTRATION_DEPOSIT_AVAX);
 
         // Then
         const sale = await AvalaunchSale.sale();
@@ -242,7 +256,7 @@ describe("AvalaunchSale", function() {
         const tokensUnlockTime = blockTimestamp + TOKENS_UNLOCK_TIME_DELTA;
 
         // Then
-        await expect(AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime))
+        await expect(AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime, PORTION_VESTING_PRECISION, STAKING_ROUND_ID, REGISTRATION_DEPOSIT_AVAX))
           .to.emit(AvalaunchSale, "SaleCreated")
           .withArgs(saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
       });
@@ -283,6 +297,16 @@ describe("AvalaunchSale", function() {
       it("Should not set sale parameters if tokens unlock time is in the past", async function() {
         // Then
         await expect(setSaleParams({tokensUnlockTimeDelta: -100})).to.be.revertedWith("setSaleParams: Bad input");
+      });
+
+      it("Should not set sale parameters if portion vesting precision is less than 100", async function() {
+        // Then
+        await expect(setSaleParams({portionVestingPrecision: 99})).to.be.revertedWith("Should be at least 100");
+      });
+
+      it("Should not set sale parameters if portion staking round id is 0", async function() {
+        // Then
+        await expect(setSaleParams({stakingRoundId: 0})).to.be.revertedWith("Staking round ID can not be 0.");
       });
     });
 
@@ -425,7 +449,7 @@ describe("AvalaunchSale", function() {
         await setRounds();
 
         // Then
-        await expect(setRounds()).to.be.revertedWith("setRounds: Rounds are already");
+        await expect(setRounds()).to.be.revertedWith("setRounds: Rounds are set already.");
       });
 
       it("Should not set sale rounds if times and participation arrays lengths don't match", async function() {
@@ -576,7 +600,7 @@ describe("AvalaunchSale", function() {
     describe("Postpone sale", async function() {
       it("Should postpone the sale", async function() {
         // Given
-        const timeToShift = 10;
+        const timeToShift = 2;
         await runFullSetup();
         const currentStartRound1 = parseInt((await AvalaunchSale.roundIdToRound(1)).startTime);
         const currentStartRound2 = parseInt((await AvalaunchSale.roundIdToRound(2)).startTime);
@@ -795,7 +819,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // When
-        await AvalaunchSale.registerForSale(sig, roundId);
+        await AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX});
 
         // Then
         expect((await AvalaunchSale.registration()).numberOfRegistrants).to.equal(1);
@@ -813,7 +837,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.be.revertedWith("Round ID can not be 0.");
       });
 
@@ -830,7 +854,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.be.revertedWith("Registration gate is closed.");
       });
 
@@ -843,7 +867,7 @@ describe("AvalaunchSale", function() {
         const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.be.revertedWith("Registration gate is closed.");
       });
 
@@ -859,7 +883,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.be.revertedWith("Invalid signature");
       });
 
@@ -874,10 +898,10 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
 
-        await AvalaunchSale.registerForSale(sig, roundId);
+        await AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX});
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.be.revertedWith("User can not register twice.");
       });
 
@@ -893,7 +917,22 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId)).to.be.reverted;
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX})).to.be.reverted;
+      });
+
+      it("Should not register without paying deposit", async function() {
+        // Given
+        await runFullSetup();
+        expect((await AvalaunchSale.registration()).numberOfRegistrants).to.equal(0);
+
+        const roundId = 2;
+        const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+
+        await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        // Then
+        await expect(AvalaunchSale.registerForSale(sig, roundId)).to.be.revertedWith("Registration deposit does not match.");
       });
 
       it("Should emit UserRegistered event", async function() {
@@ -908,7 +947,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.emit(AvalaunchSale, "UserRegistered").withArgs(deployer.address, roundId);
       });
     });
@@ -916,11 +955,11 @@ describe("AvalaunchSale", function() {
     describe("Get registration info", async function() {
       it("Should return registration info when sale not set", async function() {
         // When
-        const regInfo = await AvalaunchSale.getRegistrationInfo();
+        const regInfo = await AvalaunchSale.registration();
 
         // Then
-        expect(regInfo[0]).to.equal(0);
-        expect(regInfo[1]).to.equal(0);
+        expect(regInfo.registrationTimeEnds).to.equal(0);
+        expect(regInfo.registrationTimeStarts).to.equal(0);
       });
 
       it("Should return initial registration info", async function() {
@@ -929,12 +968,12 @@ describe("AvalaunchSale", function() {
         await runFullSetup();
 
         // When
-        const regInfo = await AvalaunchSale.getRegistrationInfo();
+        const regInfo = await AvalaunchSale.registration();
 
         // Then
-        const registrationTimeEnds = (await AvalaunchSale.registration()).registrationTimeEnds;
-        expect(regInfo[0]).to.equal(registrationTimeEnds);
-        expect(regInfo[1]).to.equal(0);
+        expect(regInfo.registrationTimeEnds).to.greaterThan(0);
+        expect(regInfo.registrationTimeStarts).to.greaterThan(0);
+        expect(regInfo.numberOfRegistrants).to.equal(0);
       });
 
       it("Should return updated registration info after users registered", async function() {
@@ -947,8 +986,8 @@ describe("AvalaunchSale", function() {
         await registerForSale();
 
         // Then
-        const regInfo = await AvalaunchSale.getRegistrationInfo();
-        expect(regInfo[1]).to.equal(1);
+        const regInfo = await AvalaunchSale.registration();
+        expect(regInfo.numberOfRegistrants).to.equal(1);
       });
 
       it("Should return updated registration info after registration extended", async function() {
@@ -960,9 +999,9 @@ describe("AvalaunchSale", function() {
         await AvalaunchSale.extendRegistrationPeriod(timeToAdd);
 
         // Then
-        const regInfo = await AvalaunchSale.getRegistrationInfo();
+        const regInfo = await AvalaunchSale.registration();
         const registrationTimeEnds = (await AvalaunchSale.registration()).registrationTimeEnds;
-        expect(regInfo[0]).to.equal(registrationTimeEnds);
+        expect(regInfo.registrationTimeEnds).to.equal(registrationTimeEnds);
       });
     });
   });
@@ -1171,10 +1210,10 @@ describe("AvalaunchSale", function() {
         const isParticipated = await AvalaunchSale.isParticipated(deployer.address);
         const participation = await AvalaunchSale.userToParticipation(deployer.address);
 
-        expect(sale.totalTokensSold).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(sale.totalTokensSold).to.equal(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX));
         expect(sale.totalAVAXRaised).to.equal(PARTICIPATION_VALUE);
         expect(isParticipated).to.be.true;
-        expect(participation.amount).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(participation.amount).to.equal(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX));
         expect(participation.roundId).to.equal(PARTICIPATION_ROUND);
         expect(participation.isWithdrawn).to.be.false;
       });
@@ -1203,14 +1242,14 @@ describe("AvalaunchSale", function() {
         const participationDeployer = await AvalaunchSale.userToParticipation(deployer.address);
         const participationAlice = await AvalaunchSale.userToParticipation(alice.address);
 
-        expect(sale.totalTokensSold).to.equal(2 * PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(sale.totalTokensSold).to.equal(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX).mul(2));
         expect(sale.totalAVAXRaised).to.equal(2 * PARTICIPATION_VALUE);
         expect(isParticipatedDeployer).to.be.true;
         expect(isParticipatedAlice).to.be.true;
-        expect(participationDeployer.amount).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(participationDeployer.amount).to.equal(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX));
         expect(participationDeployer.roundId).to.equal(PARTICIPATION_ROUND);
         expect(participationDeployer.isWithdrawn).to.be.false;
-        expect(participationAlice.amount).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(participationAlice.amount).to.equal(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX));
         expect(participationAlice.roundId).to.equal(PARTICIPATION_ROUND);
         expect(participationAlice.isWithdrawn).to.be.false;
       });
@@ -1335,7 +1374,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(participate({participationValue: (PARTICIPATION_AMOUNT+5) * TOKEN_PRICE_IN_AVAX}))
+        await expect(participate({participationValue: (PARTICIPATION_AMOUNT.add(5).mul(TOKEN_PRICE_IN_AVAX))}))
           .to.be.revertedWith("Trying to buy more than allowed.");
       });
 
@@ -1352,7 +1391,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(participate()).to.emit(AvalaunchSale, "TokensSold").withArgs(deployer.address, PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        await expect(participate()).to.emit(AvalaunchSale, "TokensSold").withArgs(deployer.address, ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX));
       });
 
       it("Should not participate without registering for the round", async function() {
@@ -1425,11 +1464,11 @@ describe("AvalaunchSale", function() {
         const previousBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
 
         // When
-        await AvalaunchSale.withdrawTokens();
+        await AvalaunchSale.withdrawTokens(PORTION_ID);
 
         // Then
         const currentBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
-        expect(currentBalance).to.equal(previousBalance.add(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX));
+        expect(currentBalance).to.equal(previousBalance.add(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX).div(2)));
       });
 
       it("Should not withdraw if user did not participate", async function() {
@@ -1450,7 +1489,7 @@ describe("AvalaunchSale", function() {
         const previousBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
 
         // When
-        await AvalaunchSale.withdrawTokens();
+        await AvalaunchSale.withdrawTokens(PORTION_ID);
 
         // Then
         const currentBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
@@ -1474,10 +1513,10 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_increaseTime", [TOKENS_UNLOCK_TIME_DELTA - ROUNDS_START_DELTAS[0]]);
         await ethers.provider.send("evm_mine");
 
-        await AvalaunchSale.withdrawTokens();
+        await AvalaunchSale.withdrawTokens(PORTION_ID);
 
         // Then
-        await expect(AvalaunchSale.withdrawTokens()).to.be.revertedWith("Tokens already withdrawn.");
+        await expect(AvalaunchSale.withdrawTokens(PORTION_ID)).to.be.revertedWith("Tokens already withdrawn.");
       });
 
       it("Should not withdraw before tokens unlock time", async function() {
@@ -1495,7 +1534,7 @@ describe("AvalaunchSale", function() {
         await participate();
 
         // Then
-        await expect(AvalaunchSale.withdrawTokens()).to.be.revertedWith("Tokens can not be withdrawn yet.");
+        await expect(AvalaunchSale.withdrawTokens(PORTION_ID)).to.be.revertedWith("Tokens can not be withdrawn yet.");
       });
 
       it("Should emit TokensWithdrawn event", async function() {
@@ -1516,7 +1555,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.withdrawTokens()).to.emit(AvalaunchSale, "TokensWithdrawn").withArgs(deployer.address, PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        await expect(AvalaunchSale.withdrawTokens(PORTION_ID)).to.emit(AvalaunchSale, "TokensWithdrawn").withArgs(deployer.address, ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX).div(2));
       });
     });
 
@@ -1551,14 +1590,14 @@ describe("AvalaunchSale", function() {
         const contractTokenBalance = await XavaToken.balanceOf(AvalaunchSale.address);
 
         expect(currentBalance).to.equal(previousBalance.add(PARTICIPATION_VALUE));
-        expect(currentTokenBalance).to.equal(previousTokenBalance.add(AMOUNT_OF_TOKENS_TO_SELL - PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX));
+        expect(currentTokenBalance).to.equal(previousTokenBalance.add(AMOUNT_OF_TOKENS_TO_SELL.sub(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX))));
         expect(contractBalance).to.equal(0);
-        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(contractTokenBalance).to.equal(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX));
       });
 
       it("Should not withdraw twice", async function() {
         // Given
-        await runFullSetup({amountOfTokensToSell: 10});
+        await runFullSetup();
 
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
@@ -1654,13 +1693,13 @@ describe("AvalaunchSale", function() {
         expect(currentBalance).to.equal(previousBalance.add(PARTICIPATION_VALUE));
         expect(currentTokenBalance).to.equal(previousTokenBalance);
         expect(contractBalance).to.equal(0);
-        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
-        expect(burnedTokenBalance).to.equal(AMOUNT_OF_TOKENS_TO_SELL - PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(contractTokenBalance).to.equal(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX));
+        expect(burnedTokenBalance).to.equal(AMOUNT_OF_TOKENS_TO_SELL.sub(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX)));
       });
 
       it("Should not crash if leftover is 0", async function() {
         // Given
-        await runFullSetup({amountOfTokensToSell: PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX});
+        await runFullSetup({amountOfTokensToSell: ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX)});
 
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
@@ -1690,12 +1729,12 @@ describe("AvalaunchSale", function() {
         expect(currentBalance).to.equal(previousBalance.add(PARTICIPATION_VALUE));
         expect(currentTokenBalance).to.equal(previousTokenBalance);
         expect(contractBalance).to.equal(0);
-        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(contractTokenBalance).to.equal(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX));
       });
 
       it("Should not crash if leftover is 0 and burn is requested", async function() {
         // Given
-        await runFullSetup({amountOfTokensToSell: PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX});
+        await runFullSetup({amountOfTokensToSell: ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX)});
 
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
@@ -1726,7 +1765,7 @@ describe("AvalaunchSale", function() {
         expect(currentBalance).to.equal(previousBalance.add(PARTICIPATION_VALUE));
         expect(currentTokenBalance).to.equal(previousTokenBalance);
         expect(contractBalance).to.equal(0);
-        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(contractTokenBalance).to.equal(ethers.BigNumber.from(10).pow(18).mul(PARTICIPATION_VALUE).div(TOKEN_PRICE_IN_AVAX));
         expect(burnedTokenBalance).to.equal(0);
       });
 

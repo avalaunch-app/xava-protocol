@@ -15,7 +15,12 @@ describe("SalesFactory", function() {
 
   const REWARDS_PER_SECOND = ethers.utils.parseUnits("0.1");
   const DEPOSIT_FEE = 100;
+  const DEPOSIT_FEE_PRECISION = 1000;  
   const START_TIMESTAMP_DELTA = 600;
+
+  const PORTION_VESTING_PRECISION = 1000;
+  const STAKING_ROUND_ID = 3;
+  const REGISTRATION_DEPOSIT_AVAX = 20;
 
   // const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
   const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -44,7 +49,7 @@ describe("SalesFactory", function() {
     const blockTimestamp = await getCurrentBlockTimestamp();
     startTimestamp = blockTimestamp + START_TIMESTAMP_DELTA;
     AllocationStaking = await AllocationStakingRewardsFactory.deploy();
-    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
+    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE, DEPOSIT_FEE_PRECISION);
 
     await AllocationStaking.add(1, XavaToken.address, false);
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
@@ -119,7 +124,7 @@ describe("SalesFactory", function() {
 
         // When
         const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-        await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10);
+        await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10, PORTION_VESTING_PRECISION, STAKING_ROUND_ID, REGISTRATION_DEPOSIT_AVAX);
 
         // Then
         expect(await SalesFactory.saleOwnerToSale(deployer.address)).to.equal(AvalaunchSale.address);
@@ -133,7 +138,7 @@ describe("SalesFactory", function() {
 
         // Then
         const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-        await expect(AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10))
+        await expect(AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10, PORTION_VESTING_PRECISION, STAKING_ROUND_ID, REGISTRATION_DEPOSIT_AVAX))
           .to.emit(SalesFactory, "SaleOwnerAndTokenSetInFactory");
       });
 
@@ -143,14 +148,14 @@ describe("SalesFactory", function() {
         const AvalaunchSale = AvalaunchSaleFactory.attach(await SalesFactory.allSales(0));
 
         const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-        await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10);
+        await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10, PORTION_VESTING_PRECISION, STAKING_ROUND_ID, REGISTRATION_DEPOSIT_AVAX);
 
         // When
         await SalesFactory.deploySale();
         const AvalaunchSale2 = AvalaunchSaleFactory.attach(await SalesFactory.allSales(1));
 
         // Then
-        await expect(AvalaunchSale2.setSaleParams(XavaToken2.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10))
+        await expect(AvalaunchSale2.setSaleParams(XavaToken2.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10, PORTION_VESTING_PRECISION, STAKING_ROUND_ID, REGISTRATION_DEPOSIT_AVAX))
           .to.be.revertedWith("Sale owner already set.");
       });
 
@@ -160,14 +165,14 @@ describe("SalesFactory", function() {
         const AvalaunchSale = AvalaunchSaleFactory.attach(await SalesFactory.allSales(0));
 
         const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-        await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10);
+        await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10, PORTION_VESTING_PRECISION, STAKING_ROUND_ID, REGISTRATION_DEPOSIT_AVAX);
 
         // When
         await SalesFactory.deploySale();
         const AvalaunchSale2 = AvalaunchSaleFactory.attach(await SalesFactory.allSales(1));
 
         // Then
-        await expect(AvalaunchSale2.setSaleParams(XavaToken.address, alice.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10))
+        await expect(AvalaunchSale2.setSaleParams(XavaToken.address, alice.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10, PORTION_VESTING_PRECISION, STAKING_ROUND_ID, REGISTRATION_DEPOSIT_AVAX))
           .to.be.revertedWith("Sale token already set.");
       });
 
