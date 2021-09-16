@@ -17,6 +17,7 @@ async function main() {
     const tx = await salesFactory.deploySale();
     console.log('Sale deployed.');
 
+
     const lastDeployedSale = await salesFactory.getLastDeployedSale();
     console.log('Deployed Sale is: ', lastDeployedSale);
 
@@ -25,38 +26,35 @@ async function main() {
     console.log('Successfully instantiated sale contract.');
 
 
-    const token = await hre.ethers.getContractAt('XavaToken', c['tokenAddress'])
-    console.log('Successfully instantiated sale token contract at address: ', c['tokenAddress']);
-
-
     const totalTokens = ethers.utils.parseEther(c['totalTokens']);
     console.log('Total tokens to sell: ', c['totalTokens']);
 
     const tokenPriceInAvax = ethers.utils.parseEther(c['tokenPriceInAvax']);
     console.log('Token price in AVAX: ', c['tokenPriceInAvax']);
 
-
     const saleOwner = c['saleOwner'];
     console.log('Sale owner is: ', c['saleOwner']);
 
-    const registrationStart = c['registrationStartAt'];
 
+    const registrationStart = c['registrationStartAt'];
     const registrationEnd = registrationStart + c['registrationLength'];
     const validatorRound = registrationEnd + c['delayBetweenRegistrationAndSale'];
-    const stakingRound = validatorRound + c['roundLength']; //
-    const publicRound = stakingRound + c['roundLength'];
-    const saleEndTime = publicRound + c['roundLength'];
+    const publicRound = validatorRound + c['roundLength'];
+    const stakingRound = publicRound + c['roundLength'];
+    const saleEndTime = stakingRound + c['roundLength'];
 
     const tokensUnlockTime = c['TGE'];
 
     await sale.setSaleParams(
-        token.address,
+        c['tokenAddress'],
         saleOwner,
         tokenPriceInAvax,
         totalTokens,
         saleEndTime,
         tokensUnlockTime,
-        c['portionVestingPrecision']
+        c['portionVestingPrecision'],
+        c['stakingRoundId'],
+        c['registrationDepositAVAX']
     );
 
     console.log('Sale Params set successfully.');
@@ -70,8 +68,8 @@ async function main() {
     console.log('Registration time set.');
 
     await sale.setRounds(
-        [validatorRound, stakingRound, publicRound],
-        [ethers.utils.parseEther('700000'),ethers.utils.parseEther('700000'),ethers.utils.parseEther('700000')]
+        [validatorRound, publicRound, stakingRound],
+        [ethers.utils.parseEther('70000000'),ethers.utils.parseEther('70000000'),ethers.utils.parseEther('70000000')]
     );
 
     const unlockingTimes = c['unlockingTimes'];
@@ -80,14 +78,15 @@ async function main() {
     console.log('Unlocking times: ', unlockingTimes);
     console.log('Percents: ', percents);
     console.log('Precision for vesting: ', c['portionVestingPrecision']);
+    console.log('Max vesting time shift in seconds: ', c['maxVestingTimeShift']);
 
-    await sale.setVestingParams(unlockingTimes, percents);
+    await sale.setVestingParams(unlockingTimes, percents, c['maxVestingTimeShift']);
 
     console.log('Vesting parameters set successfully.');
 
     console.log({
         saleAddress: lastDeployedSale,
-        saleToken: token.address,
+        saleToken: c['tokenAddress'],
         saleOwner,
         tokenPriceInAvax: tokenPriceInAvax.toString(),
         totalTokens: totalTokens.toString(),
@@ -97,7 +96,8 @@ async function main() {
         registrationEnd,
         validatorRound,
         stakingRound,
-        publicRound
+        publicRound,
+        registrationDepositAVAX: c['registrationDepositAVAX']
     });
 }
 
