@@ -36,8 +36,8 @@ _The first protocol, exclusively for the Avalanche ecosystem, to offer promising
 - Verified: https://cchain.explorer.avax.network/address/0x68c58e1107bcE9be240aF941151d42101086AF56/contracts
 
 **Sales Factory**
-- Address:0x23a391BFc5599f8c02AE121125536E3D72D19179
-- Verified: https://cchain.explorer.avax.network/address/0x23a391BFc5599f8c02AE121125536E3D72D19179/contracts
+- Address:0x089a3f7E7aFC96D73e57EdD1Aa456E1C99b1F539
+- Verified: https://cchain.explorer.avax.network/address/0x089a3f7E7aFC96D73e57EdD1Aa456E1C99b1F539/contracts
 
 **AllocationStaking Implementation v0**
 - Address: 0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6
