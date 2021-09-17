@@ -12,8 +12,8 @@
     "TGE": 1632751200,
     "portionVestingPrecision": 10000,
     "stakingRoundId": 3,
-    "registrationDepositAVAX": 1,
-    "maxVestingTimeShift": 5184000,
+    "registrationDepositAVAX": "1",
+    "maxVestingTimeShift": 2592000,
     "unlockingTimes": [
       1632751200, 1633356000, 1633960800, 1634565600, 1635170400, 1635775200, 1636380000, 1636984800, 1637589600, 1638194400,
       1638799200, 1639404000, 1640008800, 1640613600, 1641218400, 1641823200, 1642428000, 1643032800, 1643637600, 1644242400,

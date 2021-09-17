@@ -51,13 +51,13 @@ async function main() {
     await sale.setSaleParams(
         c['tokenAddress'],
         saleOwner,
-        tokenPriceInAvax,
-        totalTokens,
+        tokenPriceInAvax.toString(),
+        totalTokens.toString(),
         saleEndTime,
         tokensUnlockTime,
         c['portionVestingPrecision'],
         c['stakingRoundId'],
-        registrationDepositAVAX
+        registrationDepositAVAX.toString()
     );
 
     console.log('Sale Params set successfully.');
