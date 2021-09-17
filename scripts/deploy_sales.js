@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const { saveContractAddress, getSavedContractAddresses } = require('./utils')
-const config = require("./yay.json");
+const config = require("./saleConfig.json");
 const { ethers, web3 } = hre
 
 async function getCurrentBlockTimestamp() {
@@ -32,6 +32,9 @@ async function main() {
     const tokenPriceInAvax = ethers.utils.parseEther(c['tokenPriceInAvax']);
     console.log('Token price in AVAX: ', c['tokenPriceInAvax']);
 
+    const registrationDepositAVAX = ethers.utils.parseEther(c['registrationDepositAVAX']);
+    console.log('Registration deposit AVAX is: ', c['registrationDepositAVAX']);
+
     const saleOwner = c['saleOwner'];
     console.log('Sale owner is: ', c['saleOwner']);
 
@@ -54,7 +57,7 @@ async function main() {
         tokensUnlockTime,
         c['portionVestingPrecision'],
         c['stakingRoundId'],
-        c['registrationDepositAVAX']
+        registrationDepositAVAX
     );
 
     console.log('Sale Params set successfully.');
