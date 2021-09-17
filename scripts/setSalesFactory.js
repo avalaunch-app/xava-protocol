@@ -13,7 +13,10 @@ async function main() {
     let salesFactory = await allocationStaking.salesFactory();
     console.log(salesFactory);
 
-    // await allocationStaking.setSalesFactory(contracts['SalesFactory']);
+    await allocationStaking.setSalesFactory(contracts['SalesFactory']);
+
+    salesFactory = await allocationStaking.salesFactory();
+    console.log(salesFactory);
 }
 
 
