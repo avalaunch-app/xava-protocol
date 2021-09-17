@@ -519,7 +519,7 @@ contract AvalaunchSale {
         });
 
         // Staking round only.
-        if (roundId == 2) {
+        if (roundId == stakingRoundId) {
             // Burn XAVA from this user.
             allocationStakingContract.redistributeXava(
                 0,
