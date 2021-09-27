@@ -42,8 +42,7 @@ async function main() {
     const registrationStart = c['registrationStartAt'];
     const registrationEnd = registrationStart + c['registrationLength'];
     const validatorRound = registrationEnd + c['delayBetweenRegistrationAndSale'];
-    const publicRound = validatorRound + c['roundLength'];
-    const stakingRound = publicRound + c['roundLength'];
+    const stakingRound = validatorRound + c['roundLength'];
     const saleEndTime = stakingRound + c['roundLength'];
 
     const tokensUnlockTime = c['TGE'];
@@ -71,8 +70,8 @@ async function main() {
     console.log('Registration time set.');
 
     await sale.setRounds(
-        [validatorRound, publicRound, stakingRound],
-        [ethers.utils.parseEther('70000000'),ethers.utils.parseEther('70000000'),ethers.utils.parseEther('70000000')]
+        [validatorRound, stakingRound],
+        [ethers.utils.parseEther('70000000'), ethers.utils.parseEther('70000000')]
     );
 
     const unlockingTimes = c['unlockingTimes'];
@@ -99,7 +98,6 @@ async function main() {
         registrationEnd,
         validatorRound,
         stakingRound,
-        publicRound,
         registrationDepositAVAX: c['registrationDepositAVAX']
     });
 }
