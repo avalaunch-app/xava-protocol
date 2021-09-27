@@ -249,6 +249,18 @@ contract AvalaunchSale {
         );
     }
 
+    /// @notice     Function to retroactively set sale token address
+    function setSaleToken(
+        address saleToken
+    )
+    external
+    onlyAdmin
+    {
+        require(address(sale.token) == address(0));
+        sale.token = IERC20(saleToken);
+    }
+
+
     /// @notice     Function to set registration period parameters
     function setRegistrationTime(
         uint256 _registrationTimeStarts,
