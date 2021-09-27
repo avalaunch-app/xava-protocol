@@ -38,6 +38,7 @@ _The first protocol, exclusively for the Avalanche ecosystem, to offer promising
 **Sales Factory**
 - Address:0x0e5505404c0bfC6FC9F70bb1E7D015B7daAC2FC6
 - Verified: https://cchain.explorer.avax.network/address/0x0e5505404c0bfC6FC9F70bb1E7D015B7daAC2FC6/contracts
+- V2: https://cchain.explorer.avax.network/address/0x635DB067Bbd00edE40F47614E65Bdb65bb8715a3/contracts
 
 **AllocationStaking Implementation v0**
 - Address: 0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6
