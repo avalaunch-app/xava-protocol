@@ -205,10 +205,6 @@ contract AvalaunchSale {
     ) external onlyAdmin {
         require(!sale.isCreated, "setSaleParams: Sale is already created.");
         require(
-            _token != address(0),
-            "setSaleParams: Token address can not be 0."
-        );
-        require(
             _saleOwner != address(0),
             "setSaleParams: Sale owner address can not be 0."
         );
