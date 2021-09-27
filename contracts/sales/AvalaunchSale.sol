@@ -606,10 +606,11 @@ contract AvalaunchSale {
     function withdrawRegistrationFees() external onlyAdmin {
         require(block.timestamp >= sale.saleEnd);
         require(registrationFees > 0, "No earnings from registration fees.");
-        // Set registration fees to be 0
-        registrationFees = 0;
+
         // Transfer AVAX to the admin wallet.
         safeTransferAVAX(msg.sender, registrationFees);
+        // Set registration fees to be 0
+        registrationFees = 0;
     }
 
     /// @notice     Get current round in progress.
