@@ -29,6 +29,8 @@ contract AirdropHCT {
 
     // Function to withdraw tokens.
     function withdrawTokens(bytes memory signature, uint256 amount) public {
+        require(msg.sender == tx.origin, "Require that message sender is tx-origin.");
+
         address beneficiary = msg.sender;
 
         require(checkSignature(signature, beneficiary, amount), "Not eligible to claim tokens!");
