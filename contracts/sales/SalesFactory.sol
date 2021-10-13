@@ -53,9 +53,6 @@ contract SalesFactory {
     // Function to set owner and token for the sale
     function setSaleOwnerAndToken(address saleOwner, address saleToken) external {
         require(isSaleCreatedThroughFactory[msg.sender] == true, "setSaleOwnerAndToken: Contract not eligible.");
-        require(saleOwnerToSale[saleOwner] == address(0), "Sale owner already set.");
-        require(tokenToSale[saleToken] == address(0), "Sale token already set.");
-
         // Set owner of the sale.
         saleOwnerToSale[saleOwner] = msg.sender;
         // Set token to sale
