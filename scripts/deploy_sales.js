@@ -15,16 +15,14 @@ async function main() {
     const salesFactory = await hre.ethers.getContractAt('SalesFactory', contracts['SalesFactory']);
 
     const tx = await salesFactory.deploySale();
-    console.log('Sale deployed.');
+    console.log('Sale is deployed successfully.');
 
 
     const lastDeployedSale = await salesFactory.getLastDeployedSale();
-    console.log('Deployed Sale is: ', lastDeployedSale);
-
+    console.log('Deployed Sale address is: ', lastDeployedSale);
 
     const sale = await hre.ethers.getContractAt('AvalaunchSale', lastDeployedSale);
-    console.log('Successfully instantiated sale contract.');
-
+    console.log(`Successfully instantiated sale contract at address: ${lastDeployedSale}.`);
 
     const totalTokens = ethers.utils.parseEther(c['totalTokens']);
     console.log('Total tokens to sell: ', c['totalTokens']);
