@@ -45,7 +45,7 @@ contract Airdrop {
     }
 
     // Get who signed the message based on the params
-    function getSigner(bytes memory signature, address beneficiary, uint256 amount) public pure returns (address) {
+    function getSigner(bytes memory signature, address beneficiary, uint256 amount) public view returns (address) {
         bytes32 hash = keccak256(abi.encodePacked(beneficiary, amount, address(this)));
         bytes32 messageHash = hash.toEthSignedMessageHash();
         return messageHash.recover(signature);
