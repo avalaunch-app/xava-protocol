@@ -24,7 +24,8 @@
         "AllocationStaking": "0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6",
         "AllocationStakingProxy": "0xA6A01f4b494243d84cf8030d982D7EeB2AeCd329",
         "ProxyAdmin": "0x951aa264D7E6a1C267C24c250293e901b89D29e3",
-        "AirdropHCT": "0x87b1Beaab6f7A40b28a2dEF896c50e57061c3B36"
+        "AirdropHCT": "0x87b1Beaab6f7A40b28a2dEF896c50e57061c3B36",
+        "AirdropROCO": "0xF42111F50Cfc35f072115c082280653Be0a6F5Fb"
     },
     "local": {
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
