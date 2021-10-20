@@ -7,12 +7,17 @@ async function getCurrentBlockTimestamp() {
     return (await ethers.provider.getBlock('latest')).timestamp;
 }
 
+const delay = ms => new Promise(res => setTimeout(res, ms));
+const delayLength = 3000;
+
 async function main() {
 
     const contracts = getSavedContractAddresses()[hre.network.name];
     const c = config[hre.network.name];
 
     const salesFactory = await hre.ethers.getContractAt('SalesFactory', contracts['SalesFactory']);
+
+    await delay(delayLength);
 
     const tx = await salesFactory.deploySale();
     console.log('Sale is deployed successfully.');
@@ -59,6 +64,9 @@ async function main() {
 
     console.log('Sale Params set successfully.');
 
+    await delay(delayLength);
+
+    console.log('Setting registration time.');
 
     await sale.setRegistrationTime(
         registrationStart,
@@ -66,6 +74,9 @@ async function main() {
     );
 
     console.log('Registration time set.');
+
+    await delay(delayLength);
+    console.log('Setting rounds.');
 
     await sale.setRounds(
         [validatorRound, stakingRound],
@@ -79,6 +90,9 @@ async function main() {
     console.log('Percents: ', percents);
     console.log('Precision for vesting: ', c['portionVestingPrecision']);
     console.log('Max vesting time shift in seconds: ', c['maxVestingTimeShift']);
+
+    await delay(delayLength);
+    console.log('Setting vesting params.');
 
     await sale.setVestingParams(unlockingTimes, percents, c['maxVestingTimeShift']);
 
