@@ -1,5 +1,6 @@
 const hre = require("hardhat");
-const { saveContractAddress, getSavedContractAddresses} = require('../../utils')
+const { saveContractAddress, getSavedContractAddresses } = require("../utils");
+
 
 async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
