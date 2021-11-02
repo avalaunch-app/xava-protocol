@@ -1,20 +1,20 @@
 {
   "mainnet": {
     "tokenAddress": "0x0000000000000000000000000000000000000000",
-    "totalTokens": "7500000",
-    "tokenPriceUSD": "0.08",
-    "tokenPriceInAvax": "0.00133467",
-    "saleOwner": "0x000000010b5AFA32AB82B72625D68571B11EAE13",
-    "registrationStartAt": 1634828400,
-    "registrationLength": 226800,
-    "delayBetweenRegistrationAndSale": 86400,
+    "totalTokens": "22222222",
+    "tokenPriceUSD": "0.018",
+    "tokenPriceInAvax": "0.0002743",
+    "saleOwner": "0xdCE4FFD1398a307D9EB7965bb29D08D41EAe12B0",
+    "registrationStartAt": 1635865200,
+    "registrationLength": 313200,
+    "delayBetweenRegistrationAndSale": 172800,
     "roundLength": 43200,
-    "TGE": 1635271200,
+    "TGE": 1636804800,
     "portionVestingPrecision": 10000,
     "stakingRoundId": 2,
     "registrationDepositAVAX": "1",
     "maxVestingTimeShift": 2592000,
-    "unlockingTimes": [1635271200],
+    "unlockingTimes": [1636804800],
     "portionPercents": [10000]
   }
 }
