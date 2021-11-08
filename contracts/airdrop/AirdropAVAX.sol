@@ -63,4 +63,5 @@ contract AirdropAVAX {
         return admin.isAdmin(getSigner(signature, beneficiary, amount));
     }
 
+    receive() external payable {}
 }
