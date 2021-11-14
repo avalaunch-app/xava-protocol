@@ -58,10 +58,6 @@ contract AllocationStaking is OwnableUpgradeable {
     uint256 public endTimestamp;
     // Total amount of tokens burned from the wallet
     mapping (address => uint256) public totalBurnedFromUser;
-    // Burn percent
-    uint256 public burnPercentFromDepositFee;
-    // Total tokens burned during the redistributions.
-    uint256 public totalXAVABurned;
 
     // Events
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -70,7 +66,6 @@ contract AllocationStaking is OwnableUpgradeable {
     event DepositFeeSet(uint256 depositFeePercent, uint256 depositFeePrecision);
     event CompoundedEarnings(address indexed user, uint256 indexed pid, uint256 amountAdded, uint256 totalDeposited);
     event FeeTaken(address indexed user, uint256 indexed pid, uint256 amount);
-    event XAVABurned(uint256 amount);
 
     // Restricting calls to only verified sales
     modifier onlyVerifiedSales {
@@ -105,12 +100,6 @@ contract AllocationStaking is OwnableUpgradeable {
     function setSalesFactory(address _salesFactory) external onlyOwner {
         require(_salesFactory != address(0));
         salesFactory = ISalesFactory(_salesFactory);
-    }
-
-    // Burn percent from deposit fee.
-    function setBurnPercent(uint256 _burnPercentFromDepositFee) external onlyOwner {
-        require(_burnPercentFromDepositFee <= 100);
-        burnPercentFromDepositFee = _burnPercentFromDepositFee;
     }
 
     // Number of LP pools
@@ -219,32 +208,28 @@ contract AllocationStaking is OwnableUpgradeable {
     }
 
     // Update reward variables of the given pool to be up-to-date.
-    function redistributeXava(uint256 _pid, address _user, uint256 _totalFee) external
+    function redistributeXava(uint256 _pid, address _user, uint256 _amountToRedistribute) external
     onlyVerifiedSales
     {
-        if(_totalFee > 0) {
+        if(_amountToRedistribute > 0) {
             UserInfo storage user = userInfo[_pid][_user];
             PoolInfo storage pool = poolInfo[_pid];
-            // 50% of the fees are getting burned
-            uint256 burnAmount;
-            uint256 redistributionAmount;
-            (burnAmount, redistributionAmount) = computeBurnAndRedistributionAmount(_totalFee);
             // Update pool
-            updatePoolWithFee(_pid, redistributionAmount);
+            updatePoolWithFee(_pid, _amountToRedistribute);
             // Compute currently how much pending user has
             uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
             // Do auto-compound for user, adding his pending rewards to his deposit
             user.amount = user.amount.add(pendingAmount);
-            // Now reduce total fee (burned + redistributed) from his initial deposit
-            user.amount = user.amount.sub(_totalFee);
+            // Now reduce fee from his initial deposit
+            user.amount = user.amount.sub(_amountToRedistribute);
             // Emit event that earnings are compounded
             emit CompoundedEarnings(_user, _pid, pendingAmount, user.amount);
             // Compute new reward debt
             user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
             // Compute new total deposits
-            pool.totalDeposits = pool.totalDeposits.add(pendingAmount).sub(_totalFee);
+            pool.totalDeposits = pool.totalDeposits.add(pendingAmount).sub(_amountToRedistribute);
             // Update accounting
-            burnFromUser(_user, _pid, redistributionAmount, burnAmount);
+            burnFromUser(_user, _pid, _amountToRedistribute);
         }
     }
 
@@ -297,13 +282,8 @@ contract AllocationStaking is OwnableUpgradeable {
         if(_pid == 0) {
             depositFee = _amount.mul(depositFeePercent).div(depositFeePrecision);
             depositAmount = _amount.sub(depositFee);
-
-            uint256 burnAmount;
-            uint256 redistributionAmount;
-            // Compute how much from deposit fee gets burned and how much gets redistributed
-            (burnAmount, redistributionAmount) = computeBurnAndRedistributionAmount(depositFee);
             // Update accounting around burning
-            burnFromUser(msg.sender, _pid, redistributionAmount, burnAmount);
+            burnFromUser(msg.sender, _pid, depositFee);
         }
 
         // Update pool including fee for people staking
@@ -359,13 +339,8 @@ contract AllocationStaking is OwnableUpgradeable {
         uint256 fee = pendingAmount.mul(depositFeePercent).div(depositFeePrecision);
         uint256 amountCompounding = pendingAmount.sub(fee);
 
-        uint256 burnAmount;
-        uint256 redistributionAmount;
-        // Compute how much from deposit fee gets burned and how much gets redistributed
-        (burnAmount, redistributionAmount) = computeBurnAndRedistributionAmount(fee);
-
         // Update accounting around burns
-        burnFromUser(msg.sender, _pid, redistributionAmount, burnAmount);
+        burnFromUser(msg.sender, _pid, fee);
         // Update pool including fee for people currently staking
         updatePoolWithFee(_pid, fee);
 
@@ -399,29 +374,12 @@ contract AllocationStaking is OwnableUpgradeable {
     }
 
     // Internal function to burn amount from user and do accounting
-    function burnFromUser(address user, uint256 _pid, uint256 redistributionAmount, uint256 burnAmount) internal {
-        // Both amounts are taken from user
-        totalBurnedFromUser[user] = totalBurnedFromUser[user].add(redistributionAmount.add(burnAmount));
-        // Increase total xava redistributed across all users staking
-        totalXavaRedistributed = totalXavaRedistributed.add(redistributionAmount);
-        // Increase total XAVA burned during the program
-        totalXAVABurned = totalXAVABurned.add(burnAmount);
-        // Transfer tokens to burn address
-        erc20.transfer(address(1), burnAmount);
-        // Trigger events
-        emit XAVABurned(burnAmount);
-        emit FeeTaken(user, _pid, redistributionAmount.add(burnAmount));
+    function burnFromUser(address user, uint256 _pid, uint256 amount) internal {
+        totalBurnedFromUser[user] = totalBurnedFromUser[user].add(amount);
+        totalXavaRedistributed = totalXavaRedistributed.add(amount);
+        emit FeeTaken(user, _pid, amount);
     }
 
-    // Function to compute how much of the fee will be redistributed, and how much will be burned
-    function computeBurnAndRedistributionAmount(uint256 totalFee) internal view returns (uint256, uint256) {
-        // % of the fees are getting burned
-        uint256 burnAmount = totalFee.mul(burnPercentFromDepositFee).div(100);
-        uint256 redistributionAmount = totalFee.sub(burnAmount);
-
-        // return amount to burn and amount to redistribute
-        return (burnAmount, redistributionAmount);
-    }
 
 
     // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
