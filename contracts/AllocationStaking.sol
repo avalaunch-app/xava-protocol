@@ -58,6 +58,10 @@ contract AllocationStaking is OwnableUpgradeable {
     uint256 public endTimestamp;
     // Total amount of tokens burned from the wallet
     mapping (address => uint256) public totalBurnedFromUser;
+    // Time penalty is active
+    uint256 public postSaleWithdrawPenaltyLength;
+    // Post sale penalty withdraw percent, which is linearly dropping for postSaleWithdrawPenaltyLength period
+    uint256 public postSaleWithdrawPenaltyPercent;
 
     // Events
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -314,13 +318,21 @@ contract AllocationStaking is OwnableUpgradeable {
 
         uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
 
-        erc20Transfer(msg.sender, pendingAmount);
+        uint256 withdrawalFeeDepositAmount;
+        uint256 withdrawalFeePending;
+
+        (withdrawalFeeDepositAmount, withdrawalFeePending) = getWithdrawFee(msg.sender, pendingAmount, _pid);
+
+        erc20Transfer(msg.sender, pendingAmount.sub(withdrawalFeePending));
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
         // Reset the tokens unlock time
         user.tokensUnlockTime = 0;
-        pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        pool.lpToken.safeTransfer(address(msg.sender), _amount.sub(withdrawalFeeDepositAmount));
         pool.totalDeposits = pool.totalDeposits.sub(_amount);
+
+        // Redistribute across the pool.
+        updatePoolWithFee(_pid, withdrawalFeeDepositAmount.add(withdrawalFeePending));
 
         emit Withdraw(msg.sender, _pid, _amount);
     }
@@ -380,7 +392,29 @@ contract AllocationStaking is OwnableUpgradeable {
         emit FeeTaken(user, _pid, amount);
     }
 
+    // Function to compute withdrawal fee for the user
+    function getWithdrawFee(address userAddress, uint256 amountPending, uint256 _pid)
+    public
+    view
+    returns (uint256, uint256)
+    {
+        UserInfo storage user = userInfo[_pid][userAddress];
+        // In case last unlock time on users stake was in more than postSaleWithdrawPenaltyLength, user can withdraw without fee
+        if(user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength) <= block.timestamp) {
+            return (0,0);
+        }
 
+        // How much time is left until post sale withdraw penalty becomes inactive
+        uint256 timeLeft = user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength).sub(block.timestamp);
+
+        // 3 minutes left , 10%, 15 minutes ==> 3 * 10 / 15
+        uint256 percentToTake = timeLeft.mul(postSaleWithdrawPenaltyPercent).div(postSaleWithdrawPenaltyLength);
+        // Return amount of tokens which will be taken as withdraw fee in this case.
+        return (
+            percentToTake.mul(user.amount).div(depositFeePrecision),
+            percentToTake.mul(amountPending).div(depositFeePrecision)
+        );
+    }
 
     // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
     function getPendingAndDepositedForUsers(address [] memory users, uint pid)
@@ -399,4 +433,19 @@ contract AllocationStaking is OwnableUpgradeable {
         return (deposits, earnings);
     }
 
+    function setPostSaleWithdrawPenaltyAndLength(
+        uint256 _postSaleWithdrawPenaltyPercent,
+        uint256 _postSaleWithdrawPenaltyLength
+    )
+    public
+    onlyOwner
+    {
+        require(
+            _postSaleWithdrawPenaltyPercent >= depositFeePrecision.div(100)  &&
+            _postSaleWithdrawPenaltyPercent <= depositFeePrecision
+        );
+
+        postSaleWithdrawPenaltyLength = _postSaleWithdrawPenaltyLength;
+        postSaleWithdrawPenaltyPercent = _postSaleWithdrawPenaltyPercent;
+    }
 }
