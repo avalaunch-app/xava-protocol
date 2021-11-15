@@ -70,6 +70,7 @@ contract AllocationStaking is OwnableUpgradeable {
     event DepositFeeSet(uint256 depositFeePercent, uint256 depositFeePrecision);
     event CompoundedEarnings(address indexed user, uint256 indexed pid, uint256 amountAdded, uint256 totalDeposited);
     event FeeTaken(address indexed user, uint256 indexed pid, uint256 amount);
+    event PostSaleWithdrawFeeCharged(address user, uint256 amountStake, uint256 amountRewards);
 
     // Restricting calls to only verified sales
     modifier onlyVerifiedSales {
@@ -321,18 +322,35 @@ contract AllocationStaking is OwnableUpgradeable {
         uint256 withdrawalFeeDepositAmount;
         uint256 withdrawalFeePending;
 
-        (withdrawalFeeDepositAmount, withdrawalFeePending) = getWithdrawFee(msg.sender, pendingAmount, _pid);
+        // Take withdraw post-sale fees only if pid == 0
+        if(_pid == 0) {
+            (withdrawalFeeDepositAmount, withdrawalFeePending) = getWithdrawFeeInternal(
+                user.amount,
+                pendingAmount,
+                user.tokensUnlockTime
+            );
+        }
 
         erc20Transfer(msg.sender, pendingAmount.sub(withdrawalFeePending));
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
+
         // Reset the tokens unlock time
         user.tokensUnlockTime = 0;
         pool.lpToken.safeTransfer(address(msg.sender), _amount.sub(withdrawalFeeDepositAmount));
         pool.totalDeposits = pool.totalDeposits.sub(_amount);
 
-        // Redistribute across the pool.
-        updatePoolWithFee(_pid, withdrawalFeeDepositAmount.add(withdrawalFeePending));
+        // In case there was fee
+        if(withdrawalFeeDepositAmount > 0) {
+            // Redistribute across the pool.
+            updatePoolWithFee(_pid, withdrawalFeeDepositAmount.add(withdrawalFeePending));
+            // Emit event that post sale fee is charged
+            emit PostSaleWithdrawFeeCharged(
+                msg.sender,
+                withdrawalFeeDepositAmount,
+                withdrawalFeePending
+            );
+        }
 
         emit Withdraw(msg.sender, _pid, _amount);
     }
@@ -393,27 +411,38 @@ contract AllocationStaking is OwnableUpgradeable {
     }
 
     // Function to compute withdrawal fee for the user
-    function getWithdrawFee(address userAddress, uint256 amountPending, uint256 _pid)
-    public
+    function getWithdrawFeeInternal(
+        uint256 amountStaking,
+        uint256 amountPending,
+        uint256 stakeUnlocksAt
+    )
+    internal
     view
     returns (uint256, uint256)
     {
-        UserInfo storage user = userInfo[_pid][userAddress];
         // In case last unlock time on users stake was in more than postSaleWithdrawPenaltyLength, user can withdraw without fee
-        if(user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength) <= block.timestamp) {
+        if(stakeUnlocksAt.add(postSaleWithdrawPenaltyLength) <= block.timestamp) {
             return (0,0);
         }
 
         // How much time is left until post sale withdraw penalty becomes inactive
-        uint256 timeLeft = user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength).sub(block.timestamp);
+        uint256 timeLeft = stakeUnlocksAt.add(postSaleWithdrawPenaltyLength).sub(block.timestamp);
 
         // 3 minutes left , 10%, 15 minutes ==> 3 * 10 / 15
         uint256 percentToTake = timeLeft.mul(postSaleWithdrawPenaltyPercent).div(postSaleWithdrawPenaltyLength);
         // Return amount of tokens which will be taken as withdraw fee in this case.
         return (
-            percentToTake.mul(user.amount).div(depositFeePrecision),
+            percentToTake.mul(amountStaking).div(depositFeePrecision),
             percentToTake.mul(amountPending).div(depositFeePrecision)
         );
+    }
+
+    // External view function which will return how much withdraw fee would affect initial stake and pending rewards
+    function getWithdrawFee(address userAddress, uint256 _pid) external view returns (uint256, uint256) {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][userAddress];
+        uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
+        return getWithdrawFeeInternal(user.amount, pendingAmount, user.tokensUnlockTime);
     }
 
     // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
@@ -440,6 +469,7 @@ contract AllocationStaking is OwnableUpgradeable {
     public
     onlyOwner
     {
+        // Post sale penalty is using same precision as deposit fee
         require(
             _postSaleWithdrawPenaltyPercent >= depositFeePrecision.div(100)  &&
             _postSaleWithdrawPenaltyPercent <= depositFeePrecision
