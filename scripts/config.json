@@ -1,8 +1,8 @@
 {
   "mainnetStaging" : {
     "token": {
-      "tokenName": "XAVA-MOCK-V3",
-      "symbol": "MCK-V3",
+      "tokenName": "STAGING-FUJI-TEST",
+      "symbol": "SFT-3",
       "totalSupply": "100000000000000000000000000",
       "decimals": 18
     },
@@ -10,14 +10,16 @@
       "0x0c3e4509ee2EdD1BE61230BdE49b2FfC7a8ca88b",
       "0x85E3e0224a199f9e908AB4E3525Dd5504569EE5a",
       "0x2655D93eF7FfBF780aB9259825A8bF2b3d8A703A",
-      "0x094028E04c1FADf12F5a4Fe6C1b9D2062a252a17"
+      "0x094028E04c1FADf12F5a4Fe6C1b9D2062a252a17",
+      "0xD0CaE2309f322E24fBBc7E9D5F4995B02eF901e4"
     ],
     "allocationStakingRPS": "0.01",
     "delayBeforeStart": 500,
     "depositFeePercent": "2",
     "depositFeePrecision": "100",
     "initialRewardsAllocationStaking": "5000000",
-    "xavaPoolAllocPoints": "100"
+    "xavaPoolAllocPoints": "100",
+    "placeholderPoolAllocPoints": "50"
   },
   "mainnet" : {
     "token": {

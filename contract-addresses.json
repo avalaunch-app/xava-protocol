@@ -37,11 +37,11 @@
         "Admin": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE"
     },
     "mainnetStaging": {
-        "MOCK-XAVA": "0x344E90EE5DFAE0A0d602c3EA3847Fd5da8000A96",
-        "Admin": "0xbD75f051e1d07c2D8561373DACF10495acC9aE5f",
-        "SalesFactory": "0x0457fd45d184d295aFa43f488fe0879b8C98F1be",
-        "AllocationStaking": "0x7B108C50B118C35b095aB389a7B86E849E3e79bc",
-        "AllocationStakingProxy": "0xca90A4bf19Dd6B6fE96Ef7Cc256dCeAAC0E8490c",
-        "ProxyAdmin": "0x5392F8299F5fE3DECFB7E495cbE89c46f698d1c9"
+        "Admin": "0x0cE58B15874cb9AA3E64C0aE95615C6112004A32",
+        "SalesFactory": "0xb9dB9e6A5943E3a21CE87D61A1F5D0b59a2c3aF6",
+        "AllocationStakingProxy": "0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6",
+        "ProxyAdmin": "0x796EC8bee2871dD820F176730669848d909914c0",
+        "XavaToken": "0xb380566EDde68617C652D452102b8edA9FD3a403",
+        "DevTokenAlloStaking": "0xB650346D08A0A01Ba08F7023c6B6d761b69f1430"
     }
 }
