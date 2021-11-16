@@ -690,7 +690,7 @@ contract AvalaunchSale {
 
         safeTransferAVAX(
             msg.sender,
-            balanceAVAX.sub(totalRaised.add(registrationFees))
+            balanceAVAX.sub(totalReservedForRaise.add(registrationFees))
         );
     }
 
