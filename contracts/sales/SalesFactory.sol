@@ -50,17 +50,6 @@ contract SalesFactory {
         emit SaleDeployed(address(sale));
     }
 
-    // Function to set owner and token for the sale
-    function setSaleOwnerAndToken(address saleOwner, address saleToken) external {
-        require(isSaleCreatedThroughFactory[msg.sender] == true, "setSaleOwnerAndToken: Contract not eligible.");
-        // Set owner of the sale.
-        saleOwnerToSale[saleOwner] = msg.sender;
-        // Set token to sale
-        tokenToSale[saleToken] = msg.sender;
-        // Emit event
-        emit SaleOwnerAndTokenSetInFactory(msg.sender, saleOwner, saleToken);
-    }
-
     // Function to return number of pools deployed
     function getNumberOfSalesDeployed() external view returns (uint) {
         return allSales.length;

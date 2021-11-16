@@ -238,8 +238,6 @@ contract AvalaunchSale {
         portionVestingPrecision = _portionVestingPrecision;
         // Set staking round id
         stakingRoundId = _stakingRoundId;
-        // Mark in factory
-        factory.setSaleOwnerAndToken(sale.saleOwner, address(sale.token));
         // Emit event
         emit SaleCreated(
             sale.saleOwner,
