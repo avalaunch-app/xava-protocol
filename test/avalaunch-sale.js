@@ -14,7 +14,8 @@ describe("AvalaunchSale", function() {
   let ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
 
   const REWARDS_PER_SECOND = ethers.utils.parseUnits("0.1");
-  const DEPOSIT_FEE = 100;
+  const DEPOSIT_FEE_PERCENT = 5;
+  const DEPOSIT_FEE_PRECISION = 100;
   const START_TIMESTAMP_DELTA = 600;
 
   const TOKEN_PRICE_IN_AVAX = 10;
@@ -23,6 +24,8 @@ describe("AvalaunchSale", function() {
   const TOKENS_UNLOCK_TIME_DELTA = 150;
   const REGISTRATION_TIME_STARTS_DELTA = 10;
   const REGISTRATION_TIME_ENDS_DELTA = 40;
+  const REGISTRATION_DEPOSIT_AVAX = 1;
+  const PORTION_VESTING_PRECISION = 100;
   const ROUNDS_START_DELTAS = [50, 70, 90];
   const ROUNDS_MAX_PARTICIPATIONS = [120, 1000, 10000];
   const FIRST_ROUND = 1;
@@ -107,8 +110,12 @@ describe("AvalaunchSale", function() {
     const amountOfTokensToSell = firstOrDefault(params, 'amountOfTokensToSell', AMOUNT_OF_TOKENS_TO_SELL);
     const saleEnd = blockTimestamp + firstOrDefault(params, 'saleEndDelta', SALE_END_DELTA);
     const tokensUnlockTime = blockTimestamp + firstOrDefault(params, 'tokensUnlockTimeDelta', TOKENS_UNLOCK_TIME_DELTA);
+    const stakingRoundId = 1;
 
-    return AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
+    return await AvalaunchSale.setSaleParams(
+        token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
+        saleEnd, tokensUnlockTime, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+    );
   }
 
   async function setRegistrationTime(params) {
@@ -176,7 +183,7 @@ describe("AvalaunchSale", function() {
     const blockTimestamp = await getCurrentBlockTimestamp();
     startTimestamp = blockTimestamp + START_TIMESTAMP_DELTA;
     AllocationStaking = await AllocationStakingRewardsFactory.deploy();
-    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
+    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
 
     await AllocationStaking.add(1, XavaToken.address, false);
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
@@ -205,9 +212,13 @@ describe("AvalaunchSale", function() {
         const amountOfTokensToSell = AMOUNT_OF_TOKENS_TO_SELL;
         const saleEnd = blockTimestamp + SALE_END_DELTA;
         const tokensUnlockTime = blockTimestamp + TOKENS_UNLOCK_TIME_DELTA;
+        const stakingRoundId = 1;
 
         // When
-        await AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
+        await AvalaunchSale.setSaleParams(
+            token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
+            saleEnd, tokensUnlockTime, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+        );
 
         // Then
         const sale = await AvalaunchSale.sale();
@@ -219,8 +230,10 @@ describe("AvalaunchSale", function() {
         expect(sale.saleEnd).to.equal(saleEnd);
         expect(sale.tokensUnlockTime).to.equal(tokensUnlockTime);
 
-        expect(await SalesFactory.saleOwnerToSale(saleOwner)).to.equal(AvalaunchSale.address);
-        expect(await SalesFactory.tokenToSale(token)).to.equal(AvalaunchSale.address);
+        // Deprecated checks
+
+        // expect(await SalesFactory.saleOwnerToSale(saleOwner)).to.equal(AvalaunchSale.address);
+        // expect(await SalesFactory.tokenToSale(token)).to.equal(AvalaunchSale.address);
       });
 
       it("Should not allow non-admin to set sale parameters", async function() {
@@ -240,11 +253,14 @@ describe("AvalaunchSale", function() {
         const amountOfTokensToSell = AMOUNT_OF_TOKENS_TO_SELL;
         const saleEnd = blockTimestamp + SALE_END_DELTA;
         const tokensUnlockTime = blockTimestamp + TOKENS_UNLOCK_TIME_DELTA;
+        const stakingRoundId = 1;
 
-        // Then
-        await expect(AvalaunchSale.setSaleParams(token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime))
-          .to.emit(AvalaunchSale, "SaleCreated")
-          .withArgs(saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
+        // When
+        expect(await AvalaunchSale.setSaleParams(
+            token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
+            saleEnd, tokensUnlockTime, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+        )).to.emit(AvalaunchSale, "SaleCreated")
+        .withArgs(saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
       });
 
       it("Should not set sale parameters if sale is already created", async function() {
@@ -255,7 +271,8 @@ describe("AvalaunchSale", function() {
         await expect(setSaleParams()).to.be.revertedWith("setSaleParams: Sale is already created.");
       });
 
-      it("Should not set sale parameters if token address is the zero address", async function() {
+      // Deprecated
+      xit("Should not set sale parameters if token address is the zero address", async function() {
         // Then
         await expect(setSaleParams({token: ZERO_ADDRESS})).to.be.revertedWith("setSaleParams: Token address can not be 0.");
       });
@@ -425,7 +442,7 @@ describe("AvalaunchSale", function() {
         await setRounds();
 
         // Then
-        await expect(setRounds()).to.be.revertedWith("setRounds: Rounds are already");
+        await expect(setRounds()).to.be.revertedWith("setRounds: Rounds are set already");
       });
 
       it("Should not set sale rounds if times and participation arrays lengths don't match", async function() {
