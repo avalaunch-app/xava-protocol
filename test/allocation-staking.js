@@ -20,7 +20,8 @@ describe("AllocationStaking", function() {
   const START_TIMESTAMP_DELTA = 600;
   const END_TIMESTAMP_DELTA = Math.floor(TOKENS_TO_ADD / REWARDS_PER_SECOND + 1);
   const ALLOC_POINT = 1000;
-  const DEPOSIT_FEE = 100;
+  const DEPOSIT_FEE_PERCENT = 5;
+  const DEPOSIT_FEE_PRECISION = 100;
   const DEFAULT_DEPOSIT = 1000;
   const NUMBER_1E36 = "1000000000000000000000000000000000000";
   const DEFAULT_LP_APPROVAL = 10000;
@@ -41,7 +42,7 @@ describe("AllocationStaking", function() {
     await XavaToken.approve(AllocationStaking.address, TOKENS_TO_ADD);
     await AllocationStaking.fund(TOKENS_TO_ADD);
 
-    await AllocationStaking.setDepositFee(0, 10e6);
+    await AllocationStaking.setDepositFee(DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
 
     await AllocationStaking.add(ALLOC_POINT, XavaLP1.address, false);
     await AllocationStaking.add(ALLOC_POINT, XavaLP2.address, false);
@@ -59,10 +60,15 @@ describe("AllocationStaking", function() {
 
   function computeExpectedReward(timestampNow, lastTimestamp, rewPerSec, poolAlloc, totalAlloc, poolDeposit) {
     const tnow = ethers.BigNumber.from(timestampNow);
+    console.log(parseInt(tnow));
     const tdif = tnow.sub(lastTimestamp);
+    console.log(parseInt(tdif));
     const totalRewards = tdif.mul(rewPerSec);
+    console.log(parseInt(totalRewards));
     const poolRewards = totalRewards.mul(poolAlloc).div(totalAlloc);
+    console.log(parseInt(poolRewards));
     const poolRewardsPerShare = poolRewards.mul(NUMBER_1E36).div(poolDeposit)
+    console.log(parseInt(poolRewardsPerShare));
 
     return poolRewardsPerShare;
   }
@@ -90,9 +96,9 @@ describe("AllocationStaking", function() {
     startTimestamp = blockTimestamp + START_TIMESTAMP_DELTA;
 
     AllocationStaking = await AllocationStakingRewardsFactory.deploy();
-    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
+    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
 
-    await AllocationStaking.setDepositFee(DEPOSIT_FEE , 1000000000)
+    await AllocationStaking.setDepositFee(DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
 
     await XavaLP1.transfer(alice.address, DEFAULT_BALANCE_ALICE);
@@ -141,16 +147,16 @@ describe("AllocationStaking", function() {
     describe("Deposit fee", async function() {
       it("Should set a deposit fee and precision", async function() {
         // When
-        await AllocationStaking.setDepositFee(10, 10e7);
+        await AllocationStaking.setDepositFee(DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
 
         // Then
-        expect(await AllocationStaking.depositFeePercent()).to.equal(10);
-        expect(await AllocationStaking.depositFeePrecision()).to.equal(10e7);
+        expect(await AllocationStaking.depositFeePercent()).to.equal(DEPOSIT_FEE_PERCENT);
+        expect(await AllocationStaking.depositFeePrecision()).to.equal(DEPOSIT_FEE_PRECISION);
       });
 
       it("Should set the deposit fee to 0", async function() {
         // When
-        await AllocationStaking.setDepositFee(0, 10e6);
+        await AllocationStaking.setDepositFee(0, 0);
 
         // Then
         expect(await AllocationStaking.depositFeePercent()).to.equal(0);
@@ -163,8 +169,8 @@ describe("AllocationStaking", function() {
       });
 
       it("Should emit DepositFeeSet event", async function() {
-        await expect(AllocationStaking.setDepositFee(10, 10e7))
-          .to.emit(AllocationStaking, "DepositFeeSet").withArgs(10, 10e7);
+        await expect(AllocationStaking.setDepositFee(DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION))
+          .to.emit(AllocationStaking, "DepositFeeSet").withArgs(DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
       });
     });
   });
@@ -215,7 +221,7 @@ describe("AllocationStaking", function() {
       // Given
       const blockTimestamp = await getCurrentBlockTimestamp();
       AllocationStaking = await AllocationStakingRewardsFactory.deploy();
-      AllocationStaking.initialize(XavaToken.address, 0, blockTimestamp + START_TIMESTAMP_DELTA, SalesFactory.address, DEPOSIT_FEE);
+      AllocationStaking.initialize(XavaToken.address, 0, blockTimestamp + START_TIMESTAMP_DELTA, SalesFactory.address, DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
       await XavaToken.approve(AllocationStaking.address, TOKENS_TO_ADD);
 
       // Then
@@ -988,7 +994,7 @@ describe("AllocationStaking", function() {
         // Given
         await baseSetupTwoPools();
 
-        await AllocationStaking.setDepositFee(DEPOSIT_FEE, 10e6);
+        await AllocationStaking.setDepositFee(DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
 
         const totalXavaRedistributedBefore = await AllocationStaking.totalXavaRedistributed();
 
@@ -1002,7 +1008,7 @@ describe("AllocationStaking", function() {
 
         // Then
         const totalXavaRedistributedAfter = await AllocationStaking.totalXavaRedistributed();
-        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE).div(10e6);
+        const depositFee = ethers.BigNumber.from(amountToDeposit).mul(DEPOSIT_FEE_PERCENT).div(DEPOSIT_FEE_PRECISION);
         expect(totalXavaRedistributedAfter).to.equal(totalXavaRedistributedBefore.add(depositFee));
       });
 
