@@ -139,7 +139,7 @@ contract AllocationStaking is OwnableUpgradeable {
 
     // Set deposit fee internal
     function setDepositFeeInternal(uint256 _depositFeePercent, uint256 _depositFeePrecision) internal {
-        require(_depositFeePercent >= _depositFeePrecision.div(100)  && _depositFeePercent <= _depositFeePrecision);
+        require(_depositFeePercent >= _depositFeePrecision.div(100) && _depositFeePercent <= _depositFeePrecision);
         depositFeePercent = _depositFeePercent;
         depositFeePrecision=  _depositFeePrecision;
         emit DepositFeeSet(depositFeePercent, depositFeePrecision);
@@ -352,7 +352,6 @@ contract AllocationStaking is OwnableUpgradeable {
         emit CompoundedEarnings(msg.sender, _pid, amountCompounding, user.amount);
     }
 
-
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
@@ -379,8 +378,6 @@ contract AllocationStaking is OwnableUpgradeable {
         totalXavaRedistributed = totalXavaRedistributed.add(amount);
         emit FeeTaken(user, _pid, amount);
     }
-
-
 
     // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
     function getPendingAndDepositedForUsers(address [] memory users, uint pid)
