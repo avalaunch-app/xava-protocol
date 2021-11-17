@@ -25,8 +25,10 @@ contract AvalaunchSale {
         IERC20 token;
         // Is sale created
         bool isCreated;
-        // Are earnings and leftover withdrawn
+        // Are earnings withdrawn
         bool earningsWithdrawn;
+        // Is leftover withdrawn
+        bool leftoverWithdrawn;
         // Have tokens been deposited
         bool tokensDeposited;
         // Address of sale owner
@@ -70,7 +72,6 @@ contract AvalaunchSale {
     Sale public sale;
     // Registration
     Registration public registration;
-
     // Number of users participated in the sale.
     uint256 public numberOfParticipants;
     // Array storing IDS of rounds (IDs start from 1, so they can't be mapped as array indexes
@@ -83,7 +84,7 @@ contract AvalaunchSale {
     mapping(address => uint256) public addressToRoundRegisteredFor;
     // mapping if user is participated or not
     mapping(address => bool) public isParticipated;
-    // One ether in weis
+    // wei precision
     uint256 public constant one = 10**18;
     // Times when portions are getting unlocked
     uint256[] public vestingPortionsUnlockTime;
@@ -137,6 +138,7 @@ contract AvalaunchSale {
         uint256 startTime,
         uint256 maxParticipation
     );
+    event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
 
     // Constructor, always initialized through SalesFactory
     constructor(address _admin, address _allocationStaking) public {
@@ -181,8 +183,11 @@ contract AvalaunchSale {
     {
         require(
             timeToShift > 0 && timeToShift < maxVestingTimeShift,
-            "Shift can not be greater than 30 days."
+            "Shift must be nonzero and smaller than maxVestingTimeShift."
         );
+
+        // Time can be shifted only once.
+        maxVestingTimeShift = 0;
 
         for (uint256 i = 0; i < vestingPortionsUnlockTime.length; i++) {
             vestingPortionsUnlockTime[i] = vestingPortionsUnlockTime[i].add(
@@ -233,8 +238,6 @@ contract AvalaunchSale {
         portionVestingPrecision = _portionVestingPrecision;
         // Set staking round id
         stakingRoundId = _stakingRoundId;
-        // Mark in factory
-        factory.setSaleOwnerAndToken(sale.saleOwner, address(sale.token));
         // Emit event
         emit SaleCreated(
             sale.saleOwner,
@@ -245,7 +248,9 @@ contract AvalaunchSale {
         );
     }
 
-    /// @notice     Function to retroactively set sale token address
+    // @notice     Function to retroactively set sale token address, can be called only once,
+    //             after initial contract creation has passed. Added as an options for teams which
+    //             are not having token at the moment of sale launch.
     function setSaleToken(
         address saleToken
     )
@@ -262,7 +267,7 @@ contract AvalaunchSale {
         uint256 _registrationTimeStarts,
         uint256 _registrationTimeEnds
     ) external onlyAdmin {
-        require(sale.isCreated == true);
+        require(sale.isCreated);
         require(registration.registrationTimeStarts == 0);
         require(
             _registrationTimeStarts >= block.timestamp &&
@@ -289,7 +294,7 @@ contract AvalaunchSale {
         uint256[] calldata startTimes,
         uint256[] calldata maxParticipations
     ) external onlyAdmin {
-        require(sale.isCreated == true);
+        require(sale.isCreated);
         require(
             startTimes.length == maxParticipations.length,
             "setRounds: Bad input."
@@ -437,12 +442,13 @@ contract AvalaunchSale {
             !sale.tokensDeposited, "Deposit can be done only once"
         );
 
+        sale.tokensDeposited = true;
+
         sale.token.safeTransferFrom(
             msg.sender,
             address(this),
             sale.amountOfTokensToSell
         );
-        sale.tokensDeposited = true;
     }
 
     // Function to participate in the sales
@@ -547,6 +553,7 @@ contract AvalaunchSale {
         // Transfer registration deposit amount in AVAX back to the users.
         safeTransferAVAX(msg.sender, registrationDepositAVAX);
 
+        emit RegistrationAVAXRefunded(msg.sender, registrationDepositAVAX);
         emit TokensSold(msg.sender, amountOfTokensBuying);
     }
 
@@ -569,11 +576,44 @@ contract AvalaunchSale {
                 .amountBought
                 .mul(vestingPercentPerPortion[portionId])
                 .div(portionVestingPrecision);
+
             // Withdraw percent which is unlocked at that portion
-            sale.token.safeTransfer(msg.sender, amountWithdrawing);
-            emit TokensWithdrawn(msg.sender, amountWithdrawing);
+            if(amountWithdrawing > 0) {
+                sale.token.safeTransfer(msg.sender, amountWithdrawing);
+                emit TokensWithdrawn(msg.sender, amountWithdrawing);
+            }
         } else {
-            revert("Tokens already withdrawn.");
+            revert("Tokens already withdrawn or portion not unlocked yet.");
+        }
+    }
+
+    // Expose function where user can withdraw multiple unlocked portions at once.
+    function withdrawMultiplePortions(uint256 [] calldata portionIds) external {
+        uint256 totalToWithdraw = 0;
+
+        Participation storage p = userToParticipation[msg.sender];
+
+        for(uint i=0; i < portionIds.length; i++) {
+            uint256 portionId = portionIds[i];
+            require(portionId < vestingPercentPerPortion.length);
+
+            if (
+                !p.isPortionWithdrawn[portionId] &&
+                vestingPortionsUnlockTime[portionId] <= block.timestamp
+            ) {
+                p.isPortionWithdrawn[portionId] = true;
+                uint256 amountWithdrawing = p
+                .amountBought
+                .mul(vestingPercentPerPortion[portionId])
+                .div(portionVestingPrecision);
+                // Withdraw percent which is unlocked at that portion
+                totalToWithdraw = totalToWithdraw.add(amountWithdrawing);
+            }
+        }
+
+        if(totalToWithdraw > 0) {
+            sale.token.safeTransfer(msg.sender, totalToWithdraw);
+            emit TokensWithdrawn(msg.sender, totalToWithdraw);
         }
     }
 
@@ -584,41 +624,79 @@ contract AvalaunchSale {
     }
 
     /// Function to withdraw all the earnings and the leftover of the sale contract.
-    function withdrawEarningsAndLeftover(bool withBurn) external onlySaleOwner {
+    function withdrawEarningsAndLeftover() external onlySaleOwner {
+        withdrawEarningsInternal();
+        withdrawLeftoverInternal();
+    }
+
+    // Function to withdraw only earnings
+    function withdrawEarnings() external onlySaleOwner {
+        withdrawEarningsInternal();
+    }
+
+    // Function to withdraw only leftover
+    function withdrawLeftover() external onlySaleOwner {
+        withdrawLeftoverInternal();
+    }
+
+
+    // function to withdraw earnings
+    function withdrawEarningsInternal() internal  {
         // Make sure sale ended
         require(block.timestamp >= sale.saleEnd);
 
         // Make sure owner can't withdraw twice
         require(!sale.earningsWithdrawn);
         sale.earningsWithdrawn = true;
-
         // Earnings amount of the owner in AVAX
         uint256 totalProfit = sale.totalAVAXRaised;
+
+        safeTransferAVAX(msg.sender, totalProfit);
+    }
+
+    // Function to withdraw leftover
+    function withdrawLeftoverInternal() internal {
+        // Make sure sale ended
+        require(block.timestamp >= sale.saleEnd);
+
+        // Make sure owner can't withdraw twice
+        require(!sale.leftoverWithdrawn);
+        sale.leftoverWithdrawn = true;
 
         // Amount of tokens which are not sold
         uint256 leftover = sale.amountOfTokensToSell.sub(sale.totalTokensSold);
 
-        safeTransferAVAX(msg.sender, totalProfit);
-
-        if (leftover > 0 && !withBurn) {
+        if (leftover > 0) {
             sale.token.safeTransfer(msg.sender, leftover);
-            return;
-        }
-
-        if (withBurn) {
-            sale.token.safeTransfer(address(1), leftover);
         }
     }
 
     // Function after sale for admin to withdraw registration fees if there are any left.
     function withdrawRegistrationFees() external onlyAdmin {
-        require(block.timestamp >= sale.saleEnd);
+        require(block.timestamp >= sale.saleEnd, "Require that sale has ended.");
         require(registrationFees > 0, "No earnings from registration fees.");
 
         // Transfer AVAX to the admin wallet.
         safeTransferAVAX(msg.sender, registrationFees);
         // Set registration fees to be 0
         registrationFees = 0;
+    }
+
+    // Function where admin can withdraw all unused funds.
+    function withdrawUnusedFunds() external onlyAdmin {
+        uint256 balanceAVAX = address(this).balance;
+
+        uint256 totalReservedForRaise = sale.earningsWithdrawn ? 0 : sale.totalAVAXRaised;
+
+        safeTransferAVAX(
+            msg.sender,
+            balanceAVAX.sub(totalReservedForRaise.add(registrationFees))
+        );
+    }
+
+    // Function to act as a fallback and handle receiving AVAX.
+    receive() external payable {
+
     }
 
     /// @notice     Get current round in progress.

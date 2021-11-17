@@ -60,7 +60,7 @@ describe("Admin", function() {
       expect(await Admin.isAdmin(alice.address)).to.be.true;
 
       // Then
-      await expect(Admin.removeAdmin(alice.address)).to.be.revertedWith("not admin");
+      await expect(Admin.removeAdmin(alice.address)).to.be.revertedWith('Only admin can call.');
       expect(await Admin.isAdmin(deployer.address)).to.be.false;
       expect(await Admin.isAdmin(alice.address)).to.be.true;
     });
@@ -82,10 +82,10 @@ describe("Admin", function() {
       let admins = await Admin.getAllAdmins();
       expect(admins.length).to.eq(3);
       expect(await Admin.isAdmin(cedric.address)).to.be.false;
-      
+
       // When
       await Admin.addAdmin(cedric.address);
-      
+
       // Then
       admins = await Admin.getAllAdmins();
       expect(admins.length).to.eq(4);
@@ -101,7 +101,7 @@ describe("Admin", function() {
       expect(await Admin.isAdmin(cedric.address)).to.be.false;
 
       // Then
-      await expect(Admin.addAdmin(cedric.address)).to.be.revertedWith("not admin");
+      await expect(Admin.addAdmin(cedric.address)).to.be.revertedWith('Only admin can call.');
       expect(await Admin.isAdmin(deployer.address)).to.be.false;
       expect(await Admin.isAdmin(cedric.address)).to.be.false;
     });
