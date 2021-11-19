@@ -1,4 +1,4 @@
-name: Lint
+name: Solhint Lint
 'on':
   - push
   - pull_request
