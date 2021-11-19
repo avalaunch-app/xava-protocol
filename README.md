@@ -1,4 +1,5 @@
 ## Avalaunch protcool implementation
+![unit-tests](https://github.com/avalaunch-app/xava-protocol/actions/workflows/unit-tests.yml/badge.svg)
 
 
 _The first protocol, exclusively for the Avalanche ecosystem, to offer promising and innovative projects a fast, secure, and efficient platform for decentralized fundraising._
