@@ -94,7 +94,7 @@ describe("AvalaunchSale", function() {
     const value = firstOrDefault(params, "participationValue", PARTICIPATION_VALUE);
 
     const sig = signParticipation(userAddress, participationAmount, participationRound, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-    return AvalaunchSale.connect(registrant).participate(sig, participationAmount, AMOUNT_OF_XAVA_TO_BURN, participationRound, {value});
+    return AvalaunchSale.connect(registrant).participate(sig, participationAmount, AMOUNT_OF_XAVA_TO_BURN, participationRound, {value: 1});
   }
 
   async function getCurrentBlockTimestamp() {
@@ -160,7 +160,7 @@ describe("AvalaunchSale", function() {
     const roundId = firstOrDefault(params, 'registerRound', FIRST_ROUND)
     const sig = signRegistration(registrant.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
-    await AvalaunchSale.connect(registrant).registerForSale(sig, roundId);
+    await AvalaunchSale.connect(registrant).registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX});
   }
 
   beforeEach(async function() {
@@ -557,7 +557,8 @@ describe("AvalaunchSale", function() {
           .withArgs(price);
       });
 
-      it("Should not update token price if 1st round already started", async function() {
+      // Deprecated
+      xit("Should not update token price if 1st round already started", async function() {
         // Given
         const price = 123;
         await runFullSetup();
@@ -579,7 +580,8 @@ describe("AvalaunchSale", function() {
         await expect(AvalaunchSale.updateTokenPriceInAVAX(price)).to.be.revertedWith("Price can not be 0.");
       });
 
-      it("Should not update token price if rounds not set", async function() {
+      // Deprecated
+      xit("Should not update token price if rounds not set", async function() {
         // Given
         const price = 123;
         await setSaleParams();
@@ -783,7 +785,8 @@ describe("AvalaunchSale", function() {
         await expect(AvalaunchSale.depositTokens()).to.be.revertedWith("Deposit can be done only once");
       });
 
-      it("Should not deposit tokens if round already started", async function() {
+      // Deprecated
+      xit("Should not deposit tokens if round already started", async function() {
         // Given
         await runFullSetupNoDeposit();
         await XavaToken.approve(AvalaunchSale.address, AMOUNT_OF_TOKENS_TO_SELL);
@@ -812,7 +815,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // When
-        await AvalaunchSale.registerForSale(sig, roundId);
+        await AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX});
 
         // Then
         expect((await AvalaunchSale.registration()).numberOfRegistrants).to.equal(1);
@@ -830,7 +833,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.be.revertedWith("Round ID can not be 0.");
       });
 
@@ -847,7 +850,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.be.revertedWith("Registration gate is closed.");
       });
 
@@ -860,7 +863,7 @@ describe("AvalaunchSale", function() {
         const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.be.revertedWith("Registration gate is closed.");
       });
 
@@ -876,7 +879,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.be.revertedWith("Invalid signature");
       });
 
@@ -891,10 +894,10 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
 
-        await AvalaunchSale.registerForSale(sig, roundId);
+        await AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX});
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.be.revertedWith("User can not register twice.");
       });
 
@@ -910,7 +913,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId)).to.be.reverted;
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX})).to.be.reverted;
       });
 
       it("Should emit UserRegistered event", async function() {
@@ -925,7 +928,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.registerForSale(sig, roundId))
+        await expect(AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX}))
           .to.emit(AvalaunchSale, "UserRegistered").withArgs(deployer.address, roundId);
       });
     });
@@ -1617,7 +1620,7 @@ describe("AvalaunchSale", function() {
         await expect(AvalaunchSale.withdrawEarningsAndLeftover(false, {gasPrice: 0})).to.be.reverted;
       });
 
-      it("Should not allow non-sale owner to withdraw ", async function() {
+      it("Should not allow non-sale owner to withdraw", async function() {
         // Given
         await runFullSetup();
 
