@@ -462,7 +462,7 @@ contract AllocationStaking is OwnableUpgradeable {
         return (deposits, earnings);
     }
 
-    function setPostSaleWithdrawPenaltyAndLength(
+    function setPostSaleWithdrawPenaltyPercentAndLength(
         uint256 _postSaleWithdrawPenaltyPercent,
         uint256 _postSaleWithdrawPenaltyLength
     )
