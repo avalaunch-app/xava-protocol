@@ -302,24 +302,6 @@
                 "inputs": [
                     {
                         "internalType": "address",
-                        "name": "saleOwner",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "address",
-                        "name": "saleToken",
-                        "type": "address"
-                    }
-                ],
-                "name": "setSaleOwnerAndToken",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "address",
                         "name": "",
                         "type": "address"
                     }
@@ -717,6 +699,11 @@
                         "internalType": "uint256",
                         "name": "_depositFeePercent",
                         "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_depositFeePrecision",
+                        "type": "uint256"
                     }
                 ],
                 "name": "initialize",
@@ -926,6 +913,19 @@
                     }
                 ],
                 "name": "setDepositFee",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_salesFactory",
+                        "type": "address"
+                    }
+                ],
+                "name": "setSalesFactory",
                 "outputs": [],
                 "stateMutability": "nonpayable",
                 "type": "function"
@@ -1150,6 +1150,25 @@
                     }
                 ],
                 "name": "MaxParticipationSet",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amountRefunded",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "RegistrationAVAXRefunded",
                 "type": "event"
             },
             {
@@ -1463,6 +1482,19 @@
                 "type": "function"
             },
             {
+                "inputs": [],
+                "name": "getNumberOfRegisteredUsers",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
                 "inputs": [
                     {
                         "internalType": "address",
@@ -1493,9 +1525,9 @@
                         "type": "uint256"
                     },
                     {
-                        "internalType": "bool",
+                        "internalType": "bool[]",
                         "name": "",
-                        "type": "bool"
+                        "type": "bool[]"
                     }
                 ],
                 "stateMutability": "view",
@@ -1542,17 +1574,17 @@
             },
             {
                 "inputs": [],
-                "name": "getRegistrationInfo",
+                "name": "getVestingInfo",
                 "outputs": [
                     {
-                        "internalType": "uint256",
+                        "internalType": "uint256[]",
                         "name": "",
-                        "type": "uint256"
+                        "type": "uint256[]"
                     },
                     {
-                        "internalType": "uint256",
+                        "internalType": "uint256[]",
                         "name": "",
-                        "type": "uint256"
+                        "type": "uint256[]"
                     }
                 ],
                 "stateMutability": "view",
@@ -1572,6 +1604,19 @@
                         "internalType": "bool",
                         "name": "",
                         "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "maxVestingTimeShift",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
                     }
                 ],
                 "stateMutability": "view",
@@ -1632,6 +1677,19 @@
                 "type": "function"
             },
             {
+                "inputs": [],
+                "name": "portionVestingPrecision",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
                 "inputs": [
                     {
                         "internalType": "uint256",
@@ -1659,7 +1717,7 @@
                 ],
                 "name": "registerForSale",
                 "outputs": [],
-                "stateMutability": "nonpayable",
+                "stateMutability": "payable",
                 "type": "function"
             },
             {
@@ -1679,6 +1737,32 @@
                     {
                         "internalType": "uint256",
                         "name": "numberOfRegistrants",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "registrationDepositAVAX",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "registrationFees",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
                         "type": "uint256"
                     }
                 ],
@@ -1745,6 +1829,11 @@
                     {
                         "internalType": "bool",
                         "name": "earningsWithdrawn",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "leftoverWithdrawn",
                         "type": "bool"
                     },
                     {
@@ -1876,11 +1965,88 @@
                         "internalType": "uint256",
                         "name": "_tokensUnlockTime",
                         "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_portionVestingPrecision",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_stakingRoundId",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_registrationDepositAVAX",
+                        "type": "uint256"
                     }
                 ],
                 "name": "setSaleParams",
                 "outputs": [],
                 "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "saleToken",
+                        "type": "address"
+                    }
+                ],
+                "name": "setSaleToken",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256[]",
+                        "name": "_unlockingTimes",
+                        "type": "uint256[]"
+                    },
+                    {
+                        "internalType": "uint256[]",
+                        "name": "_percents",
+                        "type": "uint256[]"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_maxVestingTimeShift",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "setVestingParams",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "timeToShift",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "shiftVestingUnlockingTimes",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "stakingRoundId",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
                 "type": "function"
             },
             {
@@ -1925,11 +2091,6 @@
                         "internalType": "uint256",
                         "name": "roundId",
                         "type": "uint256"
-                    },
-                    {
-                        "internalType": "bool",
-                        "name": "isWithdrawn",
-                        "type": "bool"
                     }
                 ],
                 "stateMutability": "view",
@@ -1938,11 +2099,50 @@
             {
                 "inputs": [
                     {
-                        "internalType": "bool",
-                        "name": "withBurn",
-                        "type": "bool"
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
                     }
                 ],
+                "name": "vestingPercentPerPortion",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "vestingPortionsUnlockTime",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "withdrawEarnings",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
                 "name": "withdrawEarningsAndLeftover",
                 "outputs": [],
                 "stateMutability": "nonpayable",
@@ -1950,10 +2150,54 @@
             },
             {
                 "inputs": [],
+                "name": "withdrawLeftover",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256[]",
+                        "name": "portionIds",
+                        "type": "uint256[]"
+                    }
+                ],
+                "name": "withdrawMultiplePortions",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "withdrawRegistrationFees",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "portionId",
+                        "type": "uint256"
+                    }
+                ],
                 "name": "withdrawTokens",
                 "outputs": [],
                 "stateMutability": "nonpayable",
                 "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "withdrawUnusedFunds",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "stateMutability": "payable",
+                "type": "receive"
             }
         ]
     }

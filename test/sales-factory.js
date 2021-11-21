@@ -14,7 +14,10 @@ describe("SalesFactory", function() {
   let ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
   const REWARDS_PER_SECOND = ethers.utils.parseUnits("0.1");
-  const DEPOSIT_FEE = 100;
+  const DEPOSIT_FEE_PERCENT = 5;
+  const DEPOSIT_FEE_PRECISION = 100;
+  const REGISTRATION_DEPOSIT_AVAX = 1;
+  const PORTION_VESTING_PRECISION = 100;
   const START_TIMESTAMP_DELTA = 600;
 
   // const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
@@ -44,7 +47,7 @@ describe("SalesFactory", function() {
     const blockTimestamp = await getCurrentBlockTimestamp();
     startTimestamp = blockTimestamp + START_TIMESTAMP_DELTA;
     AllocationStaking = await AllocationStakingRewardsFactory.deploy();
-    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE);
+    await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
 
     await AllocationStaking.add(1, XavaToken.address, false);
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
@@ -119,48 +122,67 @@ describe("SalesFactory", function() {
 
         // When
         const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-        await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10);
+        await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100,
+            blockTimestamp + 10, PORTION_VESTING_PRECISION, 1, REGISTRATION_DEPOSIT_AVAX);
+
+        // Deprecated checks
+        // expect(await SalesFactory.saleOwnerToSale(deployer.address)).to.equal(AvalaunchSale.address);
+        // expect(await SalesFactory.tokenToSale(XavaToken.address)).to.equal(AvalaunchSale.address);
 
         // Then
-        expect(await SalesFactory.saleOwnerToSale(deployer.address)).to.equal(AvalaunchSale.address);
-        expect(await SalesFactory.tokenToSale(XavaToken.address)).to.equal(AvalaunchSale.address);
+        const sale = await AvalaunchSale.sale();
+        expect(sale.saleOwner).to.equal(deployer.address);
+        expect(sale.token).to.equal(XavaToken.address);
       });
 
-      it("Should emit SaleOwnerAndTokenSetInFactory event", async function() {
+      // Deprecated
+      xit("Should emit SaleOwnerAndTokenSetInFactory event", async function() {
         // Given
         await SalesFactory.deploySale();
         const AvalaunchSale = AvalaunchSaleFactory.attach(await SalesFactory.allSales(0));
 
         // Then
         const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-        await expect(AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10))
-          .to.emit(SalesFactory, "SaleOwnerAndTokenSetInFactory");
+        await expect(AvalaunchSale.setSaleParams(
+            XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100,
+            blockTimestamp + 10, PORTION_VESTING_PRECISION, 1, REGISTRATION_DEPOSIT_AVAX
+        )).to.emit(SalesFactory, "SaleOwnerAndTokenSetInFactory");
       });
 
-      it("Should not allow same sale owner to own two sales", async function() {
+      // Deprecated
+      xit("Should not allow same sale owner to own two sales", async function() {
         // Given
         await SalesFactory.deploySale();
         const AvalaunchSale = AvalaunchSaleFactory.attach(await SalesFactory.allSales(0));
 
         const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-        await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10);
+        await AvalaunchSale.setSaleParams(
+            XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100,
+            blockTimestamp + 10, PORTION_VESTING_PRECISION, 1, REGISTRATION_DEPOSIT_AVAX
+        );
 
         // When
         await SalesFactory.deploySale();
         const AvalaunchSale2 = AvalaunchSaleFactory.attach(await SalesFactory.allSales(1));
 
         // Then
-        await expect(AvalaunchSale2.setSaleParams(XavaToken2.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10))
-          .to.be.revertedWith("Sale owner already set.");
+        await expect(AvalaunchSale2.setSaleParams(
+            XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100,
+            blockTimestamp + 10, PORTION_VESTING_PRECISION, 2, REGISTRATION_DEPOSIT_AVAX
+        )).to.be.revertedWith("Sale owner already set.");
       });
 
-      it("Should not allow same token to be part of two sales", async function() {
+      // Deprecated
+      xit("Should not allow same token to be part of two sales", async function() {
         // Given
         await SalesFactory.deploySale();
         const AvalaunchSale = AvalaunchSaleFactory.attach(await SalesFactory.allSales(0));
 
         const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-        await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100, blockTimestamp + 10);
+        await AvalaunchSale.setSaleParams(
+            XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100,
+            blockTimestamp + 10, PORTION_VESTING_PRECISION, 1, REGISTRATION_DEPOSIT_AVAX
+        );
 
         // When
         await SalesFactory.deploySale();
@@ -171,7 +193,8 @@ describe("SalesFactory", function() {
           .to.be.revertedWith("Sale token already set.");
       });
 
-      it("Should not allow address to set sale owner and token if address not deployed through factory", async function() {
+      // Deprecated
+      xit("Should not allow address to set sale owner and token if address not deployed through factory", async function() {
         // Given
         await SalesFactory.deploySale();
 
@@ -207,6 +230,22 @@ describe("SalesFactory", function() {
     });
 
     describe("Get all sales", async function() {
+      it("Should return last deployed sale", async function() {
+        // Given
+        // Condition: There were no sales deployed before
+        await SalesFactory.deploySale();
+
+        let sale = await SalesFactory.allSales(0);
+        expect(await SalesFactory.getLastDeployedSale()).to.equal(sale);
+      });
+
+      it("Should return zero address if there were no sales deployed", async function() {
+        // Given
+        // Condition: There were no sales deployed before
+
+        expect(await SalesFactory.getLastDeployedSale()).to.equal(ZERO_ADDRESS);
+      });
+
       it("Should return only first sale", async function() {
         // Given
         await SalesFactory.deploySale();

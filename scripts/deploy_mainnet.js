@@ -66,15 +66,13 @@ async function main() {
     await allocationStaking.add(c.placeholderPoolAllocPoints, contracts["DevTokenAlloStaking"], true);
     console.log(`allocationStaking.add(${c.placeholderPoolAllocPoints}, ${contracts["DevTokenAlloStaking"]}, true)`)
 
+    // Fund only 5000 tokens, for testing
+    await allocationStaking.fund(ethers.utils.parseEther('50000'));
+    console.log('Funded tokens')
+
     const totalSupplyDevToken = ethers.utils.parseEther('10000');
     await devToken.approve(allocationStaking.address, totalSupplyDevToken);
     console.log('Dev token successfully approved.');
-
-    await allocationStaking.deposit(1, totalSupplyDevToken);
-    console.log('Successfully deposited total supply for dev token to the farm.');
-
-    // Fund only 5000 tokens, for testing
-    await allocationStaking.fund(ethers.utils.parseEther('4500'));
 }
 
 
