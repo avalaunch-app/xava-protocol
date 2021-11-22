@@ -47,7 +47,8 @@
     "xavaPoolAllocPoints": "50",
     "placeholderPoolAllocPoints": "50",
     "postSaleWithdrawPenaltyLength": 432000,
-    "postSaleWithdrawPenaltyPercent": 10
+    "postSaleWithdrawPenaltyPercent": 100000,
+    "postSaleWithdrawPenaltyPrecision": 1000000
   },
   "local" : {
     "token": {
