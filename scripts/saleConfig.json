@@ -47,8 +47,6 @@
     "stakingRoundId": 2,
     "registrationDepositAVAX": "1",
     "maxVestingTimeShift": 2592000,
-    "postSaleWithdrawPenaltyLength": 7200,
-    "postSaleWithdrawPenaltyPercent": 10000,
     "unlockingTimes": [
       1637612173,
       1637612233,

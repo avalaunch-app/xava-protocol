@@ -42,7 +42,9 @@
     "depositFeePrecision": "100",
     "initialRewardsAllocationStaking": "320000",
     "xavaPoolAllocPoints": "50",
-    "placeholderPoolAllocPoints": "50"
+    "placeholderPoolAllocPoints": "50",
+    "postSaleWithdrawPenaltyLength": 432000,
+    "postSaleWithdrawPenaltyPercent": 10
   },
   "local" : {
     "token": {
