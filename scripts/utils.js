@@ -21,6 +21,16 @@ function getSavedContractABI() {
     return JSON.parse(json)
 }
 
+function getSavedProxyABI() {
+    let json
+    try {
+        json = fs.readFileSync(path.join(__dirname, `../proxy-abis.json`))
+    } catch (err) {
+        json = '{}'
+    }
+    return JSON.parse(json)
+}
+
 function saveContractAbi(network, contract, abi) {
     const abis = getSavedContractABI()
     abis[network] = abis[network] || {}
@@ -39,5 +49,6 @@ module.exports = {
     getSavedContractAddresses,
     saveContractAddress,
     saveContractAbi,
-    getSavedContractABI
+    getSavedContractABI,
+    getSavedProxyABI
 }
