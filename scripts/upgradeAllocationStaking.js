@@ -7,7 +7,7 @@ async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
     const proxyAdminAbi = getSavedProxyABI()['ProxyAdmin'];
 
-    console.log(proxyAdminAbi);
+    //console.log(proxyAdminAbi);
     const proxyAdmin = await hre.ethers.getContractAt(proxyAdminAbi, contracts['ProxyAdmin']);
 
     const allocationStakingProxy = contracts["AllocationStakingProxy"];
