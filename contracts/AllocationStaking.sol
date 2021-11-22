@@ -62,7 +62,8 @@ contract AllocationStaking is OwnableUpgradeable {
     uint256 public postSaleWithdrawPenaltyLength;
     // Post sale penalty withdraw percent, which is linearly dropping for postSaleWithdrawPenaltyLength period
     uint256 public postSaleWithdrawPenaltyPercent;
-
+    // Post sale withdraw penalty precision
+    uint256 public postSaleWithdrawPenaltyPrecision;
     // Events
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -438,8 +439,8 @@ contract AllocationStaking is OwnableUpgradeable {
         uint256 percentToTake = timeLeft.mul(postSaleWithdrawPenaltyPercent).div(postSaleWithdrawPenaltyLength);
         // Return amount of tokens which will be taken as withdraw fee in this case.
         return (
-            percentToTake.mul(amountStaking).div(depositFeePrecision),
-            percentToTake.mul(amountPending).div(depositFeePrecision)
+            percentToTake.mul(amountStaking).div(postSaleWithdrawPenaltyPrecision),
+            percentToTake.mul(amountPending).div(postSaleWithdrawPenaltyPrecision)
         );
     }
 
@@ -470,19 +471,21 @@ contract AllocationStaking is OwnableUpgradeable {
 
     function setPostSaleWithdrawPenaltyPercentAndLength(
         uint256 _postSaleWithdrawPenaltyPercent,
-        uint256 _postSaleWithdrawPenaltyLength
+        uint256 _postSaleWithdrawPenaltyLength,
+        uint256 _postSaleWithdrawPenaltyPrecision
     )
     public
     onlyOwner
     {
         // Post sale penalty is using same precision as deposit fee
         require(
-            _postSaleWithdrawPenaltyPercent >= depositFeePrecision.div(100)  &&
-            _postSaleWithdrawPenaltyPercent <= depositFeePrecision
+            _postSaleWithdrawPenaltyPercent >= _postSaleWithdrawPenaltyPrecision.div(100)  &&
+            _postSaleWithdrawPenaltyPercent <= _postSaleWithdrawPenaltyPrecision
         );
 
         postSaleWithdrawPenaltyLength = _postSaleWithdrawPenaltyLength;
         postSaleWithdrawPenaltyPercent = _postSaleWithdrawPenaltyPercent;
+        postSaleWithdrawPenaltyPrecision = _postSaleWithdrawPenaltyPrecision;
     }
 
 }
