@@ -39,7 +39,7 @@
     "staging": {
         "Admin": "0x9f07b3219366503802516f672F0fBA7C5dfE8365",
         "SalesFactory": "0xeBd69FcCcaC8baf1e0286a93aE5fd135426b98de",
-        "AllocationStakingProxy": "0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6",
+        "AllocationStakingProxy": "0x43656165d39eEF85179A48321804b5590eD56294",
         "ProxyAdmin": "0x796EC8bee2871dD820F176730669848d909914c0",
         "XavaToken": "0x468e36a251B33CF093EB48Cfe9796721747E376B",
         "DevTokenAlloStaking": "0x08abB4B963d4Aa95349708f2cE979cF5f2d4d75a",
