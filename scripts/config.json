@@ -16,8 +16,8 @@
     ],
     "allocationStakingRPS": "0.01",
     "delayBeforeStart": 500,
-    "depositFeePercent": "2",
-    "depositFeePrecision": "100",
+    "depositFeePercent": "2000",
+    "depositFeePrecision": "100000",
     "initialRewardsAllocationStaking": "5000000",
     "xavaPoolAllocPoints": "100",
     "placeholderPoolAllocPoints": "50"
