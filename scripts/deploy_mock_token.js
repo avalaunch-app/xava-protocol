@@ -2,8 +2,8 @@ const hre = require("hardhat");
 const { saveContractAddress } = require('./utils')
 
 async function main() {
-  const tokenName = "MOCK-SALE-1";
-  const symbol = "MCK1";
+  const tokenName = "MOCK-TOKEN";
+  const symbol = "MCK";
   const totalSupply = "1000000000000000000000000000";
   const decimals = 18;
 
@@ -12,7 +12,7 @@ async function main() {
   await token.deployed();
   console.log("MCK1 deployed to: ", token.address);
 
-  saveContractAddress(hre.network.name, "MCK1", token.address);
+  saveContractAddress(hre.network.name, "MOCK-TOKEN", token.address);
 }
 
 
