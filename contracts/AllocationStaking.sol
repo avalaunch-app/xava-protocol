@@ -438,11 +438,11 @@ contract AllocationStaking is OwnableUpgradeable {
     }
 
     // External view function which will return how much withdraw fee would affect initial stake and pending rewards
-    function getWithdrawFee(address userAddress, uint256 _pid) external view returns (uint256, uint256) {
+    function getWithdrawFee(address userAddress, uint256 amountToWithdraw, uint256 _pid) external view returns (uint256, uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][userAddress];
         uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
-        return getWithdrawFeeInternal(user.amount, pendingAmount, user.tokensUnlockTime);
+        return getWithdrawFeeInternal(amountToWithdraw, pendingAmount, user.tokensUnlockTime);
     }
 
     // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
