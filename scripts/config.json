@@ -1,5 +1,5 @@
 {
-  "mainnetStaging" : {
+  "staging" : {
     "token": {
       "tokenName": "STAGING-FUJI-TEST",
       "symbol": "SFT-3",

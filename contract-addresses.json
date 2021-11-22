@@ -36,7 +36,7 @@
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
         "Admin": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE"
     },
-    "mainnetStaging": {
+    "staging": {
         "Admin": "0x0cE58B15874cb9AA3E64C0aE95615C6112004A32",
         "SalesFactory": "0xb9dB9e6A5943E3a21CE87D61A1F5D0b59a2c3aF6",
         "AllocationStakingProxy": "0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6",
