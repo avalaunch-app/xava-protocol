@@ -12,10 +12,14 @@ async function main() {
 
     const allocationStakingProxy = contracts["AllocationStakingProxy"];
     console.log("Proxy:", allocationStakingProxy);
-    const allocationStakingImplementation = contracts["AllocationStaking"];
-    console.log("Implementation:", allocationStakingImplementation);
 
-    await proxyAdmin.upgrade(allocationStakingProxy, allocationStakingImplementation);
+    const AllocationStakingImplementation = await ethers.getContractFactory("AllocationStaking");
+    const allocationStakingImpl = await AllocationStakingImplementation.deploy();
+    await allocationStakingImpl.deployed();
+
+    console.log("New Implementation:", allocationStakingImpl.address);
+
+    await proxyAdmin.upgrade(allocationStakingProxy, allocationStakingImpl.address);
     console.log("AllocationStaking contract upgraded");
 }
 
