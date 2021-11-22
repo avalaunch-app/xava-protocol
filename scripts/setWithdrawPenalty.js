@@ -7,9 +7,11 @@ async function main() {
     const allocationStakingProxyAddress = getSavedContractAddresses()[hre.network.name]["AllocationStaking"];
     const allocationStakingProxy = await hre.ethers.getContractAt("AllocationStaking", allocationStakingProxyAddress);
 
+
+
     await allocationStakingProxy.setPostSaleWithdrawPenaltyPercentAndLength(
-        c.postSaleWithdrawPenaltyLength,
-        c.postSaleWithdrawPenaltyPercent
+        c.postSaleWithdrawPenaltyPercent,
+        c.postSaleWithdrawPenaltyLength
     );
 }
 
