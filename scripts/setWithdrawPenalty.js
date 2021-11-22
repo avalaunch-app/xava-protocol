@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const { getSavedContractAddresses } = require('./utils');
-const config = require('./saleConfig.json');
+const config = require('./config.json');
 
 async function main() {
     const c = config[hre.network.name];
