@@ -7,6 +7,8 @@ async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
     const AllocationStaking = await ethers.getContractFactory("AllocationStaking");
     console.log('Allocation Staking Proxy: ', contracts['AllocationStakingProxy']);
+
+
     const allocationStaking = await upgrades.upgradeProxy(contracts['AllocationStakingProxy'], AllocationStaking);
     console.log("AllocationStaking contract upgraded");
     let proxyAdminContract = await upgrades.admin.getInstance();

@@ -336,8 +336,7 @@ contract AllocationStaking is OwnableUpgradeable {
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
 
-        // Reset the tokens unlock time
-        user.tokensUnlockTime = 0;
+
         pool.lpToken.safeTransfer(address(msg.sender), _amount.sub(withdrawalFeeDepositAmount));
         pool.totalDeposits = pool.totalDeposits.sub(_amount);
 
@@ -353,6 +352,9 @@ contract AllocationStaking is OwnableUpgradeable {
                 withdrawalFeeDepositAmount,
                 withdrawalFeePending
             );
+        } else {
+            // Reset the tokens unlock time only after cooldown period is over
+            user.tokensUnlockTime = 0;
         }
 
         emit Withdraw(msg.sender, _pid, _amount);
