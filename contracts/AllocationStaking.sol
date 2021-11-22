@@ -354,8 +354,10 @@ contract AllocationStaking is OwnableUpgradeable {
                 withdrawalFeePending
             );
         } else {
-            // Reset the tokens unlock time only after cooldown period is over
-            user.tokensUnlockTime = 0;
+            if(_amount > 0) {
+                // Reset the tokens unlock time only after cooldown period is over
+                user.tokensUnlockTime = 0;
+            }
         }
 
         emit Withdraw(msg.sender, _pid, _amount);
@@ -488,4 +490,9 @@ contract AllocationStaking is OwnableUpgradeable {
         postSaleWithdrawPenaltyPrecision = _postSaleWithdrawPenaltyPrecision;
     }
 
+
+    function setTokensUnlockAtForUser(address userAddress, uint256 _pid, uint256 time) public {
+        UserInfo storage user = userInfo[_pid][userAddress];
+        user.tokensUnlockTime = time;
+    }
 }
