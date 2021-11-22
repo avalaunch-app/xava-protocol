@@ -14,8 +14,20 @@ async function main() {
         contracts['AllocationStakingProxy']
     );
 
-    const payload = await allocationStaking.depositFeePrecision();
-    console.log(payload.toString());
+    const unlockTime = await getCurrentBlockTimestamp();
+
+    const stake = await allocationStaking.deposited(0, '0xE8E6959a29bB94cB1080DE4257417E6f22AB3AE2');
+    console.log(stake.toString());
+
+    const fee = await allocationStaking.getWithdrawFee('0xE8E6959a29bB94cB1080DE4257417E6f22AB3AE2', stake.toString(), 0);
+    console.log(fee.toString());
+
+    // const endDate = await allocationStaking.setTokensUnlockAtForUser(
+    //     '0xE8E6959a29bB94cB1080DE4257417E6f22AB3AE2',
+    //     0,
+    //     unlockTime - 1800
+    // );
+
 }
 
 

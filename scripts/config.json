@@ -16,11 +16,14 @@
     ],
     "allocationStakingRPS": "0.01",
     "delayBeforeStart": 500,
-    "depositFeePercent": "2000",
-    "depositFeePrecision": "100000",
+    "depositFeePercent": "2",
+    "depositFeePrecision": "100",
     "initialRewardsAllocationStaking": "5000000",
     "xavaPoolAllocPoints": "100",
-    "placeholderPoolAllocPoints": "50"
+    "placeholderPoolAllocPoints": "50",
+    "postSaleWithdrawPenaltyLength": 432000,
+    "postSaleWithdrawPenaltyPercent": 10000,
+    "postSaleWithdrawPenaltyPrecision": 100000
   },
   "mainnet" : {
     "token": {
@@ -64,6 +67,8 @@
     "delayBeforeStart": 500,
     "depositFeePercent": "2",
     "initialRewardsAllocationStaking": "5000000",
-    "xavaPoolAllocPoints": "100"
+    "xavaPoolAllocPoints": "100",
+    "postSaleWithdrawPenaltyLength": 432000,
+    "postSaleWithdrawPenaltyPercent": 10
   }
 }

@@ -9,9 +9,16 @@ async function main() {
 
 
 
+    console.log(
+        c.postSaleWithdrawPenaltyPercent,
+        c.postSaleWithdrawPenaltyLength,
+        c.postSaleWithdrawPenaltyPrecision
+    )
+
     await allocationStakingProxy.setPostSaleWithdrawPenaltyPercentAndLength(
         c.postSaleWithdrawPenaltyPercent,
-        c.postSaleWithdrawPenaltyLength
+        c.postSaleWithdrawPenaltyLength,
+        c.postSaleWithdrawPenaltyPrecision
     );
 }
 
