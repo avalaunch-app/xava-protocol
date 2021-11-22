@@ -491,8 +491,4 @@ contract AllocationStaking is OwnableUpgradeable {
     }
 
 
-    function setTokensUnlockAtForUser(address userAddress, uint256 _pid, uint256 time) public {
-        UserInfo storage user = userInfo[_pid][userAddress];
-        user.tokensUnlockTime = time;
-    }
 }
