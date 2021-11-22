@@ -315,6 +315,7 @@ contract AllocationStaking is OwnableUpgradeable {
         require(user.tokensUnlockTime <= block.timestamp, "Last sale you registered for is not finished yet.");
         require(user.amount >= _amount, "withdraw: can't withdraw more than deposit");
 
+        // Update pool
         updatePool(_pid);
 
         uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
@@ -325,7 +326,7 @@ contract AllocationStaking is OwnableUpgradeable {
         // Take withdraw post-sale fees only if pid == 0
         if(_pid == 0) {
             (withdrawalFeeDepositAmount, withdrawalFeePending) = getWithdrawFeeInternal(
-                user.amount,
+                _amount,
                 pendingAmount,
                 user.tokensUnlockTime
             );
@@ -342,6 +343,8 @@ contract AllocationStaking is OwnableUpgradeable {
 
         // In case there was fee
         if(withdrawalFeeDepositAmount > 0) {
+            // Update accounting around burns
+            burnFromUser(msg.sender, _pid, withdrawalFeeDepositAmount.add(withdrawalFeePending));
             // Redistribute across the pool.
             updatePoolWithFee(_pid, withdrawalFeeDepositAmount.add(withdrawalFeePending));
             // Emit event that post sale fee is charged
@@ -387,7 +390,8 @@ contract AllocationStaking is OwnableUpgradeable {
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.tokensUnlockTime <= block.timestamp, "Last sale you registered for is not finished yet.");
+        require(user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength) <= block.timestamp,
+            "Emergency withdraw blocked during sale and cooldown period.");
 
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
@@ -478,4 +482,5 @@ contract AllocationStaking is OwnableUpgradeable {
         postSaleWithdrawPenaltyLength = _postSaleWithdrawPenaltyLength;
         postSaleWithdrawPenaltyPercent = _postSaleWithdrawPenaltyPercent;
     }
+
 }
