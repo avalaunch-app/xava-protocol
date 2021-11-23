@@ -2,11 +2,11 @@
 pragma solidity 0.6.12;
 
 import "../interfaces/IAdmin.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "../interfaces/ISalesFactory.sol";
 import "../interfaces/IAllocationStaking.sol";
+import "../interfaces/IERC20Metadata.sol";
+import "@openzeppelin/contracts/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 contract AvalaunchSale {
     using ECDSA for bytes32;
@@ -84,8 +84,6 @@ contract AvalaunchSale {
     mapping(address => uint256) public addressToRoundRegisteredFor;
     // mapping if user is participated or not
     mapping(address => bool) public isParticipated;
-    // wei precision
-    uint256 public constant one = 10**18;
     // Times when portions are getting unlocked
     uint256[] public vestingPortionsUnlockTime;
     // Percent of the participation user can withdraw
@@ -115,8 +113,7 @@ contract AvalaunchSale {
         _;
     }
 
-    // EVENTS
-
+    // Events
     event TokensSold(address user, uint256 amount);
     event UserRegistered(address user, uint256 roundId);
     event TokenPriceSet(uint256 newPrice);
@@ -500,9 +497,8 @@ contract AvalaunchSale {
         );
 
         // Compute the amount of tokens user is buying
-        uint256 amountOfTokensBuying = (msg.value).mul(one).div(
-            sale.tokenPriceInAVAX
-        );
+        uint256 amountOfTokensBuying =
+            (msg.value).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
 
         // Must buy more than 0 tokens
         require(amountOfTokensBuying > 0, "Can't buy 0 tokens");
@@ -694,11 +690,6 @@ contract AvalaunchSale {
         );
     }
 
-    // Function to act as a fallback and handle receiving AVAX.
-    receive() external payable {
-
-    }
-
     /// @notice     Get current round in progress.
     ///             If 0 is returned, means sale didn't start or it's ended.
     function getCurrentRound() public view returns (uint256) {
@@ -816,5 +807,10 @@ contract AvalaunchSale {
         returns (uint256[] memory, uint256[] memory)
     {
         return (vestingPortionsUnlockTime, vestingPercentPerPortion);
+    }
+
+    // Function to act as a fallback and handle receiving AVAX.
+    receive() external payable {
+
     }
 }
