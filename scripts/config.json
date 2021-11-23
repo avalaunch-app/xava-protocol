@@ -1,5 +1,5 @@
 {
-  "mainnetStaging" : {
+  "staging" : {
     "token": {
       "tokenName": "STAGING-FUJI-TEST",
       "symbol": "SFT-3",
@@ -11,7 +11,8 @@
       "0x85E3e0224a199f9e908AB4E3525Dd5504569EE5a",
       "0x2655D93eF7FfBF780aB9259825A8bF2b3d8A703A",
       "0x094028E04c1FADf12F5a4Fe6C1b9D2062a252a17",
-      "0xD0CaE2309f322E24fBBc7E9D5F4995B02eF901e4"
+      "0xD0CaE2309f322E24fBBc7E9D5F4995B02eF901e4",
+      "0xa91a2a8e47fa3fbaEed92Cc3D00C61712b9781A5"
     ],
     "allocationStakingRPS": "0.01",
     "delayBeforeStart": 500,
@@ -19,7 +20,10 @@
     "depositFeePrecision": "100",
     "initialRewardsAllocationStaking": "5000000",
     "xavaPoolAllocPoints": "100",
-    "placeholderPoolAllocPoints": "50"
+    "placeholderPoolAllocPoints": "50",
+    "postSaleWithdrawPenaltyLength": 432000,
+    "postSaleWithdrawPenaltyPercent": 10000,
+    "postSaleWithdrawPenaltyPrecision": 100000
   },
   "mainnet" : {
     "token": {
@@ -41,7 +45,10 @@
     "depositFeePrecision": "100",
     "initialRewardsAllocationStaking": "320000",
     "xavaPoolAllocPoints": "50",
-    "placeholderPoolAllocPoints": "50"
+    "placeholderPoolAllocPoints": "50",
+    "postSaleWithdrawPenaltyLength": 432000,
+    "postSaleWithdrawPenaltyPercent": 100000,
+    "postSaleWithdrawPenaltyPrecision": 1000000
   },
   "local" : {
     "token": {
@@ -61,6 +68,8 @@
     "delayBeforeStart": 500,
     "depositFeePercent": "2",
     "initialRewardsAllocationStaking": "5000000",
-    "xavaPoolAllocPoints": "100"
+    "xavaPoolAllocPoints": "100",
+    "postSaleWithdrawPenaltyLength": 432000,
+    "postSaleWithdrawPenaltyPercent": 10
   }
 }

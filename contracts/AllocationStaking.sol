@@ -58,7 +58,12 @@ contract AllocationStaking is OwnableUpgradeable {
     uint256 public endTimestamp;
     // Total amount of tokens burned from the wallet
     mapping (address => uint256) public totalBurnedFromUser;
-
+    // Time penalty is active
+    uint256 public postSaleWithdrawPenaltyLength;
+    // Post sale penalty withdraw percent, which is linearly dropping for postSaleWithdrawPenaltyLength period
+    uint256 public postSaleWithdrawPenaltyPercent;
+    // Post sale withdraw penalty precision
+    uint256 public postSaleWithdrawPenaltyPrecision;
     // Events
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -66,6 +71,7 @@ contract AllocationStaking is OwnableUpgradeable {
     event DepositFeeSet(uint256 depositFeePercent, uint256 depositFeePrecision);
     event CompoundedEarnings(address indexed user, uint256 indexed pid, uint256 amountAdded, uint256 totalDeposited);
     event FeeTaken(address indexed user, uint256 indexed pid, uint256 amount);
+    event PostSaleWithdrawFeeCharged(address user, uint256 amountStake, uint256 amountRewards);
 
     // Restricting calls to only verified sales
     modifier onlyVerifiedSales {
@@ -139,7 +145,7 @@ contract AllocationStaking is OwnableUpgradeable {
 
     // Set deposit fee internal
     function setDepositFeeInternal(uint256 _depositFeePercent, uint256 _depositFeePrecision) internal {
-        require(_depositFeePercent >= _depositFeePrecision.div(100) && _depositFeePercent <= _depositFeePrecision);
+        require(_depositFeePercent >= _depositFeePrecision.div(100)  && _depositFeePercent <= _depositFeePrecision);
         depositFeePercent = _depositFeePercent;
         depositFeePrecision=  _depositFeePrecision;
         emit DepositFeeSet(depositFeePercent, depositFeePrecision);
@@ -310,17 +316,49 @@ contract AllocationStaking is OwnableUpgradeable {
         require(user.tokensUnlockTime <= block.timestamp, "Last sale you registered for is not finished yet.");
         require(user.amount >= _amount, "withdraw: can't withdraw more than deposit");
 
+        // Update pool
         updatePool(_pid);
 
         uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
 
-        erc20Transfer(msg.sender, pendingAmount);
+        uint256 withdrawalFeeDepositAmount;
+        uint256 withdrawalFeePending;
+
+        // Take withdraw post-sale fees only if pid == 0
+        if(_pid == 0) {
+            (withdrawalFeeDepositAmount, withdrawalFeePending) = getWithdrawFeeInternal(
+                _amount,
+                pendingAmount,
+                user.tokensUnlockTime
+            );
+        }
+
+        erc20Transfer(msg.sender, pendingAmount.sub(withdrawalFeePending));
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
-        // Reset the tokens unlock time
-        user.tokensUnlockTime = 0;
-        pool.lpToken.safeTransfer(address(msg.sender), _amount);
+
+
+        pool.lpToken.safeTransfer(address(msg.sender), _amount.sub(withdrawalFeeDepositAmount));
         pool.totalDeposits = pool.totalDeposits.sub(_amount);
+
+        // In case there was fee
+        if(withdrawalFeeDepositAmount > 0) {
+            // Update accounting around burns
+            burnFromUser(msg.sender, _pid, withdrawalFeeDepositAmount.add(withdrawalFeePending));
+            // Redistribute across the pool.
+            updatePoolWithFee(_pid, withdrawalFeeDepositAmount.add(withdrawalFeePending));
+            // Emit event that post sale fee is charged
+            emit PostSaleWithdrawFeeCharged(
+                msg.sender,
+                withdrawalFeeDepositAmount,
+                withdrawalFeePending
+            );
+        } else {
+            if(_amount > 0) {
+                // Reset the tokens unlock time only after cooldown period is over
+                user.tokensUnlockTime = 0;
+            }
+        }
 
         emit Withdraw(msg.sender, _pid, _amount);
     }
@@ -352,11 +390,13 @@ contract AllocationStaking is OwnableUpgradeable {
         emit CompoundedEarnings(msg.sender, _pid, amountCompounding, user.amount);
     }
 
+
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.tokensUnlockTime <= block.timestamp, "Last sale you registered for is not finished yet.");
+        require(user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength) <= block.timestamp,
+            "Emergency withdraw blocked during sale and cooldown period.");
 
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
@@ -379,6 +419,41 @@ contract AllocationStaking is OwnableUpgradeable {
         emit FeeTaken(user, _pid, amount);
     }
 
+    // Function to compute withdrawal fee for the user
+    function getWithdrawFeeInternal(
+        uint256 amountStaking,
+        uint256 amountPending,
+        uint256 stakeUnlocksAt
+    )
+    internal
+    view
+    returns (uint256, uint256)
+    {
+        // In case last unlock time on users stake was in more than postSaleWithdrawPenaltyLength, user can withdraw without fee
+        if(stakeUnlocksAt.add(postSaleWithdrawPenaltyLength) <= block.timestamp) {
+            return (0,0);
+        }
+
+        // How much time is left until post sale withdraw penalty becomes inactive
+        uint256 timeLeft = stakeUnlocksAt.add(postSaleWithdrawPenaltyLength).sub(block.timestamp);
+
+        // 3 minutes left , 10%, 15 minutes ==> 3 * 10 / 15
+        uint256 percentToTake = timeLeft.mul(postSaleWithdrawPenaltyPercent).div(postSaleWithdrawPenaltyLength);
+        // Return amount of tokens which will be taken as withdraw fee in this case.
+        return (
+            percentToTake.mul(amountStaking).div(postSaleWithdrawPenaltyPrecision),
+            percentToTake.mul(amountPending).div(postSaleWithdrawPenaltyPrecision)
+        );
+    }
+
+    // External view function which will return how much withdraw fee would affect initial stake and pending rewards
+    function getWithdrawFee(address userAddress, uint256 amountToWithdraw, uint256 _pid) external view returns (uint256, uint256) {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][userAddress];
+        uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
+        return getWithdrawFeeInternal(amountToWithdraw, pendingAmount, user.tokensUnlockTime);
+    }
+
     // Function to fetch deposits and earnings at one call for multiple users for passed pool id.
     function getPendingAndDepositedForUsers(address [] memory users, uint pid)
     external
@@ -395,5 +470,25 @@ contract AllocationStaking is OwnableUpgradeable {
 
         return (deposits, earnings);
     }
+
+    function setPostSaleWithdrawPenaltyPercentAndLength(
+        uint256 _postSaleWithdrawPenaltyPercent,
+        uint256 _postSaleWithdrawPenaltyLength,
+        uint256 _postSaleWithdrawPenaltyPrecision
+    )
+    public
+    onlyOwner
+    {
+        // Post sale penalty is using same precision as deposit fee
+        require(
+            _postSaleWithdrawPenaltyPercent >= _postSaleWithdrawPenaltyPrecision.div(100)  &&
+            _postSaleWithdrawPenaltyPercent <= _postSaleWithdrawPenaltyPrecision
+        );
+
+        postSaleWithdrawPenaltyLength = _postSaleWithdrawPenaltyLength;
+        postSaleWithdrawPenaltyPercent = _postSaleWithdrawPenaltyPercent;
+        postSaleWithdrawPenaltyPrecision = _postSaleWithdrawPenaltyPrecision;
+    }
+
 
 }

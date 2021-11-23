@@ -20,8 +20,8 @@
         "FarmingXavaV2": "0x6E125b68F0f1963b09add1b755049e66f53CC1EA",
         "DevTokenAlloStaking": "0x281e9179CE50b951b77d3B0D92456BD3e4F5430A",
         "Admin": "0x68c58e1107bcE9be240aF941151d42101086AF56",
-        "SalesFactory": "0x9eB3fEF2963b359562694c391A6DAf18322FB2c6",
-        "AllocationStaking": "0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6",
+        "SalesFactory": "0x4c858df3BebBa1CDB73f49B002f095bB15Df4542",
+        "AllocationStaking": "0x897e8265454fd44CAC7D739827d6b46BF1D6A8ff",
         "AllocationStakingProxy": "0xA6A01f4b494243d84cf8030d982D7EeB2AeCd329",
         "ProxyAdmin": "0x951aa264D7E6a1C267C24c250293e901b89D29e3",
         "AirdropHCT": "0x87b1Beaab6f7A40b28a2dEF896c50e57061c3B36",
@@ -30,19 +30,22 @@
         "AirdropOH2": "0x017F0f2747953bdc30DEcd1603D26D491EF24718",
         "AirdropOH3": "0x90e996dE9843aC8d6B69ce9a7c97BFC301E3e8a2",
         "AirdropAVAXCrabada": "0xB1B6B9Ce5fCb7a207B85c1A3Ed3085618ACE65Eb",
-        "AirdropCRA": "0xfaa5eC315eeea382830414ea4cC02262289394d6"
+        "AirdropCRA": "0xfaa5eC315eeea382830414ea4cC02262289394d6",
+        "AirdropAVAXCRAFT": "0x4f7DD657037e6Ea7Cdad6eafDD20a8a336935B94"
     },
     "local": {
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
         "Admin": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE"
     },
-    "mainnetStaging": {
-        "Admin": "0x0cE58B15874cb9AA3E64C0aE95615C6112004A32",
-        "SalesFactory": "0xb9dB9e6A5943E3a21CE87D61A1F5D0b59a2c3aF6",
-        "AllocationStakingProxy": "0x027D6EA70Bc4904c2BfC00b014571c6C4EDF0DD6",
+    "staging": {
+        "Admin": "0x42B0C4c2ce5DB3e50c64209Cf296cdFb213a4129",
+        "SalesFactory": "0x7a7075d6bEbF87AADB8D1AD0A94C83111b512b61",
+        "AllocationStakingProxy": "0x297E4853c7bb699dC324B252397A5638D82B2e32",
         "ProxyAdmin": "0x796EC8bee2871dD820F176730669848d909914c0",
-        "XavaToken": "0xb380566EDde68617C652D452102b8edA9FD3a403",
-        "DevTokenAlloStaking": "0xB650346D08A0A01Ba08F7023c6B6d761b69f1430",
-        "MCK1": "0x1A0ED6719F36f3a7887aD5032B3ae208Df66cCa7"
+        "XavaToken": "0x468e36a251B33CF093EB48Cfe9796721747E376B",
+        "DevTokenAlloStaking": "0x08abB4B963d4Aa95349708f2cE979cF5f2d4d75a",
+        "MCK1": "0xc87cd7FaA48eDF2CD28A524E982FFBe3779fe70F",
+        "MOCK-TOKEN": "0xD95d874e6bc638A25ec7FbA5224b21f5e18B308f",
+        "AllocationStaking": "0x297E4853c7bb699dC324B252397A5638D82B2e32"
     }
 }
