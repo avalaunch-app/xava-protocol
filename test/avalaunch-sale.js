@@ -17,6 +17,7 @@ describe("AvalaunchSale", function() {
   const DEPOSIT_FEE_PERCENT = 5;
   const DEPOSIT_FEE_PRECISION = 100;
   const START_TIMESTAMP_DELTA = 600;
+  const NUMBER_1E36 = "1000000000000000000000000000000000000";
 
   const TOKEN_PRICE_IN_AVAX = 10;
   const AMOUNT_OF_TOKENS_TO_SELL = 1000;
@@ -92,9 +93,9 @@ describe("AvalaunchSale", function() {
     const participationAmount = firstOrDefault(params, 'participationAmount', PARTICIPATION_AMOUNT);
     const participationRound = firstOrDefault(params, "participationRound", PARTICIPATION_ROUND);
     const value = firstOrDefault(params, "participationValue", PARTICIPATION_VALUE);
-
+    console.log(participationAmount, value);
     const sig = signParticipation(userAddress, participationAmount, participationRound, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-    return AvalaunchSale.connect(registrant).participate(sig, participationAmount, AMOUNT_OF_XAVA_TO_BURN, participationRound, {value: 1});
+    return AvalaunchSale.connect(registrant).participate(sig, participationAmount, AMOUNT_OF_XAVA_TO_BURN, participationRound, {value: value});
   }
 
   async function getCurrentBlockTimestamp() {
@@ -595,7 +596,7 @@ describe("AvalaunchSale", function() {
     describe("Postpone sale", async function() {
       it("Should postpone the sale", async function() {
         // Given
-        const timeToShift = 10;
+        const timeToShift = 2;
         await runFullSetup();
         const currentStartRound1 = parseInt((await AvalaunchSale.roundIdToRound(1)).startTime);
         const currentStartRound2 = parseInt((await AvalaunchSale.roundIdToRound(2)).startTime);
@@ -933,7 +934,8 @@ describe("AvalaunchSale", function() {
       });
     });
 
-    describe("Get registration info", async function() {
+    // Deprecated getter function tests
+    xdescribe("Get registration info", async function() {
       it("Should return registration info when sale not set", async function() {
         // When
         const regInfo = await AvalaunchSale.getRegistrationInfo();
@@ -1767,7 +1769,7 @@ describe("AvalaunchSale", function() {
         const previousTokenBalance = await XavaToken.balanceOf(deployer.address);
 
         // When
-        await AvalaunchSale.withdrawEarningsAndLeftover(false, {gasPrice: 0});
+        await AvalaunchSale.withdrawEarningsAndLeftover();
 
         // Then
         const currentBalance = await ethers.provider.getBalance(deployer.address);
@@ -1798,7 +1800,7 @@ describe("AvalaunchSale", function() {
         const previousTokenBalance = await XavaToken.balanceOf(deployer.address);
 
         // When
-        await AvalaunchSale.withdrawEarningsAndLeftover(true, {gasPrice: 0});
+        await AvalaunchSale.withdrawEarningsAndLeftover();
 
         // Then
         const currentBalance = await ethers.provider.getBalance(deployer.address);

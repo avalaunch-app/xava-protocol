@@ -342,10 +342,12 @@ describe("AllocationStaking", function() {
         await AllocationStaking.updatePool(0);
 
         // Then
-        const blockTimestamp = await getCurrentBlockTimestamp();
+        let blockTimestamp = await getCurrentBlockTimestamp();
         const pool = await AllocationStaking.poolInfo(0);
         expect(pool.lastRewardTimestamp).to.equal(blockTimestamp);
-        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, ALLOC_POINT, DEFAULT_DEPOSIT);
+        const endTimestamp = await AllocationStaking.endTimestamp();
+        if(blockTimestamp > endTimestamp) blockTimestamp = endTimestamp.deposited(0, )
+        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
         expect(pool.accERC20PerShare).to.equal(expectedRewardsPerShare);
       });
 
@@ -385,7 +387,7 @@ describe("AllocationStaking", function() {
         const blockTimestamp = await getCurrentBlockTimestamp();
         const pool = await AllocationStaking.poolInfo(0);
         expect(pool.lastRewardTimestamp).to.equal(startTimestamp + END_TIMESTAMP_DELTA);
-        const expectedRewardsPerShare = computeExpectedReward(END_TIMESTAMP_DELTA, 0, REWARDS_PER_SECOND, ALLOC_POINT, ALLOC_POINT, DEFAULT_DEPOSIT);
+        const expectedRewardsPerShare = computeExpectedReward(END_TIMESTAMP_DELTA, 0, REWARDS_PER_SECOND, ALLOC_POINT, ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
         expect(pool.accERC20PerShare).to.equal(expectedRewardsPerShare);
       });
 
@@ -413,7 +415,7 @@ describe("AllocationStaking", function() {
         const blockTimestamp = await getCurrentBlockTimestamp();
         const pool = await AllocationStaking.poolInfo(0);
         expect(pool.lastRewardTimestamp).to.equal(startTimestamp + END_TIMESTAMP_DELTA);
-        const expectedRewardsPerShare = computeExpectedReward(END_TIMESTAMP_DELTA, 0, REWARDS_PER_SECOND, ALLOC_POINT, ALLOC_POINT, DEFAULT_DEPOSIT);
+        const expectedRewardsPerShare = computeExpectedReward(END_TIMESTAMP_DELTA, 0, REWARDS_PER_SECOND, ALLOC_POINT, ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
         expect(pool.accERC20PerShare).to.equal(expectedRewardsPerShare);
       });
 
@@ -462,7 +464,8 @@ describe("AllocationStaking", function() {
         const pool2 = await AllocationStaking.poolInfo(1);
         expect(pool1.lastRewardTimestamp).to.equal(blockTimestamp);
         expect(pool2.lastRewardTimestamp).to.equal(blockTimestamp);
-        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, DEFAULT_DEPOSIT);
+        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        console.log("Pool1 AccERC20:", parseInt(pool1.accERC20PerShare), "Expected AccERC20:", parseInt(expectedRewardsPerShare), "Pool2 AccERC20:", parseInt(pool2.accERC20PerShare));
         expect(pool1.accERC20PerShare).to.equal(expectedRewardsPerShare);
         expect(pool2.accERC20PerShare).to.equal(expectedRewardsPerShare);
       });
@@ -566,8 +569,8 @@ describe("AllocationStaking", function() {
         const pending = await AllocationStaking.pending(0, deployer.address);
 
         // Then
-        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, DEFAULT_DEPOSIT);
-        expect(pending).to.equal(expectedRewardsPerShare.div(NUMBER_1E36).mul(DEFAULT_DEPOSIT));
+        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        expect(pending).to.equal(expectedRewardsPerShare.mul(takeFeeFromDeposit(DEFAULT_DEPOSIT)).div(NUMBER_1E36));
       });
 
       it("Should return user's pending amount if called right after an update", async function() {
@@ -583,8 +586,8 @@ describe("AllocationStaking", function() {
         const pending = await AllocationStaking.pending(0, deployer.address);
 
         // Then
-        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, DEFAULT_DEPOSIT);
-        expect(pending).to.equal(expectedRewardsPerShare.div(NUMBER_1E36).mul(DEFAULT_DEPOSIT));
+        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        expect(pending).to.equal(expectedRewardsPerShare.mul(takeFeeFromDeposit(DEFAULT_DEPOSIT)).div(NUMBER_1E36));
       });
 
       it("Should return user's pending amount if called some time after an update", async function() {
@@ -604,8 +607,8 @@ describe("AllocationStaking", function() {
         const pending = await AllocationStaking.pending(0, deployer.address);
 
         // Then
-        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, DEFAULT_DEPOSIT);
-        expect(pending).to.equal(expectedRewardsPerShare.div(NUMBER_1E36).mul(DEFAULT_DEPOSIT));
+        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        expect(pending).to.equal(expectedRewardsPerShare.mul(takeFeeFromDeposit(DEFAULT_DEPOSIT)).div(NUMBER_1E36));
       });
 
       it("Should return user's last pending amount if user deposited multiple times", async function() {
@@ -627,9 +630,13 @@ describe("AllocationStaking", function() {
         const pending = await AllocationStaking.pending(0, deployer.address);
 
         // Then
-        const expectedRewardsPerShare1 = computeExpectedReward(blockTimestampAtLastDeposit, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, 2 * DEFAULT_DEPOSIT);
-        const expectedRewardsPerShare2 = computeExpectedReward(blockTimestamp, blockTimestampAtLastDeposit, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, DEFAULT_DEPOSIT);
-        expect(pending).to.equal(expectedRewardsPerShare2.div(NUMBER_1E36).mul(DEFAULT_DEPOSIT).sub(1));
+        // const expectedRewardsPerShare1 = computeExpectedReward(blockTimestampAtLastDeposit, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, 2 * takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        const expectedRewardsPerShare2 = computeExpectedReward(blockTimestamp, blockTimestampAtLastDeposit, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+
+        const user = await AllocationStaking.userInfo(0, deployer.address);
+        console.log("User rewardDebt:",user.rewardDebt);
+
+        expect(pending).to.equal(expectedRewardsPerShare2.mul(takeFeeFromDeposit(DEFAULT_DEPOSIT)).div(NUMBER_1E36).sub(1));
       });
 
       it("Should compute reward debt properly if user is not first to stake in pool", async function() {
@@ -650,12 +657,14 @@ describe("AllocationStaking", function() {
         const pending = await AllocationStaking.pending(0, alice.address);
 
         // Then
-        const prevExpectedRewardsPerShare = computeExpectedReward(blockTimestampAtLastDeposit, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, DEFAULT_DEPOSIT);
+        const prevExpectedRewardsPerShare = computeExpectedReward(blockTimestampAtLastDeposit, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
         const user = await AllocationStaking.userInfo(0, alice.address);
-        expect(user.rewardDebt).to.equal(prevExpectedRewardsPerShare.mul(DEFAULT_DEPOSIT).div(NUMBER_1E36))
+        console.log('a')
+        expect(user.rewardDebt).to.equal(prevExpectedRewardsPerShare.div(NUMBER_1E36).mul(takeFeeFromDeposit(DEFAULT_DEPOSIT)));
+        console.log('a')
 
-        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, blockTimestampAtLastDeposit, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, 2 * DEFAULT_DEPOSIT);
-        expect(pending).to.equal(expectedRewardsPerShare.div(NUMBER_1E36).mul(DEFAULT_DEPOSIT));
+        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, blockTimestampAtLastDeposit, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, 2 * takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        expect(pending).to.equal(expectedRewardsPerShare.mul(takeFeeFromDeposit(DEFAULT_DEPOSIT)).div(NUMBER_1E36));
       });
 
       it("Should compute reward debt properly if user is not first to stake in pool but staking not started", async function() {
@@ -675,8 +684,8 @@ describe("AllocationStaking", function() {
         const user = await AllocationStaking.userInfo(0, alice.address);
         expect(user.rewardDebt).to.equal(0)
 
-        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, 2 * DEFAULT_DEPOSIT);
-        expect(pending).to.equal(expectedRewardsPerShare.div(NUMBER_1E36).mul(DEFAULT_DEPOSIT));
+        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, 2 * takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        expect(pending).to.equal(expectedRewardsPerShare.mul(takeFeeFromDeposit(DEFAULT_DEPOSIT)).div(NUMBER_1E36));
       });
 
       it("Should not use updated accERC20PerShare if time passed but staking ended without pool update", async function() {
@@ -693,8 +702,8 @@ describe("AllocationStaking", function() {
         const pending = await AllocationStaking.pending(0, deployer.address);
 
         // Then
-        const expectedRewardsPerShare = computeExpectedReward(END_TIMESTAMP_DELTA, 0, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, DEFAULT_DEPOSIT);
-        expect(pending).to.equal(expectedRewardsPerShare.div(NUMBER_1E36).mul(DEFAULT_DEPOSIT));
+        const expectedRewardsPerShare = computeExpectedReward(END_TIMESTAMP_DELTA, 0, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        expect(pending).to.equal(expectedRewardsPerShare.mul(takeFeeFromDeposit(DEFAULT_DEPOSIT)).div(NUMBER_1E36));
       });
 
       it("Should not use updated accERC20PerShare if time passed but staking ended with pool update", async function() {
@@ -712,8 +721,8 @@ describe("AllocationStaking", function() {
         const pending = await AllocationStaking.pending(0, deployer.address);
 
         // Then
-        const expectedRewardsPerShare = computeExpectedReward(END_TIMESTAMP_DELTA, 0, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, DEFAULT_DEPOSIT);
-        expect(pending).to.equal(expectedRewardsPerShare.div(NUMBER_1E36).mul(DEFAULT_DEPOSIT));
+        const expectedRewardsPerShare = computeExpectedReward(END_TIMESTAMP_DELTA, 0, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        expect(pending).to.equal(expectedRewardsPerShare.div(NUMBER_1E36).mul(takeFeeFromDeposit(DEFAULT_DEPOSIT)));
       });
     });
 
@@ -943,9 +952,9 @@ describe("AllocationStaking", function() {
         const blockTimestamp = await getCurrentBlockTimestamp();
         const pool = await AllocationStaking.poolInfo(0);
         expect(pool.lastRewardTimestamp).to.equal(blockTimestamp);
-        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, DEFAULT_DEPOSIT);
+        const expectedRewardsPerShare = computeExpectedReward(blockTimestamp, startTimestamp, REWARDS_PER_SECOND, ALLOC_POINT, 2 * ALLOC_POINT, takeFeeFromDeposit(DEFAULT_DEPOSIT));
         expect(pool.accERC20PerShare).to.equal(expectedRewardsPerShare);
-        expect(pool.totalDeposits).to.equal(DEFAULT_DEPOSIT + 100);
+        expect(pool.totalDeposits).to.equal(takeFeeFromDeposit(DEFAULT_DEPOSIT + 100));
       });
 
       it("Should not deposit into non-existent pool", async function() {
@@ -1107,11 +1116,11 @@ describe("AllocationStaking", function() {
         const balanceBefore = await XavaLP1.balanceOf(deployer.address);
 
         // When
-        await AllocationStaking.withdraw(0, DEFAULT_DEPOSIT / 2);
+        await AllocationStaking.withdraw(0, takeFeeFromDeposit(DEFAULT_DEPOSIT) / 2);
 
         // Then
         const balanceAfter = await XavaLP1.balanceOf(deployer.address);
-        expect(balanceAfter).to.equal(balanceBefore.add(DEFAULT_DEPOSIT / 2));
+        expect(balanceAfter).to.equal(balanceBefore.add(takeFeeFromDeposit(DEFAULT_DEPOSIT) / 2));
       });
 
       it("Should not withdraw more than user's deposit", async function() {
@@ -1119,7 +1128,7 @@ describe("AllocationStaking", function() {
         await baseSetupTwoPools();
 
         // Then
-        await expect(AllocationStaking.withdraw(0, DEFAULT_DEPOSIT * 2)).to.be.revertedWith("withdraw: can't withdraw more than deposit");
+        await expect(AllocationStaking.withdraw(0, takeFeeFromDeposit(DEFAULT_DEPOSIT) * 2)).to.be.revertedWith("withdraw: can't withdraw more than deposit");
       });
 
       it("Should transfer user's ERC20 share", async function() {
