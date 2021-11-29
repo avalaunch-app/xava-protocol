@@ -29,13 +29,13 @@ describe("AvalaunchSale", function() {
   const REGISTRATION_DEPOSIT_AVAX = 1;
   const PORTION_VESTING_PRECISION = 100;
   const ROUNDS_START_DELTAS = [50, 70, 90];
-  const ROUNDS_MAX_PARTICIPATIONS = ["100000000000000000000000000", "200000000000000000000000000", "300000000000000000000000000"];
+  const ROUNDS_MAX_PARTICIPATIONS = ["1000000000000000", "200000000000000000000000000", "300000000000000000000000000"];
   const FIRST_ROUND = 1;
   const MIDDLE_ROUND = 2;
   const LAST_ROUND = 3;
-  const PARTICIPATION_AMOUNT = "10000000000000000";
+  const PARTICIPATION_AMOUNT = "1000000";
   const PARTICIPATION_ROUND = 1;
-  const PARTICIPATION_VALUE = "10000000";
+  const PARTICIPATION_VALUE = "100";
   const AMOUNT_OF_XAVA_TO_BURN = 0;
 
   const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -138,6 +138,11 @@ describe("AvalaunchSale", function() {
     return AvalaunchSale.setRounds(startTimes, maxParticipations);
   }
 
+  async function setVestingParams() {
+    const blockTimestamp = await getCurrentBlockTimestamp();
+    await AvalaunchSale.setVestingParams([blockTimestamp + 10, blockTimestamp + 20], [5, 95], 500000);
+  }
+
   async function depositTokens() {
     await XavaToken.approve(AvalaunchSale.address, AMOUNT_OF_TOKENS_TO_SELL);
     await AvalaunchSale.depositTokens();
@@ -173,7 +178,7 @@ describe("AvalaunchSale", function() {
     cedric = accounts[3];
 
     const XavaTokenFactory = await ethers.getContractFactory("XavaToken");
-    XavaToken = await XavaTokenFactory.deploy("Xava", "XAVA", ethers.utils.parseUnits("100000000"), 18);
+    XavaToken = await XavaTokenFactory.deploy("Xava", "XAVA", ethers.utils.parseUnits("10000000000000000000000000"), 18);
 
     const AdminFactory = await ethers.getContractFactory("Admin");
     Admin = await AdminFactory.deploy([deployer.address, alice.address, bob.address]);
@@ -1437,6 +1442,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         await registerForSale();
+        await setVestingParams();
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
@@ -1448,12 +1454,17 @@ describe("AvalaunchSale", function() {
 
         const previousBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
 
+        console.log(await AvalaunchSale.getParticipation(deployer.address));
+
+        await XavaToken.transfer(AvalaunchSale.address, "10000000000000000000");
+
         // When
         await AvalaunchSale.withdrawTokens(0);
 
         // Then
         const currentBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
-        expect(currentBalance).to.equal(previousBalance.add(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX));
+        console.log(currentBalance)
+        expect(currentBalance).to.equal(previousBalance.add((PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * 50 / PORTION_VESTING_PRECISION) * NUMBER_1E18));
       });
 
       it("Should not withdraw if user did not participate", async function() {
