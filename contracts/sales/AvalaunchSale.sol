@@ -559,7 +559,10 @@ contract AvalaunchSale {
             block.timestamp >= sale.tokensUnlockTime,
             "Tokens can not be withdrawn yet."
         );
-        require(portionId < vestingPercentPerPortion.length);
+        require(
+            portionId < vestingPercentPerPortion.length,
+            "Portion id out of range."
+        );
 
         Participation storage p = userToParticipation[msg.sender];
 
