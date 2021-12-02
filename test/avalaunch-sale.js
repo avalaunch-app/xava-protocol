@@ -1734,7 +1734,7 @@ describe("AvalaunchSale", function() {
         expect(currentBalance).to.equal(previousBalance.add(PARTICIPATION_VALUE));
         expect(currentTokenBalance).to.equal(previousTokenBalance);
         expect(contractBalance).to.equal(0);
-        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * NUMBER_1E18);
       });
 
       it("Should not crash if leftover is 0 and burn is requested", async function() {
@@ -1770,7 +1770,7 @@ describe("AvalaunchSale", function() {
         expect(currentBalance).to.equal(previousBalance.add(PARTICIPATION_VALUE));
         expect(currentTokenBalance).to.equal(previousTokenBalance);
         expect(contractBalance).to.equal(0);
-        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
+        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * NUMBER_1E18);
         expect(burnedTokenBalance).to.equal(0);
       });
 
