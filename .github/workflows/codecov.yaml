@@ -21,6 +21,6 @@ jobs:
       - name: Install dependencies
         run: yarn install
       - name: Run tests
-        run: npm run test
+        run: npx hardhat coverage --network local --testfiles test
       - name: Codecov
         uses: codecov/codecov-action@v1.5.2
