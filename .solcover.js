@@ -1,3 +1,3 @@
 module.exports = {
-    skipFiles: ['math']
+    skipFiles: ['math', 'utils', 'farming', 'KuCoinVestingContract.sol', 'ParticipationVestingPrivate.sol', 'ParticipationVestingSeed.sol']
 };
