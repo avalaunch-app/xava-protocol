@@ -23,4 +23,4 @@ jobs:
       - name: Setup node
         run: npx hardhat node &
       - name: Run tests
-        run: npx hardhat test
+        run: npx hardhat test --network local
