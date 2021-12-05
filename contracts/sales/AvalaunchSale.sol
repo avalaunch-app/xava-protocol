@@ -7,8 +7,9 @@ import "../interfaces/IAllocationStaking.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract AvalaunchSale {
+contract AvalaunchSale is ReentrancyGuard{
     using ECDSA for bytes32;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -810,6 +811,18 @@ contract AvalaunchSale {
         returns (uint256[] memory, uint256[] memory)
     {
         return (vestingPortionsUnlockTime, vestingPercentPerPortion);
+    }
+
+    /// @notice     Function to remove stuck tokens from sale contract
+    function removeStuckTokens(
+        address token,
+        address beneficiary
+    )
+        external
+        onlyAdmin
+        nonReentrant
+    {
+        IERC20(token).safeTransfer(beneficiary, IERC20(token).balanceOf(address(this)));
     }
 
     // Function to act as a fallback and handle receiving AVAX.
