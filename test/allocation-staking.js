@@ -26,6 +26,9 @@ describe("AllocationStaking", function() {
   const NUMBER_1E36 = "1000000000000000000000000000000000000";
   const DEFAULT_LP_APPROVAL = 10000;
   const DEFAULT_BALANCE_ALICE = 10000;
+  const POST_SALE_WITHDRAW_PENALTY_PERCENT = 10;
+  const POST_SALE_WITHDRAW_PENALTY_LENGTH = 500;
+  const POST_SALE_WITHDRAW_PENALTY_PRECISION = 100;
 
   async function getCurrentBlockTimestamp() {
     return (await ethers.provider.getBlock('latest')).timestamp;
@@ -54,6 +57,12 @@ describe("AllocationStaking", function() {
     await XavaLP2.approve(AllocationStaking.address, DEFAULT_LP_APPROVAL);
     await XavaLP2.connect(alice).approve(AllocationStaking.address, DEFAULT_LP_APPROVAL);
     await XavaLP2.connect(bob).approve(AllocationStaking.address, DEFAULT_LP_APPROVAL);
+
+    await AllocationStaking.setPostSaleWithdrawPenaltyPercentAndLength(
+      POST_SALE_WITHDRAW_PENALTY_PERCENT,
+      POST_SALE_WITHDRAW_PENALTY_LENGTH,
+      POST_SALE_WITHDRAW_PENALTY_PRECISION
+    );
 
     await AllocationStaking.deposit(0, DEFAULT_DEPOSIT);
   }
@@ -1100,6 +1109,18 @@ describe("AllocationStaking", function() {
         // console.log(parseInt(amountToDeposit), parseInt(depositFee));
         expect(totalXavaRedistributedAfter).to.equal(depositFee.add(initialDepositFee));
       });
+
+      it("Should get deposited amount from user", async () => {
+        // Given
+        await baseSetupTwoPools();
+
+        // Then
+        let deposits, earnings;
+        [deposits, earnings] = await AllocationStaking.getPendingAndDepositedForUsers([deployer.address], 0)
+        expect(deposits[0]).to.equal(takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        // TODO: Try with time increase and estimate the earnings
+        expect(earnings[0]).to.equal(0);
+      });
     });
   });
 
@@ -1175,6 +1196,17 @@ describe("AllocationStaking", function() {
         // Then
         await expect(AllocationStaking.withdraw(0, takeFeeFromDeposit(DEFAULT_DEPOSIT)))
           .to.emit(AllocationStaking, "Withdraw").withArgs(deployer.address, 0, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+      });
+
+      it("Should get withdraw fee", async function () {
+        // Given
+        await baseSetupTwoPools();
+
+        //TODO: get to call getWithdrawFeeInternal
+
+        // Then
+        const fees = await AllocationStaking.getWithdrawFee(deployer.address, takeFeeFromDeposit((DEFAULT_DEPOSIT)), 0);
+        console.log(fees[0], fees[1]);
       });
     });
 
