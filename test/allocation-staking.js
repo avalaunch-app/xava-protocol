@@ -157,6 +157,18 @@ describe("AllocationStaking", function() {
       expect(totalAllocPoint).to.equal(ALLOC_POINT);
     });
 
+    it("Should add a pool successfully with mass update", async function() {
+      // When
+      await AllocationStaking.add(ALLOC_POINT, XavaToken.address, true);
+
+      // Then
+      let poolLength = await AllocationStaking.poolLength();
+      let totalAllocPoint = await AllocationStaking.totalAllocPoint();
+
+      expect(poolLength).to.equal(1);
+      expect(totalAllocPoint).to.equal(ALLOC_POINT);
+    });
+
     describe("Deposit fee", async function() {
       it("Should set a deposit fee and precision", async function() {
         // When
@@ -311,6 +323,20 @@ describe("AllocationStaking", function() {
         expect(await AllocationStaking.totalAllocPoint()).to.equal(newAllocPoint);
       });
 
+      it("Should set pool's allocation point with mass update", async function() {
+        // Given
+        await baseSetup();
+        const newAllocPoint = 12345;
+
+        // When
+        await AllocationStaking.set(0, newAllocPoint, true);
+
+        // Then
+        const pool = await AllocationStaking.poolInfo(0);
+        expect(pool.allocPoint).to.equal(newAllocPoint);
+        expect(await AllocationStaking.totalAllocPoint()).to.equal(newAllocPoint);
+      });
+
       it("Should set pool's allocation point to 0", async function() {
         // Given
         await baseSetup();
@@ -451,7 +477,7 @@ describe("AllocationStaking", function() {
 
     describe("Mass update pools", async function() {
       // TODO:
-      xit("Should update all pools", async function() {
+      it("Should update all pools", async function() {
         // Given
         await baseSetup();
 
@@ -622,7 +648,7 @@ describe("AllocationStaking", function() {
       });
 
       //TODO:
-      xit("Should return user's last pending amount if user deposited multiple times", async function() {
+      it("Should return user's last pending amount if user deposited multiple times", async function() {
         // Given
         await baseSetupTwoPools();
         await AllocationStaking.deposit(0, DEFAULT_DEPOSIT);
@@ -651,7 +677,7 @@ describe("AllocationStaking", function() {
       });
 
       //TODO:
-      xit("Should compute reward debt properly if user is not first to stake in pool", async function() {
+      it("Should compute reward debt properly if user is not first to stake in pool", async function() {
         // Given
         await baseSetupTwoPools();
 
@@ -680,7 +706,7 @@ describe("AllocationStaking", function() {
       });
 
       //TODO:
-      xit("Should compute reward debt properly if user is not first to stake in pool but staking not started", async function() {
+      it("Should compute reward debt properly if user is not first to stake in pool but staking not started", async function() {
         // Given
         await baseSetupTwoPools();
 
@@ -720,7 +746,7 @@ describe("AllocationStaking", function() {
       });
 
       //TODO:
-      xit("Should not use updated accERC20PerShare if time passed but staking ended with pool update", async function() {
+      it("Should not use updated accERC20PerShare if time passed but staking ended with pool update", async function() {
         // Given
         await baseSetupTwoPools();
 
@@ -758,7 +784,7 @@ describe("AllocationStaking", function() {
       });
 
       //TODO:
-      xit("Should be sum of pending for each pool if multiple pools", async function() {
+      it("Should be sum of pending for each pool if multiple pools", async function() {
         // Given
         await baseSetupTwoPools();
 
@@ -780,7 +806,7 @@ describe("AllocationStaking", function() {
       });
 
       //TODO:
-      xit("Should be sum of pending for each user if multiple users", async function() {
+      it("Should be sum of pending for each user if multiple users", async function() {
         // Given
         await baseSetup();
 
@@ -803,7 +829,7 @@ describe("AllocationStaking", function() {
       });
 
       //TODO:
-      xit("Should be sum of pending for each pool and user if multiple pools and users", async function() {
+      it("Should be sum of pending for each pool and user if multiple pools and users", async function() {
         // Given
         await baseSetupTwoPools();
 
@@ -845,7 +871,7 @@ describe("AllocationStaking", function() {
       });
 
       //TODO:
-      xit("Should return 0 if all pending tokens have been paid", async function() {
+      it("Should return 0 if all pending tokens have been paid", async function() {
         // Given
         await baseSetupTwoPools();
 
@@ -957,7 +983,7 @@ describe("AllocationStaking", function() {
       });
 
       //TODO:
-      xit("Should update pool before adding LP tokens", async function() {
+      it("Should update pool before adding LP tokens", async function() {
         // Given
         await baseSetupTwoPools();
 
@@ -985,7 +1011,7 @@ describe("AllocationStaking", function() {
       });
 
       //TODO:
-      xit("Should pay user pending amount before adding new deposit", async function() {
+      it("Should pay user pending amount before adding new deposit", async function() {
         // Given
         await baseSetupTwoPools();
 
@@ -1276,6 +1302,26 @@ describe("AllocationStaking", function() {
         expect(user.amount).to.equal(0);
         expect(user.rewardDebt).to.equal(0);
       });
+    });
+  });
+
+  describe("Compound", function () {
+    it("Should compound", async function() {
+      // Given
+      await baseSetupTwoPools();
+
+      await ethers.provider.send("evm_increaseTime", [START_TIMESTAMP_DELTA + 50]);
+      await ethers.provider.send("evm_mine");
+
+      await ethers.provider.send("evm_increaseTime", [END_TIMESTAMP_DELTA]);
+      await ethers.provider.send("evm_mine");
+
+      const userInfo = await AllocationStaking.userInfo(0, deployer.address);
+      console.log(BigInt(userInfo[0]))
+
+      console.log(BigInt(parseInt(await AllocationStaking.pending("0", deployer.address))));
+
+      expect(await AllocationStaking.compound(0)).to.emit(AllocationStaking, "CompoundedEarnings");
     });
   });
 

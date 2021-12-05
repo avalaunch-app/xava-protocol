@@ -1576,7 +1576,7 @@ describe("AvalaunchSale", function() {
 
     describe("Withdraw earnings and leftover", async function() {
       //TODO:
-      xit("Should withdraw sale owner's earnings and leftovers", async function() {
+      it("Should withdraw sale owner's earnings and leftovers", async function() {
         // Given
         await runFullSetup();
 
@@ -1615,7 +1615,7 @@ describe("AvalaunchSale", function() {
       });
 
       //TODO:
-      xit("Should not withdraw twice", async function() {
+      it("Should not withdraw twice", async function() {
         // Given
         await runFullSetup({amountOfTokensToSell: 10});
 
@@ -1681,7 +1681,7 @@ describe("AvalaunchSale", function() {
       });
 
       //TODO:
-      xit("Should burn leftover if requested", async function() {
+      it("Should burn leftover if requested", async function() {
         // Given
         await runFullSetup();
 
@@ -1719,7 +1719,7 @@ describe("AvalaunchSale", function() {
       });
 
       //TODO:
-      xit("Should not crash if leftover is 0", async function() {
+      it("Should not crash if leftover is 0", async function() {
         // Given
         await runFullSetup({amountOfTokensToSell: PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX});
 
@@ -1755,7 +1755,7 @@ describe("AvalaunchSale", function() {
       });
 
       //TODO:
-      xit("Should not crash if leftover is 0 and burn is requested", async function() {
+      it("Should not crash if leftover is 0 and burn is requested", async function() {
         // Given
         await runFullSetup({amountOfTokensToSell: PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX});
 
@@ -1793,7 +1793,7 @@ describe("AvalaunchSale", function() {
       });
 
       //TODO:
-      xit("Should not crash if earnings are 0", async function() {
+      it("Should not crash if earnings are 0", async function() {
         // Given
         await runFullSetup();
 
@@ -1825,7 +1825,7 @@ describe("AvalaunchSale", function() {
       });
 
       //TODO:
-      xit("Should not crash if earnings are 0 and burn is requested", async function() {
+      it("Should not crash if earnings are 0 and burn is requested", async function() {
         // Given
         await runFullSetup();
 
