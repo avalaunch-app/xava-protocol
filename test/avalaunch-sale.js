@@ -13,6 +13,9 @@ describe("AvalaunchSale", function() {
   let ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   let ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
 
+  let vestingPortionsUnlockTime = [];
+  let vestingPercentPerPortion = [];
+
   const REWARDS_PER_SECOND = ethers.utils.parseUnits("0.1");
   const DEPOSIT_FEE_PERCENT = 5;
   const DEPOSIT_FEE_PRECISION = 100;
@@ -140,6 +143,8 @@ describe("AvalaunchSale", function() {
 
   async function setVestingParams() {
     const blockTimestamp = await getCurrentBlockTimestamp();
+    vestingPortionsUnlockTime = [blockTimestamp + 10, blockTimestamp + 20];
+    vestingPercentPerPortion = [5, 95];
     await AvalaunchSale.setVestingParams([blockTimestamp + 10, blockTimestamp + 20], [5, 95], 500000);
   }
 
@@ -1197,14 +1202,16 @@ describe("AvalaunchSale", function() {
         // Then
         const sale = await AvalaunchSale.sale();
         const isParticipated = await AvalaunchSale.isParticipated(deployer.address);
-        const participation = await AvalaunchSale.userToParticipation(deployer.address);
+        const participation = await AvalaunchSale.getParticipation(deployer.address);
 
         expect(sale.totalTokensSold).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * NUMBER_1E18));
         expect(sale.totalAVAXRaised).to.equal(PARTICIPATION_VALUE);
         expect(isParticipated).to.be.true;
-        expect(participation.amountBought).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * NUMBER_1E18));
-        expect(participation.roundId).to.equal(PARTICIPATION_ROUND);
+        expect(participation[0]).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * NUMBER_1E18));
+        expect(participation[3]).to.equal(PARTICIPATION_ROUND);
         // expect(participation.isWithdrawn).to.be.false;
+
+        expect(await AvalaunchSale.getNumberOfRegisteredUsers()).to.equal(1);
       });
 
       it("Should allow multiple users to participate", async function() {
@@ -1443,6 +1450,12 @@ describe("AvalaunchSale", function() {
 
         await registerForSale();
         await setVestingParams();
+
+        const vestingParams = await AvalaunchSale.getVestingInfo();
+        expect(vestingParams[0][0]).to.equal(vestingPortionsUnlockTime[0]);
+        expect(vestingParams[0][1]).to.equal(vestingPortionsUnlockTime[1]);
+        expect(vestingParams[1][0]).to.equal(vestingPercentPerPortion[0]);
+        expect(vestingParams[1][1]).to.equal(vestingPercentPerPortion[1]);
 
         await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
