@@ -7,13 +7,12 @@ const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545/'))
 const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 const BAD_DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff89";
 
-xdescribe("Airdrop", () => {
+describe("Airdrop", () => {
 
     let Admin;
     let deployer, alice, bob, cedric;
-    let airdropInstance, airdropTokenInstance;
+    let airdropInstance;
 
-    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
     const WITHDRAW_AMOUNT = 1;
 
     beforeEach(async function() {
@@ -31,9 +30,11 @@ xdescribe("Airdrop", () => {
         airdropInstance = await Airdrop.deploy(Admin.address);
         await airdropInstance.deployed();
 
-        const value = "10000";
-        console.log(await web3.eth.getBlock("latest"));
-        //web3.eth.sendTransaction({from:deployer.address, to:airdropInstance.address, value: 1000});
+        const value = "10";
+        const tx = await deployer.sendTransaction({
+            to: ethers.provider._getAddress(airdropInstance.address),
+            value: ethers.utils.parseEther(value)
+        });
     });
 
     context("Main Functionalities", () => {
@@ -41,7 +42,7 @@ xdescribe("Airdrop", () => {
             it("Should withdraw tokens with proper signature", async () => {
                 const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
                 expect(await airdropInstance.connect(alice).withdrawTokens(sig, WITHDRAW_AMOUNT))
-                    .to.emit(airdropInstance, "TokensAirdropped")
+                    .to.emit(airdropInstance, "SentAVAX")
                     .withArgs(alice.address, WITHDRAW_AMOUNT);
             });
 
@@ -54,7 +55,7 @@ xdescribe("Airdrop", () => {
             it("Should not withdraw tokens second time", async () => {
                 const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
                 expect(await airdropInstance.connect(alice).withdrawTokens(sig, WITHDRAW_AMOUNT))
-                    .to.emit(airdropInstance, "TokensAirdropped")
+                    .to.emit(airdropInstance, "SentAVAX")
                     .withArgs(alice.address, WITHDRAW_AMOUNT);
                 await expect(airdropInstance.connect(alice).withdrawTokens(sig, WITHDRAW_AMOUNT))
                     .to.be.revertedWith("Already claimed AVAX!");
