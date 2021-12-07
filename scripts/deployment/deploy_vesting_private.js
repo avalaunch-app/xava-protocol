@@ -1,6 +1,6 @@
 const hre = require("hardhat");
-const { getSavedContractAddresses, saveContractAddress } = require('./utils')
-const config = require('./config.json');
+const { getSavedContractAddresses, saveContractAddress } = require('../utils')
+const config = require('../configs/config.json');
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 

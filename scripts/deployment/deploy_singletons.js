@@ -1,6 +1,6 @@
 const hre = require("hardhat");
-const { saveContractAddress, getSavedContractAddresses } = require('./utils')
-const config = require('./config.json');
+const { saveContractAddress, getSavedContractAddresses } = require('../utils')
+const config = require('../configs/config.json');
 
 async function getCurrentBlockTimestamp() {
     return (await ethers.provider.getBlock('latest')).timestamp;
@@ -27,7 +27,6 @@ async function main() {
     saveContractAddress(hre.network.name, "SalesFactory", salesFactory.address);
     console.log('Sales factory deployed to: ',salesFactory.address);
 
-
     const currentTimestamp = await getCurrentBlockTimestamp();
     console.log('Farming starts at: ', currentTimestamp);
 
@@ -39,7 +38,7 @@ async function main() {
             salesFactory.address,
             c.depositFeePercent,
             c.depositFeePrecision
-        ]
+        ], { unsafeAllow: ['delegatecall'] }
     );
     await allocationStaking.deployed()
     console.log('AllocationStaking Proxy deployed to:', allocationStaking.address);
