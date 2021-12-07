@@ -531,6 +531,19 @@ describe("AvalaunchSale", function() {
           .to.emit(AvalaunchSale, "RoundAdded")
           .withArgs(1, startTimes[0], maxParticipations[0]);
       });
+
+      it("Should set sale token", async function () {
+        // Given
+        const XavaTokenFactory = await ethers.getContractFactory("XavaToken");
+        const XavaToken2 = await XavaTokenFactory.deploy("Xava", "XAVA", ethers.utils.parseUnits("10000000000000000000000000"), 18);
+
+        // When
+        await AvalaunchSale.setSaleToken(XavaToken2.address);
+
+        // Then
+        const sale = await AvalaunchSale.sale();
+        expect(sale[0]).to.equal(XavaToken2.address);
+      });
     });
   });
 
@@ -1481,6 +1494,46 @@ describe("AvalaunchSale", function() {
         expect(currentBalance).to.equal(previousBalance.add(Math.floor(withdrawAmount)));
       });
 
+      it("Should withdraw user's tokens using multiple portion withdrawal", async function() {
+        // Given
+        await runFullSetup();
+
+        await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await registerForSale();
+        await setVestingParams();
+
+        const vestingParams = await AvalaunchSale.getVestingInfo();
+        expect(vestingParams[0][0]).to.equal(vestingPortionsUnlockTime[0]);
+        expect(vestingParams[0][1]).to.equal(vestingPortionsUnlockTime[1]);
+        expect(vestingParams[1][0]).to.equal(vestingPercentPerPortion[0]);
+        expect(vestingParams[1][1]).to.equal(vestingPercentPerPortion[1]);
+
+        await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await participate();
+
+        await ethers.provider.send("evm_increaseTime", [TOKENS_UNLOCK_TIME_DELTA - ROUNDS_START_DELTAS[0]]);
+        await ethers.provider.send("evm_mine");
+
+        // console.log(await AvalaunchSale.getParticipation(deployer.address));
+
+        await XavaToken.transfer(AvalaunchSale.address, "10000000000000000000");
+        const previousBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
+
+        // When
+        await AvalaunchSale.withdrawMultiplePortions([0]);
+
+        // Then
+        const currentBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
+        // console.log(parseInt(currentBalance))
+        const withdrawAmount = ((PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX) * 5) / PORTION_VESTING_PRECISION * NUMBER_1E18;
+        // console.log(withdrawAmount)
+        expect(currentBalance).to.equal(previousBalance.add(Math.floor(withdrawAmount)));
+      });
+
       // Deprecated - User not participating leads to having 'invalid opcode' error on line 570 / Cause: Array index out of bounds
       xit("Should not withdraw if user did not participate", async function() {
         // Given
@@ -1572,6 +1625,24 @@ describe("AvalaunchSale", function() {
         // Then
         await expect(AvalaunchSale.withdrawTokens(0)).to.emit(AvalaunchSale, "TokensWithdrawn").withArgs(deployer.address, Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * 5 / PORTION_VESTING_PRECISION * NUMBER_1E18));
       });
+
+      it("Should shift westing unclock times", async function () {
+        // Given
+        await runFullSetup();
+
+        await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await registerForSale();
+        await setVestingParams();
+
+        const shift = 10;
+        await AvalaunchSale.shiftVestingUnlockingTimes(shift);
+
+        const vestingParams = await AvalaunchSale.getVestingInfo();
+        expect(vestingParams[0][0]).to.equal(vestingPortionsUnlockTime[0] + shift);
+        expect(vestingParams[0][1]).to.equal(vestingPortionsUnlockTime[1] + shift);
+      });
     });
 
     describe("Withdraw earnings and leftover", async function() {
@@ -1614,10 +1685,9 @@ describe("AvalaunchSale", function() {
         expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
       });
 
-      //TODO:
-      xit("Should not withdraw twice", async function() {
+      it("Should not withdraw twice", async function() {
         // Given
-        await runFullSetup({amountOfTokensToSell: 10});
+        await runFullSetup();
 
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
@@ -1721,7 +1791,7 @@ describe("AvalaunchSale", function() {
       //TODO:
       xit("Should not crash if leftover is 0", async function() {
         // Given
-        await runFullSetup({amountOfTokensToSell: PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX});
+        await runFullSetup({amountOfTokensToSell: Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * NUMBER_1E18)});
 
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
@@ -1757,7 +1827,7 @@ describe("AvalaunchSale", function() {
       //TODO:
       xit("Should not crash if leftover is 0 and burn is requested", async function() {
         // Given
-        await runFullSetup({amountOfTokensToSell: PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX});
+        await runFullSetup({amountOfTokensToSell: Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * NUMBER_1E18)});
 
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
