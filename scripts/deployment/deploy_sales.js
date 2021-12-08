@@ -45,8 +45,8 @@ async function main() {
     const registrationStart = c['registrationStartAt'];
     const registrationEnd = registrationStart + c['registrationLength'];
     const validatorRound = registrationEnd + c['delayBetweenRegistrationAndSale'];
-    const stakingRound = validatorRound + c['roundLength'];
-    const saleEndTime = stakingRound + c['roundLength'];
+    const stakingRound = validatorRound + c['validatorRoundLength'];
+    const saleEndTime = stakingRound + c['stakingRoundLength'];
 
     const tokensUnlockTime = c['TGE'];
 
