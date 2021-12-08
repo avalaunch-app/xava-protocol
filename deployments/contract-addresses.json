@@ -3,13 +3,6 @@
         "XavaToken": "0xd8dAA42dFC3f507A12AcDbb9854b682fABaFEeC9",
         "ParticipationVesting": "0xd6FBE8ac9396f986F8b4D1eBc939daA37529cF79"
     },
-    "fuji": {
-        "XavaToken": "0x293BD634900E811128CF11E04D081De02f2f1720",
-        "LpToken": "0x2EbBC3Fe952232F284541F62d813fd567E310b47",
-        "ParticipationVesting": "0xA42682cA07a263f47B7f57DD51CcF8E6d8bFe190",
-        "FarmingXava": "0x7dAb04905ecAE72Fe36fB5f6a83201E8bD6ff935",
-        "DevToken": "0x21103c4bDdB8ad49716D12f92EbdEfE8CF84F605"
-    },
     "mainnet": {
         "XavaToken": "0xd1c3f94DE7e5B45fa4eDBBA472491a9f4B166FC4",
         "LpToken": "0x42152bDD72dE8d6767FE3B4E17a221D6985E8B25",
@@ -37,7 +30,7 @@
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
         "Admin": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE"
     },
-    "staging": {
+    "fuji": {
         "Admin": "0x42B0C4c2ce5DB3e50c64209Cf296cdFb213a4129",
         "SalesFactory": "0x7a7075d6bEbF87AADB8D1AD0A94C83111b512b61",
         "AllocationStakingProxy": "0x297E4853c7bb699dC324B252397A5638D82B2e32",

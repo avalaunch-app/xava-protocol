@@ -32,7 +32,7 @@
     ],
     "portionPercents": [3500,500,500,500,500,500,500,500,500,500,500,500,500,500]
   },
-  "staging": {
+  "fuji": {
     "tokenAddress": "0xD95d874e6bc638A25ec7FbA5224b21f5e18B308f",
     "totalTokens": "3214285",
     "tokenPriceUSD": "0.28",
