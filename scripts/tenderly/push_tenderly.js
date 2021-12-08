@@ -23,8 +23,8 @@ const tenderlyPush = async (contracts) => {
 
 
 async function main() {
-    const contracts = getSavedContractAddresses()[hre.network.name];
 
+    const contracts = getSavedContractAddresses()[hre.network.name];
     let payload = [];
 
     Object.keys(contracts).forEach(name => {
