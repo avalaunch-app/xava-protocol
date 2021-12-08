@@ -1,18 +1,20 @@
 const hre = require("hardhat");
 const { saveContractAddress, getSavedContractAddresses } = require("../utils");
 
-
 async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
 
     const Airdrop = await hre.ethers.getContractFactory("Airdrop");
-    const token = '0xd1c3f94DE7e5B45fa4eDBBA472491a9f4B166FC4';
-    const airdropContract = await Airdrop.deploy(token, contracts['Admin']);
+    const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+
+    const airdropContract = await Airdrop.deploy(tokenAddress, contracts['Admin']);
     await airdropContract.deployed();
 
+    const tokenInstance = await hre.ethers.getContractAt('IERC20Metadata', tokenAddress);
+    const symbol = await tokenInstance.symbol();
 
     console.log("Airdrop contract is deployed to: ", airdropContract.address);
-    saveContractAddress(hre.network.name, "AirdropXAVA", airdropContract.address);
+    saveContractAddress(hre.network.name, `Airdrop${symbol}`, airdropContract.address);
 }
 
 
