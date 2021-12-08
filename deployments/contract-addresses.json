@@ -22,12 +22,20 @@
         "AirdropOH1": "0xDE9B91F04C7Db47fE74Ba5CdfD01Fb3c45078892",
         "AirdropOH2": "0x017F0f2747953bdc30DEcd1603D26D491EF24718",
         "AirdropOH3": "0x90e996dE9843aC8d6B69ce9a7c97BFC301E3e8a2",
-        "AirdropAVAXCRA": "0xB1B6B9Ce5fCb7a207B85c1A3Ed3085618ACE65Eb",
+        "AirdropAVAXCrabada": "0xB1B6B9Ce5fCb7a207B85c1A3Ed3085618ACE65Eb",
         "AirdropCRA": "0xfaa5eC315eeea382830414ea4cC02262289394d6",
         "AirdropAVAXCRAFT": "0x4f7DD657037e6Ea7Cdad6eafDD20a8a336935B94",
         "AirdropCRAFT": "0x47b89DF0cC711d286177588562337F30237c88Be",
         "AirdropXAVA": "0xA664A4abe3E9C0b90789F8dbb185c0D0cBcB59E2",
-        "AirdropCLY": "0x364e232d9880e4A3E8505DEBbc2F93C6a896233f"
+        "AirdropCLY": "0x364e232d9880e4A3E8505DEBbc2F93C6a896233f",
+        "AvalaunchSale-OhFinance": "0xf4e11d41Aec3bB2f980cbe2D62eBe7497E54f027",
+        "AvalaunchSale-YayGames": "0x4437c4ca026f08380812D545e26679EB8404E26b",
+        "AvalaunchSale-RocoFinance": "0x16Bc59978851012aDA4843E49Df2A314EA38665a",
+        "AvalaunchSale-Colony": "0xd8C4CfA978862F4653Bfccc1a6e3E9FfF1A6Dc54",
+        "AvalaunchSale-Talecraft": "0xAC77e873919759B962cA07B15f09f938f24E260B",
+        "AvalaunchSale-Crabada": "0x52f351A405AD70A931e03FeF20e97230F720F20B",
+        "AvalaunchSale-Kalao": "0x8498a16B04E754f873198434063c8684d506A967",
+        "AvalaunchSale-HurricaneSwap": "0x8C18dbd68a2Fd18F10b56d902Cd6aD02c41828E0"
     },
     "local": {
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
