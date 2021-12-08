@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { saveContractAddress } = require('./utils')
+const { saveContractAddress } = require('../utils')
 
 async function main() {
   const tokenName = "MOCK-TOKEN";

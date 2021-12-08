@@ -1,6 +1,6 @@
 const hre = require("hardhat");
-const { saveContractAddress, getSavedContractAddresses } = require('./utils')
-const config = require("./saleConfig.json");
+const { saveContractAddress, getSavedContractAddresses } = require('../utils')
+const config = require("../configs/saleConfig.json");
 const { ethers, web3 } = hre
 
 async function getCurrentBlockTimestamp() {

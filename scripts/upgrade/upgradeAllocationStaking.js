@@ -1,6 +1,6 @@
 // scripts/upgrade-box.js
 const { ethers, upgrades } = require("hardhat");
-const { getSavedContractAddresses, getSavedProxyABI, saveContractAddress} = require('./utils')
+const { getSavedContractAddresses, getSavedProxyABI, saveContractAddress} = require('../utils')
 const hre = require("hardhat");
 
 async function main() {
