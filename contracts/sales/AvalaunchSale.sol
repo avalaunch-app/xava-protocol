@@ -99,6 +99,12 @@ contract AvalaunchSale is ReentrancyGuard{
     uint256 public registrationDepositAVAX;
     // Accounting total AVAX collected, after sale admin can withdraw this
     uint256 public registrationFees;
+    // Price update percent threshold
+    uint8 tokenPriceInAVAXUpdateThreshold;
+    // Price update time limit
+    uint256 tokenPriceInAVAXUpdateTimeLimit;
+    // Token price in AVAX latest update timestamp
+    uint256 tokenPriceInAVAXLastCallTimestamp;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner() {
@@ -376,7 +382,28 @@ contract AvalaunchSale is ReentrancyGuard{
     /// @dev        This will be updated with an oracle during the sale every N minutes, so the users will always
     ///             pay initialy set $ value of the token. This is to reduce reliance on the AVAX volatility.
     function updateTokenPriceInAVAX(uint256 price) external onlyAdmin {
-        require(price > 0, "Price can not be 0.");
+        // Require that function params are properly set
+        require(
+            tokenPriceInAVAXUpdateTimeLimit != 0 && tokenPriceInAVAXUpdateThreshold != 0,
+            "Function params not set."
+        );
+
+        // Require that 'N' time has passed since last call
+        require(
+            tokenPriceInAVAXLastCallTimestamp.add(tokenPriceInAVAXUpdateTimeLimit) < block.timestamp,
+            "Not enough time passed since last call."
+        );
+        // Set latest call time to current timestamp
+        tokenPriceInAVAXLastCallTimestamp = block.timestamp;
+
+        // Require that the price does not differ more than 'N%' from previous one
+        uint256 maximalPriceChange = sale.tokenPriceInAVAX.mul(tokenPriceInAVAXUpdateThreshold).div(100);
+        require(
+            price < sale.tokenPriceInAVAX.add(maximalPriceChange) &&
+            price > sale.tokenPriceInAVAX.sub(maximalPriceChange),
+            "Price differs too much from the previous."
+        );
+
         // Allowing oracle to run and change the sale value
         sale.tokenPriceInAVAX = price;
         emit TokenPriceSet(price);
@@ -823,6 +850,22 @@ contract AvalaunchSale is ReentrancyGuard{
         nonReentrant
     {
         IERC20(token).safeTransfer(beneficiary, IERC20(token).balanceOf(address(this)));
+    }
+
+    /// @notice     Function to set params for updatePriceInAVAX function
+    function setUpdatePriceInAVAXParams(
+        uint8 _tokenPriceInAVAXUpdateThreshold,
+        uint256 _tokenPriceInAVAXUpdateTimeLimit
+    )
+        external
+        onlyAdmin
+    {
+        require(
+            _tokenPriceInAVAXUpdateTimeLimit != 0 && _tokenPriceInAVAXUpdateThreshold != 0,
+            "Cannot set zero value."
+        );
+        tokenPriceInAVAXUpdateThreshold = _tokenPriceInAVAXUpdateThreshold;
+        tokenPriceInAVAXUpdateTimeLimit = _tokenPriceInAVAXUpdateTimeLimit;
     }
 
     // Function to act as a fallback and handle receiving AVAX.
