@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract AvalaunchSale is ReentrancyGuard{
+contract AvalaunchSale is ReentrancyGuard {
     using ECDSA for bytes32;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -100,11 +100,11 @@ contract AvalaunchSale is ReentrancyGuard{
     // Accounting total AVAX collected, after sale admin can withdraw this
     uint256 public registrationFees;
     // Price update percent threshold
-    uint8 tokenPriceInAVAXUpdateThreshold;
+    uint8 updateTokenPriceInAVAXPercentageThreshold;
     // Price update time limit
-    uint256 tokenPriceInAVAXUpdateTimeLimit;
+    uint256 updateTokenPriceInAVAXTimeLimit;
     // Token price in AVAX latest update timestamp
-    uint256 tokenPriceInAVAXLastCallTimestamp;
+    uint256 updateTokenPriceInAVAXLastCallTimestamp;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner() {
@@ -384,23 +384,23 @@ contract AvalaunchSale is ReentrancyGuard{
     function updateTokenPriceInAVAX(uint256 price) external onlyAdmin {
         // Require that function params are properly set
         require(
-            tokenPriceInAVAXUpdateTimeLimit != 0 && tokenPriceInAVAXUpdateThreshold != 0,
+            updateTokenPriceInAVAXTimeLimit != 0 && updateTokenPriceInAVAXPercentageThreshold != 0,
             "Function params not set."
         );
 
         // Require that 'N' time has passed since last call
         require(
-            tokenPriceInAVAXLastCallTimestamp.add(tokenPriceInAVAXUpdateTimeLimit) < block.timestamp,
+            updateTokenPriceInAVAXLastCallTimestamp.add(updateTokenPriceInAVAXTimeLimit) < block.timestamp,
             "Not enough time passed since last call."
         );
         // Set latest call time to current timestamp
-        tokenPriceInAVAXLastCallTimestamp = block.timestamp;
+        updateTokenPriceInAVAXLastCallTimestamp = block.timestamp;
 
         // Require that the price does not differ more than 'N%' from previous one
-        uint256 maximalPriceChange = sale.tokenPriceInAVAX.mul(tokenPriceInAVAXUpdateThreshold).div(100);
+        uint256 maxPriceChange = sale.tokenPriceInAVAX.mul(updateTokenPriceInAVAXPercentageThreshold).div(100);
         require(
-            price < sale.tokenPriceInAVAX.add(maximalPriceChange) &&
-            price > sale.tokenPriceInAVAX.sub(maximalPriceChange),
+            price < sale.tokenPriceInAVAX.add(maxPriceChange) &&
+            price > sale.tokenPriceInAVAX.sub(maxPriceChange),
             "Price differs too much from the previous."
         );
 
@@ -854,18 +854,18 @@ contract AvalaunchSale is ReentrancyGuard{
 
     /// @notice     Function to set params for updatePriceInAVAX function
     function setUpdatePriceInAVAXParams(
-        uint8 _tokenPriceInAVAXUpdateThreshold,
-        uint256 _tokenPriceInAVAXUpdateTimeLimit
+        uint8 _updateTokenPriceInAVAXPercentageThreshold,
+        uint256 _updateTokenPriceInAVAXTimeLimit
     )
         external
         onlyAdmin
     {
         require(
-            _tokenPriceInAVAXUpdateTimeLimit != 0 && _tokenPriceInAVAXUpdateThreshold != 0,
+            _updateTokenPriceInAVAXTimeLimit != 0 && _updateTokenPriceInAVAXPercentageThreshold != 0,
             "Cannot set zero value."
         );
-        tokenPriceInAVAXUpdateThreshold = _tokenPriceInAVAXUpdateThreshold;
-        tokenPriceInAVAXUpdateTimeLimit = _tokenPriceInAVAXUpdateTimeLimit;
+        updateTokenPriceInAVAXPercentageThreshold = _updateTokenPriceInAVAXPercentageThreshold;
+        updateTokenPriceInAVAXTimeLimit = _updateTokenPriceInAVAXTimeLimit;
     }
 
     // Function to act as a fallback and handle receiving AVAX.
