@@ -44,8 +44,6 @@ contract AvalaunchSale is ReentrancyGuard {
         uint256 totalAVAXRaised;
         // Sale end time
         uint256 saleEnd;
-        // When tokens can be withdrawn
-        uint256 tokensUnlockTime;
     }
 
     // Participation structure
@@ -130,8 +128,7 @@ contract AvalaunchSale is ReentrancyGuard {
         address saleOwner,
         uint256 tokenPriceInAVAX,
         uint256 amountOfTokensToSell,
-        uint256 saleEnd,
-        uint256 tokensUnlockTime
+        uint256 saleEnd
     );
     event RegistrationTimeSet(
         uint256 registrationTimeStarts,
@@ -207,7 +204,6 @@ contract AvalaunchSale is ReentrancyGuard {
         uint256 _tokenPriceInAVAX,
         uint256 _amountOfTokensToSell,
         uint256 _saleEnd,
-        uint256 _tokensUnlockTime,
         uint256 _portionVestingPrecision,
         uint256 _stakingRoundId,
         uint256 _registrationDepositAVAX
@@ -220,8 +216,7 @@ contract AvalaunchSale is ReentrancyGuard {
         require(
             _tokenPriceInAVAX != 0 &&
                 _amountOfTokensToSell != 0 &&
-                _saleEnd > block.timestamp &&
-                _tokensUnlockTime > block.timestamp,
+                _saleEnd > block.timestamp,
             "setSaleParams: Bad input"
         );
         require(_portionVestingPrecision >= 100, "Should be at least 100");
@@ -234,7 +229,6 @@ contract AvalaunchSale is ReentrancyGuard {
         sale.tokenPriceInAVAX = _tokenPriceInAVAX;
         sale.amountOfTokensToSell = _amountOfTokensToSell;
         sale.saleEnd = _saleEnd;
-        sale.tokensUnlockTime = _tokensUnlockTime;
 
         // Deposit in AVAX, sent during the registration
         registrationDepositAVAX = _registrationDepositAVAX;
@@ -247,8 +241,7 @@ contract AvalaunchSale is ReentrancyGuard {
             sale.saleOwner,
             sale.tokenPriceInAVAX,
             sale.amountOfTokensToSell,
-            sale.saleEnd,
-            sale.tokensUnlockTime
+            sale.saleEnd
         );
     }
 
@@ -583,10 +576,6 @@ contract AvalaunchSale is ReentrancyGuard {
 
     /// Users can claim their participation
     function withdrawTokens(uint256 portionId) external {
-        require(
-            block.timestamp >= sale.tokensUnlockTime,
-            "Tokens can not be withdrawn yet."
-        );
         require(
             portionId < vestingPercentPerPortion.length,
             "Portion id out of range."
