@@ -17,11 +17,10 @@ async function main() {
 
     const salesFactory = await hre.ethers.getContractAt('SalesFactory', contracts['SalesFactory']);
 
-    await delay(delayLength);
-
     const tx = await salesFactory.deploySale();
     console.log('Sale is deployed successfully.');
 
+    await delay(delayLength);
 
     const lastDeployedSale = await salesFactory.getLastDeployedSale();
     console.log('Deployed Sale address is: ', lastDeployedSale);
