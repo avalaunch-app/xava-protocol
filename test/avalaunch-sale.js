@@ -114,12 +114,12 @@ describe("AvalaunchSale", function() {
     const tokenPriceInAVAX = firstOrDefault(params, 'tokenPriceInAVAX', TOKEN_PRICE_IN_AVAX);
     const amountOfTokensToSell = firstOrDefault(params, 'amountOfTokensToSell', AMOUNT_OF_TOKENS_TO_SELL);
     const saleEnd = blockTimestamp + firstOrDefault(params, 'saleEndDelta', SALE_END_DELTA);
-    const tokensUnlockTime = blockTimestamp + firstOrDefault(params, 'tokensUnlockTimeDelta', TOKENS_UNLOCK_TIME_DELTA);
+    // const tokensUnlockTime = blockTimestamp + firstOrDefault(params, 'tokensUnlockTimeDelta', TOKENS_UNLOCK_TIME_DELTA);
     const stakingRoundId = 1;
 
     return await AvalaunchSale.setSaleParams(
         token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
-        saleEnd, tokensUnlockTime, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+        saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
     );
   }
 
@@ -163,7 +163,12 @@ describe("AvalaunchSale", function() {
     await setSaleParams(params);
     await setRegistrationTime(params);
     await setRounds(params);
+    await setUpdatePriceInAVAXParams();
     await depositTokens();
+  }
+
+  async function setUpdatePriceInAVAXParams() {
+    await AvalaunchSale.setUpdatePriceInAVAXParams(30, 500);
   }
 
   async function registerForSale(params) {
@@ -229,7 +234,7 @@ describe("AvalaunchSale", function() {
         // When
         await AvalaunchSale.setSaleParams(
             token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
-            saleEnd, tokensUnlockTime, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+            saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
         );
 
         // Then
@@ -240,7 +245,6 @@ describe("AvalaunchSale", function() {
         expect(sale.tokenPriceInAVAX).to.equal(tokenPriceInAVAX);
         expect(sale.amountOfTokensToSell).to.equal(amountOfTokensToSell);
         expect(sale.saleEnd).to.equal(saleEnd);
-        expect(sale.tokensUnlockTime).to.equal(tokensUnlockTime);
 
         // Deprecated checks
 
@@ -270,9 +274,9 @@ describe("AvalaunchSale", function() {
         // When
         expect(await AvalaunchSale.setSaleParams(
             token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
-            saleEnd, tokensUnlockTime, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+            saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
         )).to.emit(AvalaunchSale, "SaleCreated")
-        .withArgs(saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokensUnlockTime);
+        .withArgs(saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd);
       });
 
       it("Should not set sale parameters if sale is already created", async function() {
@@ -309,7 +313,7 @@ describe("AvalaunchSale", function() {
         await expect(setSaleParams({saleEndDelta: -100})).to.be.revertedWith("setSaleParams: Bad input");
       });
 
-      it("Should not set sale parameters if tokens unlock time is in the past", async function() {
+      xit("Should not set sale parameters if tokens unlock time is in the past", async function() {
         // Then
         await expect(setSaleParams({tokensUnlockTimeDelta: -100})).to.be.revertedWith("setSaleParams: Bad input");
       });
@@ -551,7 +555,7 @@ describe("AvalaunchSale", function() {
     describe("Update token price", async function() {
       it("Should set the token price", async function() {
         // Given
-        const price = 123;
+        const price = 1000000000000001;
         await runFullSetup();
 
         // When
@@ -563,7 +567,7 @@ describe("AvalaunchSale", function() {
 
       it("Should not allow non-admin to set token price", async function() {
         // Given
-        const price = 123;
+        const price = 1000000000000001;
         await runFullSetup();
         await Admin.removeAdmin(deployer.address);
 
@@ -573,7 +577,7 @@ describe("AvalaunchSale", function() {
 
       it("Should emit TokenPriceSet event", async function() {
         // Given
-        const price = 123;
+        const price = 1000000000000001;
         await runFullSetup();
 
         // Then
@@ -585,7 +589,7 @@ describe("AvalaunchSale", function() {
       // Deprecated
       xit("Should not update token price if 1st round already started", async function() {
         // Given
-        const price = 123;
+        const price = 1000000000000001;
         await runFullSetup();
 
         // When
@@ -602,15 +606,16 @@ describe("AvalaunchSale", function() {
         await runFullSetup();
 
         // Then
-        await expect(AvalaunchSale.updateTokenPriceInAVAX(price)).to.be.revertedWith("Price can not be 0.");
+        await expect(AvalaunchSale.updateTokenPriceInAVAX(price)).to.be.revertedWith("Price differs too much from the previous.");
       });
 
       // Deprecated
       xit("Should not update token price if rounds not set", async function() {
         // Given
-        const price = 123;
+        const price = 1000000000000001;
         await setSaleParams();
         await setRegistrationTime();
+        await setUpdatePriceInAVAXParams();
 
         // Then
         await expect(AvalaunchSale.updateTokenPriceInAVAX(price)).to.be.reverted;
@@ -1585,10 +1590,11 @@ describe("AvalaunchSale", function() {
         await expect(AvalaunchSale.withdrawTokens(0)).to.be.revertedWith("Tokens already withdrawn or portion not unlocked yet.");
       });
 
-      it("Should not withdraw before tokens unlock time", async function() {
+      xit("Should not withdraw before tokens unlock time", async function() {
         // Given
         await runFullSetup();
 
+        await setVestingParams();
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
 
