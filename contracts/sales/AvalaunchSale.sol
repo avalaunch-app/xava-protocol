@@ -110,6 +110,7 @@ contract AvalaunchSale is ReentrancyGuard {
         _;
     }
 
+    // Restricting calls only to sale admin
     modifier onlyAdmin() {
         require(
             admin.isAdmin(msg.sender),
@@ -169,6 +170,7 @@ contract AvalaunchSale is ReentrancyGuard {
 
         uint256 sum;
 
+        // Set vesting portions percents and unlock times
         for (uint256 i = 0; i < _unlockingTimes.length; i++) {
             vestingPortionsUnlockTime.push(_unlockingTimes[i]);
             vestingPercentPerPortion.push(_percents[i]);
@@ -178,6 +180,7 @@ contract AvalaunchSale is ReentrancyGuard {
         require(sum == portionVestingPrecision, "Percent distribution issue.");
     }
 
+    /// @notice     Admin function to shift vesting unlocking times
     function shiftVestingUnlockingTimes(uint256 timeToShift)
         external
         onlyAdmin
@@ -190,6 +193,7 @@ contract AvalaunchSale is ReentrancyGuard {
         // Time can be shifted only once.
         maxVestingTimeShift = 0;
 
+        // Shift the unlock time
         for (uint256 i = 0; i < vestingPortionsUnlockTime.length; i++) {
             vestingPortionsUnlockTime[i] = vestingPortionsUnlockTime[i].add(
                 timeToShift
@@ -264,6 +268,7 @@ contract AvalaunchSale is ReentrancyGuard {
         uint256 _registrationTimeStarts,
         uint256 _registrationTimeEnds
     ) external onlyAdmin {
+        // Require that the sale is created
         require(sale.isCreated);
         require(registration.registrationTimeStarts == 0);
         require(
@@ -278,6 +283,7 @@ contract AvalaunchSale is ReentrancyGuard {
             );
         }
 
+        // Set registration start and end time
         registration.registrationTimeStarts = _registrationTimeStarts;
         registration.registrationTimeEnds = _registrationTimeEnds;
 
@@ -287,6 +293,7 @@ contract AvalaunchSale is ReentrancyGuard {
         );
     }
 
+    /// @notice     Setting rounds for sale.
     function setRounds(
         uint256[] calldata startTimes,
         uint256[] calldata maxParticipations
@@ -438,12 +445,14 @@ contract AvalaunchSale is ReentrancyGuard {
         external
         onlyAdmin
     {
+        // Require that round has not already started
         require(
             block.timestamp < roundIdToRound[roundIds[0]].startTime,
             "1st round already started."
         );
         require(rounds.length == caps.length, "Arrays length is different.");
 
+        // Set max participation per round
         for (uint256 i = 0; i < rounds.length; i++) {
             require(caps[i] > 0, "Can't set max participation to 0");
 
@@ -462,6 +471,7 @@ contract AvalaunchSale is ReentrancyGuard {
 
         sale.tokensDeposited = true;
 
+        // Perform safe transfer
         sale.token.safeTransferFrom(
             msg.sender,
             address(this),
@@ -838,6 +848,7 @@ contract AvalaunchSale is ReentrancyGuard {
         onlyAdmin
         nonReentrant
     {
+        // Safe transfer token from sale contract to beneficiary
         IERC20(token).safeTransfer(beneficiary, IERC20(token).balanceOf(address(this)));
     }
 
@@ -849,10 +860,12 @@ contract AvalaunchSale is ReentrancyGuard {
         external
         onlyAdmin
     {
+        // Require that arguments don't equal zero
         require(
             _updateTokenPriceInAVAXTimeLimit != 0 && _updateTokenPriceInAVAXPercentageThreshold != 0,
             "Cannot set zero value."
         );
+        // Set new values
         updateTokenPriceInAVAXPercentageThreshold = _updateTokenPriceInAVAXPercentageThreshold;
         updateTokenPriceInAVAXTimeLimit = _updateTokenPriceInAVAXTimeLimit;
     }
