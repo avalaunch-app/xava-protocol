@@ -205,6 +205,12 @@ describe("AvalaunchSale", function() {
     await AllocationStaking.add(1, XavaToken.address, false);
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
 
+    const saleContract = await ethers.getContractFactory("AvalaunchSale");
+    const saleImplementation = await saleContract.deploy();
+    await saleImplementation.deployed();
+
+    await SalesFactory.setImplementation(saleImplementation.address);
+
     await SalesFactory.deploySale();
     const AvalaunchSaleFactory = await ethers.getContractFactory("AvalaunchSale");
     AvalaunchSale = AvalaunchSaleFactory.attach(await SalesFactory.allSales(0));
