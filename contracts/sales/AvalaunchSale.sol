@@ -8,8 +8,9 @@ import "../interfaces/IERC20Metadata.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/proxy/Initializable.sol";
 
-contract AvalaunchSale is ReentrancyGuard {
+contract AvalaunchSale is Initializable, ReentrancyGuard {
     using ECDSA for bytes32;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -142,8 +143,11 @@ contract AvalaunchSale is ReentrancyGuard {
     );
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
 
-    // Constructor, always initialized through SalesFactory
-    constructor(address _admin, address _allocationStaking) public {
+    // Constructor replacement for upgradable contracts
+    function initialize(
+        address _admin,
+        address _allocationStaking
+    ) public initializer {
         require(_admin != address(0));
         require(_allocationStaking != address(0));
         admin = IAdmin(_admin);
