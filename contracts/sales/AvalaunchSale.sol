@@ -382,27 +382,31 @@ contract AvalaunchSale is ReentrancyGuard {
     /// @dev        This will be updated with an oracle during the sale every N minutes, so the users will always
     ///             pay initialy set $ value of the token. This is to reduce reliance on the AVAX volatility.
     function updateTokenPriceInAVAX(uint256 price) external onlyAdmin {
-        // Require that function params are properly set
-        require(
-            updateTokenPriceInAVAXTimeLimit != 0 && updateTokenPriceInAVAXPercentageThreshold != 0,
-            "Function params not set."
-        );
+        // Zero check on the first set
+        if(sale.tokenPriceInAVAX != 0) {
+            // Require that function params are properly set
+            require(
+                updateTokenPriceInAVAXTimeLimit != 0 && updateTokenPriceInAVAXPercentageThreshold != 0,
+                "Function params not set."
+            );
 
-        // Require that 'N' time has passed since last call
-        require(
-            updateTokenPriceInAVAXLastCallTimestamp.add(updateTokenPriceInAVAXTimeLimit) < block.timestamp,
-            "Not enough time passed since last call."
-        );
+            // Require that the price does not differ more than 'N%' from previous one
+            uint256 maxPriceChange = sale.tokenPriceInAVAX.mul(updateTokenPriceInAVAXPercentageThreshold).div(100);
+            require(
+                price < sale.tokenPriceInAVAX.add(maxPriceChange) &&
+                price > sale.tokenPriceInAVAX.sub(maxPriceChange),
+                "Price differs too much from the previous."
+            );
+
+            // Require that 'N' time has passed since last call
+            require(
+                updateTokenPriceInAVAXLastCallTimestamp.add(updateTokenPriceInAVAXTimeLimit) < block.timestamp,
+                "Not enough time passed since last call."
+            );
+        }
+
         // Set latest call time to current timestamp
         updateTokenPriceInAVAXLastCallTimestamp = block.timestamp;
-
-        // Require that the price does not differ more than 'N%' from previous one
-        uint256 maxPriceChange = sale.tokenPriceInAVAX.mul(updateTokenPriceInAVAXPercentageThreshold).div(100);
-        require(
-            price < sale.tokenPriceInAVAX.add(maxPriceChange) &&
-            price > sale.tokenPriceInAVAX.sub(maxPriceChange),
-            "Price differs too much from the previous."
-        );
 
         // Allowing oracle to run and change the sale value
         sale.tokenPriceInAVAX = price;
