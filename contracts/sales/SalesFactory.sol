@@ -2,7 +2,7 @@
 pragma solidity 0.6.12;
 
 import "../interfaces/IAdmin.sol";
-import "./AvalaunchSale.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract SalesFactory {
 
@@ -13,18 +13,19 @@ contract SalesFactory {
 
     // Official sale creation flag
     mapping (address => bool) public isSaleCreatedThroughFactory;
-
     // Mapping sale owner to sale address
     mapping(address => address) public saleOwnerToSale;
     // Mapping token to sale address
     mapping(address => address) public tokenToSale;
-
     // Expose so query can be possible only by position as well
     address [] public allSales;
+    // Latest sale implementation contract address
+    address implementation;
 
     // Events
     event SaleDeployed(address saleContract);
     event SaleOwnerAndTokenSetInFactory(address sale, address saleOwner, address saleToken);
+    event ImplementationChanged(address implementation);
 
     // Restricting calls only to sale admin
     modifier onlyAdmin {
@@ -48,16 +49,20 @@ contract SalesFactory {
     external
     onlyAdmin
     {
-        // Deploy sale
-        AvalaunchSale sale = new AvalaunchSale(address(admin), allocationStaking);
+        // Deploy sale clone
+        address sale = Clones.clone(implementation);
+
+        // Initialize sale
+        (bool success, ) = sale.call(abi.encodeWithSignature("initialize(address,address)", address(admin), allocationStaking));
+        require(success, "Initialization failed.");
 
         // Mark sale as created through official factory
-        isSaleCreatedThroughFactory[address(sale)] = true;
+        isSaleCreatedThroughFactory[sale] = true;
         // Add sale to allSales
-        allSales.push(address(sale));
+        allSales.push(sale);
 
         // Emit relevant event
-        emit SaleDeployed(address(sale));
+        emit SaleDeployed(sale);
     }
 
     /// @notice     Function to return number of pools deployed
@@ -74,11 +79,10 @@ contract SalesFactory {
         return address(0);
     }
 
-
     /// @notice     Function to get all sales between indexes
     function getAllSales(uint startIndex, uint endIndex) external view returns (address[] memory) {
         // Require valid index input
-        require(endIndex > startIndex, "Bad input");
+        require(endIndex > startIndex, "Invalid index range.");
 
         // Create new array for sale addresses
         address[] memory sales = new address[](endIndex - startIndex);
@@ -93,4 +97,13 @@ contract SalesFactory {
         return sales;
     }
 
+    /// @notice     Function to set the latest sale implementation contract
+    function setImplementation(address _implementation) external onlyAdmin {
+        require(
+            _implementation != implementation,
+            "Given implementation is same as current."
+        );
+        implementation = _implementation;
+        emit ImplementationChanged(implementation);
+    }
 }
