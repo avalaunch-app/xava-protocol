@@ -123,7 +123,7 @@ describe("SalesFactory", function() {
         // When
         const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
         await AvalaunchSale.setSaleParams(XavaToken.address, deployer.address, 10, 10, blockTimestamp + 100,
-            blockTimestamp + 10, PORTION_VESTING_PRECISION, 1, REGISTRATION_DEPOSIT_AVAX);
+             PORTION_VESTING_PRECISION, 1, REGISTRATION_DEPOSIT_AVAX);
 
         // Deprecated checks
         // expect(await SalesFactory.saleOwnerToSale(deployer.address)).to.equal(AvalaunchSale.address);
