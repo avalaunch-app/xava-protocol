@@ -2,7 +2,6 @@
 pragma solidity 0.6.12;
 
 import "../interfaces/IAdmin.sol";
-import "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract SalesFactory {
 
@@ -50,7 +49,21 @@ contract SalesFactory {
     onlyAdmin
     {
         // Deploy sale clone
-        address sale = Clones.clone(implementation);
+        address sale;
+        // Inline assembly works only with local vars
+        address imp = implementation;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
+            mstore(add(ptr, 0x14), shl(0x60, imp))
+            mstore(add(ptr, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
+            sale := create(0, ptr, 0x37)
+        }
+
+        // Require that sale was created
+        require(sale != address(0), "Sale creation failed");
 
         // Initialize sale
         (bool success, ) = sale.call(abi.encodeWithSignature("initialize(address,address)", address(admin), allocationStaking));
