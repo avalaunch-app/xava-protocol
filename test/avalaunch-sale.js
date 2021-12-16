@@ -17,8 +17,9 @@ describe("AvalaunchSale", function() {
   let vestingPortionsUnlockTime = [];
   let vestingPercentPerPortion = [];
 
-  let decimals;
-  let multiplier;
+  const DECIMALS = 18; // Working with non-18 decimals
+  const MULTIPLIER = (10 ** DECIMALS).toString();
+  const REV = (10 ** (18-DECIMALS)).toString();
 
   const REWARDS_PER_SECOND = ethers.utils.parseUnits("0.1");
   const DEPOSIT_FEE_PERCENT = 5;
@@ -27,7 +28,7 @@ describe("AvalaunchSale", function() {
   const NUMBER_1E36 = "1000000000000000000000000000000000000";
   const NUMBER_1E18 = "1000000000000000000";
 
-  const TOKEN_PRICE_IN_AVAX = ethers.utils.parseEther('1');
+  const TOKEN_PRICE_IN_AVAX = (10 ** DECIMALS).toString();
   const AMOUNT_OF_TOKENS_TO_SELL = 1000;
   const SALE_END_DELTA = 100;
   const TOKENS_UNLOCK_TIME_DELTA = 150;
@@ -36,13 +37,13 @@ describe("AvalaunchSale", function() {
   const REGISTRATION_DEPOSIT_AVAX = 1;
   const PORTION_VESTING_PRECISION = 100;
   const ROUNDS_START_DELTAS = [50, 70, 90];
-  const ROUNDS_MAX_PARTICIPATIONS = [100, 120, 1000];
+  const ROUNDS_MAX_PARTICIPATIONS = [100 * REV, 120 * REV, 1000 * REV];
   const FIRST_ROUND = 1;
   const MIDDLE_ROUND = 2;
   const LAST_ROUND = 3;
-  const PARTICIPATION_AMOUNT = 100;
+  const PARTICIPATION_AMOUNT = 100 * REV;
   const PARTICIPATION_ROUND = 1;
-  const PARTICIPATION_VALUE = 80;
+  const PARTICIPATION_VALUE = 80 * REV;
   const AMOUNT_OF_XAVA_TO_BURN = 0;
 
   const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -191,10 +192,7 @@ describe("AvalaunchSale", function() {
     cedric = accounts[3];
 
     const XavaTokenFactory = await ethers.getContractFactory("XavaToken");
-    decimals = 18; // Try with 6
-    XavaToken = await XavaTokenFactory.deploy("Xava", "XAVA", ethers.utils.parseUnits("10000000000000000000000000"), decimals);
-    multiplier = 10 ** decimals;
-    multiplier = multiplier.toString();
+    XavaToken = await XavaTokenFactory.deploy("Xava", "XAVA", ethers.utils.parseUnits("10000000000000000000000000"), DECIMALS);
 
     const AdminFactory = await ethers.getContractFactory("Admin");
     Admin = await AdminFactory.deploy([deployer.address, alice.address, bob.address]);
@@ -1234,10 +1232,10 @@ describe("AvalaunchSale", function() {
         const isParticipated = await AvalaunchSale.isParticipated(deployer.address);
         const participation = await AvalaunchSale.getParticipation(deployer.address);
 
-        expect(sale.totalTokensSold).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * multiplier));
+        expect(sale.totalTokensSold).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
         expect(sale.totalAVAXRaised).to.equal(PARTICIPATION_VALUE);
         expect(isParticipated).to.be.true;
-        expect(participation[0]).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * multiplier));
+        expect(participation[0]).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
         expect(participation[3]).to.equal(PARTICIPATION_ROUND);
         // expect(participation.isWithdrawn).to.be.false;
 
@@ -1268,14 +1266,14 @@ describe("AvalaunchSale", function() {
         const participationDeployer = await AvalaunchSale.userToParticipation(deployer.address);
         const participationAlice = await AvalaunchSale.userToParticipation(alice.address);
 
-        expect(sale.totalTokensSold).to.equal(Math.floor(2 * PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * multiplier));
+        expect(sale.totalTokensSold).to.equal(Math.floor(2 * PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
         expect(sale.totalAVAXRaised).to.equal(BigNumber.from(PARTICIPATION_VALUE).mul(2));
         expect(isParticipatedDeployer).to.be.true;
         expect(isParticipatedAlice).to.be.true;
-        expect(participationDeployer.amountBought).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * multiplier));
+        expect(participationDeployer.amountBought).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
         expect(participationDeployer.roundId).to.equal(PARTICIPATION_ROUND);
         // expect(participationDeployer.isWithdrawn).to.be.false;
-        expect(participationAlice.amountBought).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * multiplier));
+        expect(participationAlice.amountBought).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
         expect(participationAlice.roundId).to.equal(PARTICIPATION_ROUND);
         // expect(participationAlice.isWithdrawn).to.be.false;
       });
@@ -1418,7 +1416,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(participate()).to.emit(AvalaunchSale, "TokensSold").withArgs(deployer.address, Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * multiplier));
+        await expect(participate()).to.emit(AvalaunchSale, "TokensSold").withArgs(deployer.address, Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
       });
 
       it("Should not participate without registering for the round", async function() {
@@ -1507,7 +1505,7 @@ describe("AvalaunchSale", function() {
         // Then
         const currentBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
         // console.log(parseInt(currentBalance))
-        const withdrawAmount = ((PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX) * 5) / PORTION_VESTING_PRECISION * multiplier;
+        const withdrawAmount = ((PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX) * 5) / PORTION_VESTING_PRECISION * MULTIPLIER;
         // console.log(withdrawAmount)
         expect(currentBalance).to.equal(previousBalance.add(Math.floor(withdrawAmount)));
       });
@@ -1547,7 +1545,7 @@ describe("AvalaunchSale", function() {
         // Then
         const currentBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
         // console.log(parseInt(currentBalance))
-        const withdrawAmount = ((PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX) * 5) / PORTION_VESTING_PRECISION * multiplier;
+        const withdrawAmount = ((PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX) * 5) / PORTION_VESTING_PRECISION * MULTIPLIER;
         // console.log(withdrawAmount)
         expect(currentBalance).to.equal(previousBalance.add(Math.floor(withdrawAmount)));
       });
@@ -1642,7 +1640,7 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // Then
-        await expect(AvalaunchSale.withdrawTokens(0)).to.emit(AvalaunchSale, "TokensWithdrawn").withArgs(deployer.address, Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * 5 / PORTION_VESTING_PRECISION * multiplier));
+        await expect(AvalaunchSale.withdrawTokens(0)).to.emit(AvalaunchSale, "TokensWithdrawn").withArgs(deployer.address, Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * 5 / PORTION_VESTING_PRECISION * MULTIPLIER));
       });
 
       it("Should shift westing unclock times", async function () {
@@ -1811,7 +1809,7 @@ describe("AvalaunchSale", function() {
       //TODO:
       xit("Should not crash if leftover is 0", async function() {
         // Given
-        await runFullSetup({amountOfTokensToSell: Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * multiplier)});
+        await runFullSetup({amountOfTokensToSell: Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER)});
 
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
@@ -1841,13 +1839,13 @@ describe("AvalaunchSale", function() {
         expect(currentBalance).to.equal(previousBalance.add(PARTICIPATION_VALUE));
         expect(currentTokenBalance).to.equal(previousTokenBalance);
         expect(contractBalance).to.equal(0);
-        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * multiplier);
+        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER);
       });
 
       //TODO:
       xit("Should not crash if leftover is 0 and burn is requested", async function() {
         // Given
-        await runFullSetup({amountOfTokensToSell: Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * multiplier)});
+        await runFullSetup({amountOfTokensToSell: Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER)});
 
         await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
         await ethers.provider.send("evm_mine");
@@ -1878,7 +1876,7 @@ describe("AvalaunchSale", function() {
         expect(currentBalance).to.equal(previousBalance.add(PARTICIPATION_VALUE));
         expect(currentTokenBalance).to.equal(previousTokenBalance);
         expect(contractBalance).to.equal(0);
-        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * multiplier);
+        expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER);
         expect(burnedTokenBalance).to.equal(0);
       });
 
