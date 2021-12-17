@@ -8,8 +8,9 @@ import "../interfaces/IERC20Metadata.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/proxy/Initializable.sol";
 
-contract AvalaunchSale is ReentrancyGuard{
+contract AvalaunchSale is Initializable, ReentrancyGuard {
     using ECDSA for bytes32;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -44,8 +45,6 @@ contract AvalaunchSale is ReentrancyGuard{
         uint256 totalAVAXRaised;
         // Sale end time
         uint256 saleEnd;
-        // When tokens can be withdrawn
-        uint256 tokensUnlockTime;
     }
 
     // Participation structure
@@ -99,6 +98,12 @@ contract AvalaunchSale is ReentrancyGuard{
     uint256 public registrationDepositAVAX;
     // Accounting total AVAX collected, after sale admin can withdraw this
     uint256 public registrationFees;
+    // Price update percent threshold
+    uint8 updateTokenPriceInAVAXPercentageThreshold;
+    // Price update time limit
+    uint256 updateTokenPriceInAVAXTimeLimit;
+    // Token price in AVAX latest update timestamp
+    uint256 updateTokenPriceInAVAXLastCallTimestamp;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner() {
@@ -106,6 +111,7 @@ contract AvalaunchSale is ReentrancyGuard{
         _;
     }
 
+    // Restricting calls only to sale admin
     modifier onlyAdmin() {
         require(
             admin.isAdmin(msg.sender),
@@ -124,8 +130,7 @@ contract AvalaunchSale is ReentrancyGuard{
         address saleOwner,
         uint256 tokenPriceInAVAX,
         uint256 amountOfTokensToSell,
-        uint256 saleEnd,
-        uint256 tokensUnlockTime
+        uint256 saleEnd
     );
     event RegistrationTimeSet(
         uint256 registrationTimeStarts,
@@ -138,8 +143,11 @@ contract AvalaunchSale is ReentrancyGuard{
     );
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
 
-    // Constructor, always initialized through SalesFactory
-    constructor(address _admin, address _allocationStaking) public {
+    // Constructor replacement for upgradable contracts
+    function initialize(
+        address _admin,
+        address _allocationStaking
+    ) public initializer {
         require(_admin != address(0));
         require(_allocationStaking != address(0));
         admin = IAdmin(_admin);
@@ -166,6 +174,7 @@ contract AvalaunchSale is ReentrancyGuard{
 
         uint256 sum;
 
+        // Set vesting portions percents and unlock times
         for (uint256 i = 0; i < _unlockingTimes.length; i++) {
             vestingPortionsUnlockTime.push(_unlockingTimes[i]);
             vestingPercentPerPortion.push(_percents[i]);
@@ -175,6 +184,7 @@ contract AvalaunchSale is ReentrancyGuard{
         require(sum == portionVestingPrecision, "Percent distribution issue.");
     }
 
+    /// @notice     Admin function to shift vesting unlocking times
     function shiftVestingUnlockingTimes(uint256 timeToShift)
         external
         onlyAdmin
@@ -187,6 +197,7 @@ contract AvalaunchSale is ReentrancyGuard{
         // Time can be shifted only once.
         maxVestingTimeShift = 0;
 
+        // Shift the unlock time
         for (uint256 i = 0; i < vestingPortionsUnlockTime.length; i++) {
             vestingPortionsUnlockTime[i] = vestingPortionsUnlockTime[i].add(
                 timeToShift
@@ -201,7 +212,6 @@ contract AvalaunchSale is ReentrancyGuard{
         uint256 _tokenPriceInAVAX,
         uint256 _amountOfTokensToSell,
         uint256 _saleEnd,
-        uint256 _tokensUnlockTime,
         uint256 _portionVestingPrecision,
         uint256 _stakingRoundId,
         uint256 _registrationDepositAVAX
@@ -214,8 +224,7 @@ contract AvalaunchSale is ReentrancyGuard{
         require(
             _tokenPriceInAVAX != 0 &&
                 _amountOfTokensToSell != 0 &&
-                _saleEnd > block.timestamp &&
-                _tokensUnlockTime > block.timestamp,
+                _saleEnd > block.timestamp,
             "setSaleParams: Bad input"
         );
         require(_portionVestingPrecision >= 100, "Should be at least 100");
@@ -228,7 +237,6 @@ contract AvalaunchSale is ReentrancyGuard{
         sale.tokenPriceInAVAX = _tokenPriceInAVAX;
         sale.amountOfTokensToSell = _amountOfTokensToSell;
         sale.saleEnd = _saleEnd;
-        sale.tokensUnlockTime = _tokensUnlockTime;
 
         // Deposit in AVAX, sent during the registration
         registrationDepositAVAX = _registrationDepositAVAX;
@@ -241,8 +249,7 @@ contract AvalaunchSale is ReentrancyGuard{
             sale.saleOwner,
             sale.tokenPriceInAVAX,
             sale.amountOfTokensToSell,
-            sale.saleEnd,
-            sale.tokensUnlockTime
+            sale.saleEnd
         );
     }
 
@@ -265,6 +272,7 @@ contract AvalaunchSale is ReentrancyGuard{
         uint256 _registrationTimeStarts,
         uint256 _registrationTimeEnds
     ) external onlyAdmin {
+        // Require that the sale is created
         require(sale.isCreated);
         require(registration.registrationTimeStarts == 0);
         require(
@@ -279,6 +287,7 @@ contract AvalaunchSale is ReentrancyGuard{
             );
         }
 
+        // Set registration start and end time
         registration.registrationTimeStarts = _registrationTimeStarts;
         registration.registrationTimeEnds = _registrationTimeEnds;
 
@@ -288,6 +297,7 @@ contract AvalaunchSale is ReentrancyGuard{
         );
     }
 
+    /// @notice     Setting rounds for sale.
     function setRounds(
         uint256[] calldata startTimes,
         uint256[] calldata maxParticipations
@@ -376,7 +386,32 @@ contract AvalaunchSale is ReentrancyGuard{
     /// @dev        This will be updated with an oracle during the sale every N minutes, so the users will always
     ///             pay initialy set $ value of the token. This is to reduce reliance on the AVAX volatility.
     function updateTokenPriceInAVAX(uint256 price) external onlyAdmin {
-        require(price > 0, "Price can not be 0.");
+        // Zero check on the first set
+        if(sale.tokenPriceInAVAX != 0) {
+            // Require that function params are properly set
+            require(
+                updateTokenPriceInAVAXTimeLimit != 0 && updateTokenPriceInAVAXPercentageThreshold != 0,
+                "Function params not set."
+            );
+
+            // Require that the price does not differ more than 'N%' from previous one
+            uint256 maxPriceChange = sale.tokenPriceInAVAX.mul(updateTokenPriceInAVAXPercentageThreshold).div(100);
+            require(
+                price < sale.tokenPriceInAVAX.add(maxPriceChange) &&
+                price > sale.tokenPriceInAVAX.sub(maxPriceChange),
+                "Price differs too much from the previous."
+            );
+
+            // Require that 'N' time has passed since last call
+            require(
+                updateTokenPriceInAVAXLastCallTimestamp.add(updateTokenPriceInAVAXTimeLimit) < block.timestamp,
+                "Not enough time passed since last call."
+            );
+        }
+
+        // Set latest call time to current timestamp
+        updateTokenPriceInAVAXLastCallTimestamp = block.timestamp;
+
         // Allowing oracle to run and change the sale value
         sale.tokenPriceInAVAX = price;
         emit TokenPriceSet(price);
@@ -418,12 +453,14 @@ contract AvalaunchSale is ReentrancyGuard{
         external
         onlyAdmin
     {
+        // Require that round has not already started
         require(
             block.timestamp < roundIdToRound[roundIds[0]].startTime,
             "1st round already started."
         );
         require(rounds.length == caps.length, "Arrays length is different.");
 
+        // Set max participation per round
         for (uint256 i = 0; i < rounds.length; i++) {
             require(caps[i] > 0, "Can't set max participation to 0");
 
@@ -442,6 +479,7 @@ contract AvalaunchSale is ReentrancyGuard{
 
         sale.tokensDeposited = true;
 
+        // Perform safe transfer
         sale.token.safeTransferFrom(
             msg.sender,
             address(this),
@@ -556,10 +594,6 @@ contract AvalaunchSale is ReentrancyGuard{
 
     /// Users can claim their participation
     function withdrawTokens(uint256 portionId) external {
-        require(
-            block.timestamp >= sale.tokensUnlockTime,
-            "Tokens can not be withdrawn yet."
-        );
         require(
             portionId < vestingPercentPerPortion.length,
             "Portion id out of range."
@@ -822,7 +856,26 @@ contract AvalaunchSale is ReentrancyGuard{
         onlyAdmin
         nonReentrant
     {
+        // Safe transfer token from sale contract to beneficiary
         IERC20(token).safeTransfer(beneficiary, IERC20(token).balanceOf(address(this)));
+    }
+
+    /// @notice     Function to set params for updatePriceInAVAX function
+    function setUpdatePriceInAVAXParams(
+        uint8 _updateTokenPriceInAVAXPercentageThreshold,
+        uint256 _updateTokenPriceInAVAXTimeLimit
+    )
+        external
+        onlyAdmin
+    {
+        // Require that arguments don't equal zero
+        require(
+            _updateTokenPriceInAVAXTimeLimit != 0 && _updateTokenPriceInAVAXPercentageThreshold != 0,
+            "Cannot set zero value."
+        );
+        // Set new values
+        updateTokenPriceInAVAXPercentageThreshold = _updateTokenPriceInAVAXPercentageThreshold;
+        updateTokenPriceInAVAXTimeLimit = _updateTokenPriceInAVAXTimeLimit;
     }
 
     // Function to act as a fallback and handle receiving AVAX.

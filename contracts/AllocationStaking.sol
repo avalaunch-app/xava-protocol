@@ -129,13 +129,16 @@ contract AllocationStaking is OwnableUpgradeable {
         }
         uint256 lastRewardTimestamp = block.timestamp > startTimestamp ? block.timestamp : startTimestamp;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
-        poolInfo.push(PoolInfo({
-        lpToken: _lpToken,
-        allocPoint: _allocPoint,
-        lastRewardTimestamp: lastRewardTimestamp,
-        accERC20PerShare: 0,
-        totalDeposits: 0
-        }));
+        // Push new PoolInfo
+        poolInfo.push(
+            PoolInfo({
+                lpToken: _lpToken,
+                allocPoint: _allocPoint,
+                lastRewardTimestamp: lastRewardTimestamp,
+                accERC20PerShare: 0,
+                totalDeposits: 0
+            })
+        );
     }
 
     // Set deposit fee
@@ -174,6 +177,7 @@ contract AllocationStaking is OwnableUpgradeable {
 
         uint256 lpSupply = pool.totalDeposits;
 
+        // Compute pending ERC20s
         if (block.timestamp > pool.lastRewardTimestamp && lpSupply != 0) {
             uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
             uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
@@ -295,16 +299,21 @@ contract AllocationStaking is OwnableUpgradeable {
         // Update pool including fee for people staking
         updatePoolWithFee(_pid, depositFee);
 
+        // Transfer pending amount to user if already staking
         if (user.amount > 0) {
             uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
             erc20Transfer(msg.sender, pendingAmount);
         }
 
+        // Safe transfer lpToken from user
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+        // Add deposit to total deposits
         pool.totalDeposits = pool.totalDeposits.add(depositAmount);
-
+        // Add deposit to user's amount
         user.amount = user.amount.add(depositAmount);
+        // Compute reward debt
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
+        // Emit relevant event
         emit Deposit(msg.sender, _pid, depositAmount);
     }
 
@@ -319,8 +328,10 @@ contract AllocationStaking is OwnableUpgradeable {
         // Update pool
         updatePool(_pid);
 
+        // Compute user's pending amount
         uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
 
+        // Withdrawal fee params
         uint256 withdrawalFeeDepositAmount;
         uint256 withdrawalFeePending;
 
@@ -333,11 +344,12 @@ contract AllocationStaking is OwnableUpgradeable {
             );
         }
 
+        // Transfer pending amount to user (with fee being withdrawalFeePending)
         erc20Transfer(msg.sender, pendingAmount.sub(withdrawalFeePending));
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
 
-
+        // Transfer withdrawal amount to user (with fee being withdrawalFeeDepositAmount)
         pool.lpToken.safeTransfer(address(msg.sender), _amount.sub(withdrawalFeeDepositAmount));
         pool.totalDeposits = pool.totalDeposits.sub(_amount);
 
@@ -373,6 +385,7 @@ contract AllocationStaking is OwnableUpgradeable {
         // Update pool
         updatePool(_pid);
 
+        // Compute compounding amount
         uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
         uint256 fee = pendingAmount.mul(depositFeePercent).div(depositFeePrecision);
         uint256 amountCompounding = pendingAmount.sub(fee);
@@ -386,6 +399,7 @@ contract AllocationStaking is OwnableUpgradeable {
         user.amount = user.amount.add(amountCompounding);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
 
+        // Increase pool's total deposits
         pool.totalDeposits = pool.totalDeposits.add(amountCompounding);
         emit CompoundedEarnings(msg.sender, _pid, amountCompounding, user.amount);
     }
@@ -395,11 +409,14 @@ contract AllocationStaking is OwnableUpgradeable {
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength) <= block.timestamp,
-            "Emergency withdraw blocked during sale and cooldown period.");
-
+        require(
+            user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength) <= block.timestamp,
+            "Emergency withdraw blocked during sale and cooldown period."
+        );
+        // Perform safeTransfer
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
+        // Adapt contract states
         pool.totalDeposits = pool.totalDeposits.sub(user.amount);
         user.amount = 0;
         user.rewardDebt = 0;
@@ -463,6 +480,7 @@ contract AllocationStaking is OwnableUpgradeable {
         uint256 [] memory deposits = new uint256[](users.length);
         uint256 [] memory earnings = new uint256[](users.length);
 
+        // Get deposits and earnings for selected users
         for(uint i=0; i < users.length; i++) {
             deposits[i] = deposited(pid , users[i]);
             earnings[i] = pending(pid, users[i]);
@@ -471,6 +489,7 @@ contract AllocationStaking is OwnableUpgradeable {
         return (deposits, earnings);
     }
 
+    // Function to set the parameters for withdrawals during the cooldown period
     function setPostSaleWithdrawPenaltyPercentAndLength(
         uint256 _postSaleWithdrawPenaltyPercent,
         uint256 _postSaleWithdrawPenaltyLength,
@@ -485,10 +504,9 @@ contract AllocationStaking is OwnableUpgradeable {
             _postSaleWithdrawPenaltyPercent <= _postSaleWithdrawPenaltyPrecision
         );
 
+        // Set the params
         postSaleWithdrawPenaltyLength = _postSaleWithdrawPenaltyLength;
         postSaleWithdrawPenaltyPercent = _postSaleWithdrawPenaltyPercent;
         postSaleWithdrawPenaltyPrecision = _postSaleWithdrawPenaltyPrecision;
     }
-
-
 }
