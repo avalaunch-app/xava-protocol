@@ -14,7 +14,7 @@ const NUMBER_1E18 = "1000000000000000000";
 async function main() {
     const c = config[hre.network.name];
 
-    const saleAddress = '0x51208420EAba25b787008EE856665B2F4c5ed818';
+    const saleAddress = '0x55E960c1201Ba0E5cFe5F9cf5FF6e52758BE022e';
 
     const saleContract = await hre.ethers.getContractAt('AvalaunchSale', saleAddress);
 
