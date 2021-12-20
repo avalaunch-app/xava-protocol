@@ -3,7 +3,7 @@ const { expect } = require("chai");
 const ethUtil = require("ethereumjs-util")
 const {BigNumber} = require("ethers");
 
-describe("AvalaunchSale", function() {
+describe("AvalaunchSale Non 18 Decimals Participation ", function() {
 
     let Admin;
     let AvalaunchSale;
@@ -25,8 +25,6 @@ describe("AvalaunchSale", function() {
     const DEPOSIT_FEE_PERCENT = 5;
     const DEPOSIT_FEE_PRECISION = 100;
     const START_TIMESTAMP_DELTA = 600;
-    const NUMBER_1E36 = "1000000000000000000000000000000000000";
-    const NUMBER_1E18 = "1000000000000000000";
 
     const TOKEN_PRICE_IN_AVAX = (10 ** DECIMALS).toString();
     const AMOUNT_OF_TOKENS_TO_SELL = 1000;
@@ -155,12 +153,6 @@ describe("AvalaunchSale", function() {
     async function depositTokens() {
         await XavaToken.approve(AvalaunchSale.address, AMOUNT_OF_TOKENS_TO_SELL);
         await AvalaunchSale.depositTokens();
-    }
-
-    async function runFullSetupNoDeposit(params) {
-        await setSaleParams(params);
-        await setRegistrationTime(params);
-        await setRounds(params);
     }
 
     async function runFullSetup(params) {
