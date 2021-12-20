@@ -1385,8 +1385,7 @@ describe("AvalaunchSale", function() {
           .to.be.revertedWith("You can not participate in this round.");
       });
 
-      // TODO:
-      xit("Should not buy more than allowed", async function() {
+      it("Should not buy more than allowed", async function() {
         // Given
         await runFullSetup();
 
@@ -1702,8 +1701,7 @@ describe("AvalaunchSale", function() {
         expect(contractTokenBalance).to.equal(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX);
       });
 
-      // TODO:
-      xit("Should not withdraw twice", async function() {
+      it("Should not withdraw twice", async function() {
         // Given
         await runFullSetup();
 
