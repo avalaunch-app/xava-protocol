@@ -856,6 +856,8 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         onlyAdmin
         nonReentrant
     {
+        // Require that token address does not match with sale token
+        require(token != address(sale.token), "Cannot withdraw official sale token.");
         // Safe transfer token from sale contract to beneficiary
         IERC20(token).safeTransfer(beneficiary, IERC20(token).balanceOf(address(this)));
     }
