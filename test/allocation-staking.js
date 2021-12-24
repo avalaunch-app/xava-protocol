@@ -1,5 +1,6 @@
 const { ethers, upgrades } = require("hardhat");
 const { expect } = require("chai");
+const ethUtil = require("ethereumjs-util");
 const hre = require("hardhat");
 
 describe("AllocationStaking", function() {
@@ -29,6 +30,36 @@ describe("AllocationStaking", function() {
   const POST_SALE_WITHDRAW_PENALTY_PERCENT = 10;
   const POST_SALE_WITHDRAW_PENALTY_LENGTH = 500;
   const POST_SALE_WITHDRAW_PENALTY_PRECISION = 100;
+
+  const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+  function generateSignature(digest, privateKey) {
+    // prefix with "\x19Ethereum Signed Message:\n32"
+    // Reference: https://github.com/OpenZeppelin/openzeppelin-contracts/issues/890
+    const prefixedHash = ethUtil.hashPersonalMessage(ethUtil.toBuffer(digest));
+
+    // sign message
+    const {v, r, s} = ethUtil.ecsign(prefixedHash, Buffer.from(privateKey, 'hex'))
+
+    // generate signature by concatenating r(32), s(32), v(1) in this order
+    // Reference: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/76fe1548aee183dfcc395364f0745fe153a56141/contracts/ECRecovery.sol#L39-L43
+    const vb = Buffer.from([v]);
+    const signature = Buffer.concat([r, s, vb]);
+
+    return signature;
+  }
+
+  function signWithdrawal(user, pid, amount, nonce) {
+    // compute keccak256(abi.encodePacked(user, roundId, address(this)))
+    const digest = ethers.utils.keccak256(
+        ethers.utils.solidityPack(
+            [ 'address', 'uint256', 'uint256', 'uint256'],
+            [user, pid, amount, nonce]
+        )
+    );
+
+    return generateSignature(digest, DEPLOYER_PRIVATE_KEY);
+  }
 
   async function getCurrentBlockTimestamp() {
     return (await ethers.provider.getBlock('latest')).timestamp;
@@ -110,6 +141,8 @@ describe("AllocationStaking", function() {
 
     AllocationStaking = await AllocationStakingRewardsFactory.deploy();
     await AllocationStaking.initialize(XavaToken.address, REWARDS_PER_SECOND, startTimestamp, SalesFactory.address, DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
+
+    await AllocationStaking.setAdmin(Admin.address);
 
     await AllocationStaking.setDepositFee(DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
@@ -1170,8 +1203,15 @@ describe("AllocationStaking", function() {
         const poolBefore = await AllocationStaking.poolInfo(0);
         const balanceBefore = await XavaLP1.balanceOf(deployer.address);
 
+        const amount = takeFeeFromDeposit(DEFAULT_DEPOSIT);
+
         // When
-        await AllocationStaking.withdraw(0, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        await AllocationStaking.withdraw(
+            0,
+            amount,
+            1,
+            signWithdrawal(deployer.address, 0, amount, 1)
+        );
 
         // Then
         const poolAfter = await AllocationStaking.poolInfo(0)
@@ -1181,13 +1221,70 @@ describe("AllocationStaking", function() {
         expect(poolAfter.totalDeposits).to.equal(0);
       });
 
+      it("Should now withdraw user's deposit, with used nonce", async function() {
+        // Given
+        await baseSetupTwoPools();
+        const poolBefore = await AllocationStaking.poolInfo(0);
+        const balanceBefore = await XavaLP1.balanceOf(deployer.address);
+
+        const amount = takeFeeFromDeposit(DEFAULT_DEPOSIT);
+
+        // When
+        await AllocationStaking.withdraw(
+            0,
+            amount,
+            1,
+            signWithdrawal(deployer.address, 0, amount, 1)
+        );
+
+        // When
+        await expect(AllocationStaking.withdraw(
+            0,
+            amount,
+            1,
+            signWithdrawal(deployer.address, 0, amount, 1)
+        )).to.be.revertedWith("Nonce already used.");
+      });
+
+      it("Should now withdraw user's deposit, with used signature", async function() {
+        // Given
+        await baseSetupTwoPools();
+        const poolBefore = await AllocationStaking.poolInfo(0);
+        const balanceBefore = await XavaLP1.balanceOf(deployer.address);
+
+        const amount = takeFeeFromDeposit(DEFAULT_DEPOSIT);
+
+        // When
+        await AllocationStaking.withdraw(
+            0,
+            amount,
+            1,
+            signWithdrawal(deployer.address, 0, amount, 1)
+        );
+
+        // When
+        await expect(AllocationStaking.withdraw(
+            0,
+            amount,
+            2,
+            signWithdrawal(deployer.address, 0, amount, 1)
+        )).to.be.revertedWith('Signature already used.');
+      });
+
       it("Should withdraw part of user's deposit", async function() {
         // Given
         await baseSetupTwoPools();
         const balanceBefore = await XavaLP1.balanceOf(deployer.address);
 
         // When
-        await AllocationStaking.withdraw(0, takeFeeFromDeposit(DEFAULT_DEPOSIT) / 2);
+        const amount = takeFeeFromDeposit(DEFAULT_DEPOSIT) / 2;
+
+        await AllocationStaking.withdraw(
+            0,
+            amount,
+            1,
+            signWithdrawal(deployer.address, 0, amount, 1)
+        );
 
         // Then
         const balanceAfter = await XavaLP1.balanceOf(deployer.address);
@@ -1198,8 +1295,15 @@ describe("AllocationStaking", function() {
         // Given
         await baseSetupTwoPools();
 
+        const amount = takeFeeFromDeposit(DEFAULT_DEPOSIT) * 2;
+
         // Then
-        await expect(AllocationStaking.withdraw(0, takeFeeFromDeposit(DEFAULT_DEPOSIT) * 2)).to.be.revertedWith("withdraw: can't withdraw more than deposit");
+        await expect(AllocationStaking.withdraw(
+            0,
+            amount,
+            1,
+            signWithdrawal(deployer.address, 0, amount, 1)
+        )).to.be.revertedWith("withdraw: can't withdraw more than deposit");
       });
 
       it("Should transfer user's ERC20 share", async function() {
@@ -1216,7 +1320,14 @@ describe("AllocationStaking", function() {
         const pendingBefore = await AllocationStaking.pending(0, deployer.address);
         const balanceERC20Before = await XavaToken.balanceOf(deployer.address);
 
-        await AllocationStaking.withdraw(0, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        const amount = takeFeeFromDeposit(DEFAULT_DEPOSIT);
+
+        await AllocationStaking.withdraw(
+            0,
+            amount,
+            1,
+            signWithdrawal(deployer.address, 0, amount, 1)
+        );
 
         // Then
         const pendingAfter = await AllocationStaking.pending(0, deployer.address);
@@ -1231,9 +1342,15 @@ describe("AllocationStaking", function() {
         // Given
         await baseSetupTwoPools();
 
+        const amount = takeFeeFromDeposit(DEFAULT_DEPOSIT);
+
         // Then
-        await expect(AllocationStaking.withdraw(0, takeFeeFromDeposit(DEFAULT_DEPOSIT)))
-          .to.emit(AllocationStaking, "Withdraw").withArgs(deployer.address, 0, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+        await expect(AllocationStaking.withdraw(
+            0,
+            amount,
+            1,
+            signWithdrawal(deployer.address, 0, amount, 1)
+        )).to.emit(AllocationStaking, "Withdraw").withArgs(deployer.address, 0, takeFeeFromDeposit(DEFAULT_DEPOSIT));
       });
 
       it("Should get withdraw fee", async function () {
