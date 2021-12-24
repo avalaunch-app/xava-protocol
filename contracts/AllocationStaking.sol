@@ -5,13 +5,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "./interfaces/ISalesFactory.sol";
-
+import "./interfaces/IAdmin.sol";
 
 contract AllocationStaking is OwnableUpgradeable {
 
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using ECDSA for bytes32;
 
     // Info of each user.
     struct UserInfo {
@@ -64,6 +66,13 @@ contract AllocationStaking is OwnableUpgradeable {
     uint256 public postSaleWithdrawPenaltyPercent;
     // Post sale withdraw penalty precision
     uint256 public postSaleWithdrawPenaltyPrecision;
+    // Nonce usage mapping
+    mapping (bytes32 => bool) public isNonceUsed;
+    // Signature usage mapping
+    mapping (bytes => bool) public isSignatureUsed;
+    // Admin contract
+    IAdmin public admin;
+
     // Events
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -317,8 +326,41 @@ contract AllocationStaking is OwnableUpgradeable {
         emit Deposit(msg.sender, _pid, depositAmount);
     }
 
+    function verifySignature(
+        string memory functionName,
+        uint256 nonce,
+        bytes32 hash,
+        bytes memory signature
+    ) internal returns (bool) {
+
+        // generate nonceHash and check if nonce has been used
+        bytes32 nonceHash = keccak256(abi.encodePacked(functionName, nonce));
+        require(!isNonceUsed[nonceHash], "Nonce already used.");
+        // specify that the nonce is used
+        isNonceUsed[nonceHash] = true;
+
+        // require that signature is not already used
+        require(!isSignatureUsed[signature], "Signature already used.");
+        // specify that signature is used
+        isSignatureUsed[signature] = true;
+
+        return admin.isAdmin(hash.recover(signature));
+    }
+
     // Withdraw LP tokens from Farm.
-    function withdraw(uint256 _pid, uint256 _amount) public {
+    function withdraw(uint256 _pid, uint256 _amount, uint256 nonce, bytes memory signature) public {
+
+        // generate hash
+        bytes32 hash = keccak256(
+            abi.encodePacked(msg.sender, _pid, _amount, nonce)
+        ).toEthSignedMessageHash();
+
+        // validate signature
+        require(
+            verifySignature("withdraw", nonce, hash, signature),
+            "Invalid signature."
+        );
+
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
@@ -508,5 +550,11 @@ contract AllocationStaking is OwnableUpgradeable {
         postSaleWithdrawPenaltyLength = _postSaleWithdrawPenaltyLength;
         postSaleWithdrawPenaltyPercent = _postSaleWithdrawPenaltyPercent;
         postSaleWithdrawPenaltyPrecision = _postSaleWithdrawPenaltyPrecision;
+    }
+
+	// Function to set admin contract by owner
+    function setAdmin(address _admin) external onlyOwner {
+        require(_admin != address(0), "Cannot set zero address as admin.");
+        admin = IAdmin(_admin);
     }
 }
