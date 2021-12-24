@@ -164,7 +164,7 @@ describe("AvalaunchSale Non 18 Decimals Participation ", function() {
     }
 
     async function setUpdatePriceInAVAXParams() {
-        await AvalaunchSale.setUpdatePriceInAVAXParams(30, 500);
+        await AvalaunchSale.setUpdateTokenPriceInAVAXParams(30, 500);
     }
 
     async function registerForSale(params) {

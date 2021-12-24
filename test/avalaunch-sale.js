@@ -173,7 +173,7 @@ describe("AvalaunchSale", function() {
   }
 
   async function setUpdatePriceInAVAXParams() {
-    await AvalaunchSale.setUpdatePriceInAVAXParams(30, 500);
+    await AvalaunchSale.setUpdateTokenPriceInAVAXParams(30, 500);
   }
 
   async function registerForSale(params) {
@@ -372,10 +372,14 @@ describe("AvalaunchSale", function() {
           .withArgs(registrationTimeStarts, registrationTimeEnds);
       });
 
-      it("Should not set registration times twice", async function() {
+      it("Should not set registration times when gate is closed", async function() {
         // Given
         await setSaleParams();
-        await setRegistrationTime()
+        await setRegistrationTime();
+        await depositTokens();
+        await setUpdatePriceInAVAXParams();
+
+        await AvalaunchSale.closeGate();
 
         // Then
         await expect(setRegistrationTime()).to.be.reverted;
@@ -817,14 +821,16 @@ describe("AvalaunchSale", function() {
         await expect(AvalaunchSale.depositTokens()).to.be.revertedWith("OnlySaleOwner:: Restricted");
       });
 
-      it("Should not deposit tokens twice", async function() {
+      it("Should not deposit tokens when gate is closed", async function() {
         // Given
         await runFullSetupNoDeposit();
         await XavaToken.approve(AvalaunchSale.address, AMOUNT_OF_TOKENS_TO_SELL);
         await AvalaunchSale.depositTokens();
+        await setUpdatePriceInAVAXParams();
 
+        await AvalaunchSale.closeGate();
         // Then
-        await expect(AvalaunchSale.depositTokens()).to.be.revertedWith("Deposit can be done only once");
+        await expect(AvalaunchSale.depositTokens()).to.be.revertedWith("Setter gate is closed.");
       });
 
       // Deprecated
@@ -1740,7 +1746,7 @@ describe("AvalaunchSale", function() {
         const previousTokenBalance = await XavaToken.balanceOf(deployer.address);
 
         const sale = await AvalaunchSale.sale();
-        console.log(parseInt(sale.amountOfTokensToSell), parseInt(sale.totalTokensSold));
+        // console.log(parseInt(sale.amountOfTokensToSell), parseInt(sale.totalTokensSold));
 
         // When
         await AvalaunchSale.withdrawEarningsAndLeftover();
@@ -1779,7 +1785,7 @@ describe("AvalaunchSale", function() {
         const previousTokenBalance = await XavaToken.balanceOf(deployer.address);
 
         const sale = await AvalaunchSale.sale();
-        console.log(parseInt(sale.amountOfTokensToSell), parseInt(sale.totalTokensSold));
+        // console.log(parseInt(sale.amountOfTokensToSell), parseInt(sale.totalTokensSold));
 
         // When
         await AvalaunchSale.withdrawEarnings();
