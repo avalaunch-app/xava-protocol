@@ -104,6 +104,8 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     uint256 updateTokenPriceInAVAXTimeLimit;
     // Token price in AVAX latest update timestamp
     uint256 updateTokenPriceInAVAXLastCallTimestamp;
+    // Sale setter gate flag
+    bool public gateClosed;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner() {
@@ -117,6 +119,12 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
             admin.isAdmin(msg.sender),
             "Only admin can call this function."
         );
+        _;
+    }
+
+    // Restricting setter calls after gate closing
+    modifier onlyIfGateOpen() {
+        require(!gateClosed, "Setter gate is closed.");
         _;
     }
 
@@ -142,6 +150,7 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         uint256 maxParticipation
     );
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
+    event GateClosed(uint256 time);
 
     // Constructor replacement for upgradable contracts
     function initialize(
@@ -160,7 +169,10 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         uint256[] memory _unlockingTimes,
         uint256[] memory _percents,
         uint256 _maxVestingTimeShift
-    ) external onlyAdmin {
+    )
+        external
+        onlyAdmin
+    {
         require(
             vestingPercentPerPortion.length == 0 &&
             vestingPortionsUnlockTime.length == 0
@@ -215,7 +227,10 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         uint256 _portionVestingPrecision,
         uint256 _stakingRoundId,
         uint256 _registrationDepositAVAX
-    ) external onlyAdmin {
+    )
+        external
+        onlyAdmin
+    {
         require(!sale.isCreated, "setSaleParams: Sale is already created.");
         require(
             _saleOwner != address(0),
@@ -259,10 +274,10 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     function setSaleToken(
         address saleToken
     )
-    external
-    onlyAdmin
+        external
+        onlyAdmin
+        onlyIfGateOpen
     {
-        require(address(sale.token) == address(0));
         sale.token = IERC20(saleToken);
     }
 
@@ -271,10 +286,13 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     function setRegistrationTime(
         uint256 _registrationTimeStarts,
         uint256 _registrationTimeEnds
-    ) external onlyAdmin {
+    )
+        external
+        onlyAdmin
+        onlyIfGateOpen
+    {
         // Require that the sale is created
         require(sale.isCreated);
-        require(registration.registrationTimeStarts == 0);
         require(
             _registrationTimeStarts >= block.timestamp &&
                 _registrationTimeEnds > _registrationTimeStarts
@@ -301,7 +319,10 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     function setRounds(
         uint256[] calldata startTimes,
         uint256[] calldata maxParticipations
-    ) external onlyAdmin {
+    )
+        external
+        onlyAdmin
+    {
         require(sale.isCreated);
         require(
             startTimes.length == maxParticipations.length,
@@ -472,11 +493,11 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     }
 
     // Function for owner to deposit tokens, can be called only once.
-    function depositTokens() external onlySaleOwner {
-        require(
-            !sale.tokensDeposited, "Deposit can be done only once"
-        );
-
+    function depositTokens()
+        external
+        onlySaleOwner
+        onlyIfGateOpen
+    {
         sale.tokensDeposited = true;
 
         // Perform safe transfer
@@ -863,12 +884,13 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     }
 
     /// @notice     Function to set params for updatePriceInAVAX function
-    function setUpdatePriceInAVAXParams(
+    function setUpdateTokenPriceInAVAXParams(
         uint8 _updateTokenPriceInAVAXPercentageThreshold,
         uint256 _updateTokenPriceInAVAXTimeLimit
     )
         external
         onlyAdmin
+        onlyIfGateOpen
     {
         // Require that arguments don't equal zero
         require(
@@ -878,6 +900,30 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         // Set new values
         updateTokenPriceInAVAXPercentageThreshold = _updateTokenPriceInAVAXPercentageThreshold;
         updateTokenPriceInAVAXTimeLimit = _updateTokenPriceInAVAXTimeLimit;
+    }
+
+    /// @notice     Function close setter gate after all params are set
+    function closeGate() external onlyAdmin {
+        // Require that sale is created
+        require(sale.isCreated, "closeGate: Sale not created.");
+        // Require that sale token is set
+        require(address(sale.token) != address(0), "closeGate: Token not set.");
+        // Require that tokens were deposited
+        require(sale.tokensDeposited, "closeGate: Tokens not deposited.");
+        // Require that token price updating params are set
+        require(
+            updateTokenPriceInAVAXPercentageThreshold != 0 && updateTokenPriceInAVAXTimeLimit != 0,
+            "closeGate: Params for updateTokenPriceInAvax not set."
+        );
+        // Require that registration times are set
+        require(
+            registration.registrationTimeStarts != 0 && registration.registrationTimeEnds != 0,
+            "closeGate: Registration params not set."
+        );
+
+        // Close the gate
+        gateClosed = true;
+        emit GateClosed(block.timestamp);
     }
 
     // Function to act as a fallback and handle receiving AVAX.
