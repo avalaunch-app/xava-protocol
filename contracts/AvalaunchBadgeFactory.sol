@@ -12,7 +12,7 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	// Contract level uri
 	string private contractURI;
 	// Store id of latest badge created
-	uint256 public lastCreatedBadgeId;
+	uint256 private lastCreatedBadgeId;
 	// Mapping badge id to tradeability
 	mapping (uint256 => bool) private badgeIdToTradeability;
 	// Mapping badge id to multiplier
@@ -98,27 +98,30 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	function createBadges(
 		uint256[] memory badgeIds,
 		uint8[] memory multipliers,
-		bool[] memory tradeability,
-		uint256 startIndex,
-		uint256 endIndex
+		bool[] memory tradeability
 	)
 	external
 	onlyAdmin
 	{
-		// Validate input
-		require(badgeIds.length == tradeability.length, "Array size mismatch.");
-		require(startIndex <= endIndex, "Invalid index range.");
+		// Validate array size
+		require(
+			badgeIds.length == multipliers.length &&
+			multipliers.length == tradeability.length,
+			"Array size mismatch."
+		);
 
 		// Create badges
-		for(uint256 i = startIndex; i < endIndex; i++) {
+		for(uint32 i = 0; i < badgeIds.length; i++) {
 			// Require that new badge has proper id
 			require(badgeIds[i] == lastCreatedBadgeId.add(1), "Invalid badge id.");
+			// Set new lastly created badge id
+			lastCreatedBadgeId = badgeIds[i];
 
 			// Set badge params
 			badgeIdToTradeability[badgeIds[i]] = tradeability[i];
 			badgeIdToMultiplier[badgeIds[i]] = multipliers[i];
-			lastCreatedBadgeId = badgeIds[i];
 
+			// Emit event
 			emit BadgeCreated(badgeIds[i], multipliers[i], tradeability[i]);
 		}
 	}
@@ -177,6 +180,15 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	returns (uint256)
 	{
 		return badgeIdToMultiplier[badgeId];
+	}
+
+	/// @notice 	Returns id from lastly created badge
+	function getLastCreatedBadgeId()
+	external
+	view
+	returns (uint256)
+	{
+		return lastCreatedBadgeId;
 	}
 
 	function _beforeTokenTransfer(
