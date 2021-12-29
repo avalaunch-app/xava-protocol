@@ -440,6 +440,56 @@ describe("AvalaunchSale", function() {
       });
     });
 
+    describe("Edge Cases", async function () {
+      it("Should register for sale, but not participate and withdraw leftover after", async function() {
+        // Given
+        await setSaleParams({saleEndDelta: 25});
+        await setUpdatePriceInAVAXParams();
+        await depositTokens();
+
+        // When
+        const blockTimestamp = await getCurrentBlockTimestamp();
+        const startTimes = [5,6,7].map((s) => blockTimestamp+s);
+        const maxParticipations = ROUNDS_MAX_PARTICIPATIONS;
+        await AvalaunchSale.setRounds(startTimes, maxParticipations);
+
+        // Then
+        for (let i = 0; i < startTimes.length; i++) {
+          expect(await AvalaunchSale.roundIds(i)).to.equal(i+1);
+          expect((await AvalaunchSale.roundIdToRound(i+1)).startTime).to.equal(startTimes[i]);
+          expect((await AvalaunchSale.roundIdToRound(i+1)).maxParticipation).to.equal(maxParticipations[i]);
+        }
+
+        await setRegistrationTime({registrationTimeStartsDelta: 1, registrationTimeEndsDelta: 3});
+
+        // When
+        await ethers.provider.send("evm_increaseTime", [1]);
+        await ethers.provider.send("evm_mine");
+
+        expect((await AvalaunchSale.registration()).numberOfRegistrants).to.equal(0);
+
+        const roundId = 1;
+        const sig = signRegistration(deployer.address, roundId, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+
+        // When
+        await AvalaunchSale.registerForSale(sig, roundId, {value: REGISTRATION_DEPOSIT_AVAX});
+
+        // Then
+        expect((await AvalaunchSale.registration()).numberOfRegistrants).to.equal(1);
+
+        let balance = await ethers.provider.getBalance(AvalaunchSale.address)
+        console.log(balance);
+
+        await ethers.provider.send("evm_increaseTime", [30]);
+        await ethers.provider.send("evm_mine");
+
+        await AvalaunchSale.withdrawRegistrationFees();
+
+        balance = await ethers.provider.getBalance(AvalaunchSale.address)
+        console.log(balance);
+      });
+    });
+
     describe("Set sale rounds", async function() {
       it("Should set sale rounds", async function() {
         // Given
