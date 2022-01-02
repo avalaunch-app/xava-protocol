@@ -440,7 +440,7 @@ describe("AvalaunchSale", function() {
       });
     });
 
-    describe("Edge Cases", async function () {
+    describe("Edge Cases & Miscellaneous", async function () {
       it("Should register for sale, but not participate and withdraw leftover after", async function() {
         // Given
         await setSaleParams({saleEndDelta: 25});
@@ -487,6 +487,28 @@ describe("AvalaunchSale", function() {
 
         balance = await ethers.provider.getBalance(AvalaunchSale.address)
         console.log(balance);
+      });
+
+      it("Remove stuck tokens", async () => {
+        // Given
+        const TokenFactory = await ethers.getContractFactory("XavaToken");
+        const testToken = await TokenFactory.deploy("TestToken", "TT", ethers.utils.parseUnits("10000000000000000000000000"), DECIMALS);
+
+        // When
+        const val = 1000;
+        await testToken.transfer(AvalaunchSale.address, val);
+
+        // Then
+        await AvalaunchSale.removeStuckTokens(testToken.address, alice.address);
+
+        expect(await testToken.balanceOf(alice.address)).to.equal(val);
+      });
+
+      it("Should not remove XAVA using removeStuckTokens", async () => {
+        await AvalaunchSale.setSaleToken(XavaToken.address);
+
+        await expect(AvalaunchSale.removeStuckTokens(XavaToken.address, alice.address))
+          .to.be.revertedWith("Cannot withdraw official sale token.");
       });
     });
 
