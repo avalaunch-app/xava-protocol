@@ -1,3 +1,4 @@
+//SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -10,63 +11,91 @@ contract AirdropSale {
 	using ECDSA for bytes32;
 	using SafeMath for *;
 
+	// Globals
 	IAdmin public admin;
-	address[] public airdropTokens;
-	mapping(address => uint256) public tokenToTotalWithdrawn;
-
+	address[] public airdropERC20s;
+	bool public includesAVAX;
+	bool public includesERC20s;
+	mapping (address => uint256) public tokenToTotalWithdrawn;
 	mapping (address => bool) public wasClaimed;
 
-	event TokensAirdropped(address beneficiary, address token, uint256 amount);
+	// Events
+	event SentERC20(address beneficiary, address token, uint256 amount);
 	event SentAVAX(address beneficiary, uint256 amount);
 
 	// Constructor, initial setup
-	constructor(address[] memory _airdropTokens, address _admin) public {
+	constructor(address[] memory _airdropERC20s, address _admin, bool _includesAVAX) public {
 		require(_admin != address(0));
 		admin = IAdmin(_admin);
 
-		for(uint i = 0; i < _airdropTokens.length; i++) {
-			require(_airdropTokens[i] != address(0));
-			airdropTokens.push(_airdropTokens[i]);
+		// Mark if contract airdrops AVAX
+		if(_includesAVAX) {includesAVAX = true;}
+
+		// Add airdrop tokens to array
+		if(_airdropERC20s.length != 0) {
+			includesERC20s = true;
+			for(uint i = 0; i < _airdropERC20s.length; i++) {
+				require(_airdropERC20s[i] != address(0));
+				airdropERC20s.push(_airdropERC20s[i]);
+			}
 		}
+		// else: leave includesERC20 on false/default
 	}
 
-	// Function to withdraw tokens.
-	function withdrawTokens(bytes memory signature, uint256[] memory amounts) public {
+	/// @notice Function to withdraw tokens
+	function withdrawTokens(
+		bytes calldata signature,
+		uint256[] calldata amounts
+	) external {
 		// Allow only direct call
 		require(msg.sender == tx.origin, "Require that message sender is tx-origin.");
 		// Require that array sizes are matching
-		require(airdropTokens.length == amounts.length, "Array size mismatch.");
+		if(includesAVAX) {
+			require(airdropERC20s.length.add(1) == amounts.length, "Array size mismatch.");
+		} else {
+			require(airdropERC20s.length == amounts.length, "Array size mismatch.");
+		}
 
 		// Get beneficiary address
 		address beneficiary = msg.sender;
-		// Use first token amount for generating signature
-		uint256 amountAVAX = amounts[0];
 
 		// Validate signature
-		require(checkSignature(signature, beneficiary, amountAVAX), "Not eligible to claim tokens!");
+		require(checkSignature(signature, beneficiary, amounts[0]), "Not eligible to claim tokens!");
 		// Require that user didn't claim already
 		require(!wasClaimed[beneficiary], "Already claimed!");
 		// Mark that user claimed
 		wasClaimed[msg.sender] = true;
 
-		// Go through all of the airdrop tokens
-		for(uint i = 1; i < amounts.length; i++) {
-			if(amounts[i] > 0) {
-				// Perform transfer
-				bool status = IERC20(airdropTokens[i.sub(1)]).transfer(beneficiary, amounts[i]);
-				// Require that transfer was successful
-				require(status, "Token transfer status is false.");
-				// Increase token's withdrawn amount
-				tokenToTotalWithdrawn[airdropTokens[i.sub(1)]] = tokenToTotalWithdrawn[airdropTokens[i.sub(1)]].add(amounts[i]);
-				// Trigger event that token is sent
-				emit TokensAirdropped(beneficiary,airdropTokens[i.sub(1)], amounts[i]);
-			}
+		// Amounts array's ERC20 distribution starting index
+		uint startIndex = 0;
+
+		// Only if airdrop includes AVAX
+		if(includesAVAX) {
+			// Perform AVAX safeTransferAVAX
+			safeTransferAVAX(beneficiary, amounts[0]);
+			// Switch startIndex to 1 if airdropping AVAX
+			startIndex = 1;
 		}
 
-		// Transfer AVAX to user
-		safeTransferAVAX(beneficiary, amountAVAX);
-		// Trigger event that AVAX is sent.
-		emit SentAVAX(beneficiary, amountAVAX);
+		// Only if airdrop includes ERC20s
+		if(includesERC20s) {
+			// Go through all of the airdrop tokens
+			for(uint i = startIndex; i < amounts.length; i++) {
+				// Allows to skip token transfers for user's on order
+				if(amounts[i] > 0) {
+					// Compute airdropERC20s proper index
+					uint j = i.sub(startIndex);
+					// Perform transfer
+					bool status = IERC20(airdropERC20s[j]).transfer(beneficiary, amounts[i]);
+					// Require that transfer was successful
+					require(status, "Token transfer status is false.");
+					// Increase token's withdrawn amount
+					tokenToTotalWithdrawn[airdropERC20s[j]] = tokenToTotalWithdrawn[airdropERC20s[j]].add(amounts[i]);
+					// Trigger event that token is sent
+					emit SentERC20(beneficiary,airdropERC20s[j], amounts[i]);
+				}
+			}
+		}
 	}
 
 	// Get who signed the message based on the params
@@ -87,7 +116,10 @@ contract AirdropSale {
 		(bool success, ) = to.call{value: value}(new bytes(0));
 		// Require that transfer was successful.
 		require(success, "AVAX transfer failed.");
+		// Trigger relevant event
+		emit SentAVAX(to, value);
 	}
 
+	// Enable receiving AVAX
 	receive() external payable {}
 }
