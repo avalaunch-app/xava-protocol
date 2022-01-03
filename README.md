@@ -9,8 +9,10 @@ _The first protocol, exclusively for the Avalanche ecosystem, to offer promising
 - `$ yarn install` - _Install all dependencies_
 - `$ echo PK="PRIVATE_KEY" > .env` - _Add testing private key_
 - `$ npx hardhat compile` - _Compile all contracts_
+- `$ npx hardhat node` - _Setup node_
 - `$ npx hardhat test` - _Run all tests_
-
+- `$ npx hardhat test --network hardhat` - _Run all tests without node_
+- `$ npx hardhat coverage --network hardhat --testfiles test/` - _Run full code coverage_
 
 - Migrations are inside `scripts/` folder.
 - Tests are inside `test/` folder.
