@@ -7,12 +7,11 @@ import "../interfaces/IAllocationStaking.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-contract AvalaunchSale is Initializable, ReentrancyGuard {
+contract AvalaunchSale is ERC721Upgradeable, ReentrancyGuardUpgradeable {
     using ECDSA for bytes32;
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     // Pointer to Allocation staking contract, where burnXavaFromUser will be called.
@@ -84,6 +83,12 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     mapping(address => uint256) public addressToRoundRegisteredFor;
     // mapping if user is participated or not
     mapping(address => bool) public isParticipated;
+    // Mapping vault ID to his participation
+    mapping(uint => Participation) public vaultToParticipation;
+    // Vault ID to round for which he registered
+    mapping(uint256 => uint256) public vaultToRoundRegisteredFor;
+    // mapping if vault is participated or not
+    mapping(uint256 => bool) public isVaultParticipated;
     // Times when portions are getting unlocked
     uint256[] public vestingPortionsUnlockTime;
     // Percent of the participation user can withdraw
@@ -106,6 +111,8 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     uint256 updateTokenPriceInAVAXLastCallTimestamp;
     // Sale setter gate flag
     bool public gateClosed;
+    // Vault count
+    uint public vaultCount;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner() {
@@ -125,6 +132,13 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     // Restricting setter calls after gate closing
     modifier onlyIfGateOpen() {
         require(!gateClosed, "Setter gate is closed.");
+        _;
+    }
+
+    // Only existing vaults and vault owners can access
+    modifier onlyVaultOwner(uint256 vaultID) {
+        require(_exists(vaultID), "Vault does not exist");
+        require(ownerOf(vaultID) == msg.sender, "Vault is not owned by you");
         _;
     }
 
@@ -151,6 +165,7 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     );
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
     event GateClosed(uint256 time);
+    event ParticipationMigrated(address user, uint256 vaultId);
 
     // Constructor replacement for upgradable contracts
     function initialize(
@@ -162,6 +177,10 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         admin = IAdmin(_admin);
         factory = ISalesFactory(msg.sender);
         allocationStakingContract = IAllocationStaking(_allocationStaking);
+
+        __ReentrancyGuard_init();
+        __ERC721_init("Sale Vault", "SV");
+        _setBaseURI("ipfs://");
     }
 
     /// @notice         Function to set vesting params
@@ -613,6 +632,38 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         emit TokensSold(msg.sender, amountOfTokensBuying);
     }
 
+    // Create vault that will hold participation
+    function createVault() internal returns (uint256) {
+        uint256 id = vaultCount;
+        vaultCount = vaultCount.add(1);
+
+        assert(vaultCount >= id);
+
+        _mint(msg.sender,id);
+
+        return id;
+    }
+
+    // Migrate participation detauls from user to vault NFT
+    function migrateToVault() external {
+
+        uint256 vaultId = createVault();
+
+        require(isParticipated[msg.sender] 
+            && userToParticipation[msg.sender].amountBought > 0,"No participation found");
+
+        vaultToParticipation[vaultId] = userToParticipation[msg.sender];
+        vaultToRoundRegisteredFor[vaultId] = addressToRoundRegisteredFor[msg.sender];
+        isVaultParticipated[vaultId] = true;
+
+
+        delete userToParticipation[msg.sender];
+        isParticipated[msg.sender] = false;
+        addressToRoundRegisteredFor[msg.sender] = 0;
+
+        emit ParticipationMigrated(msg.sender, vaultId);
+    }
+
     /// Users can claim their participation
     function withdrawTokens(uint256 portionId) external {
         require(
@@ -621,6 +672,35 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         );
 
         Participation storage p = userToParticipation[msg.sender];
+
+        if (
+            !p.isPortionWithdrawn[portionId] &&
+            vestingPortionsUnlockTime[portionId] <= block.timestamp
+        ) {
+            p.isPortionWithdrawn[portionId] = true;
+            uint256 amountWithdrawing = p
+                .amountBought
+                .mul(vestingPercentPerPortion[portionId])
+                .div(portionVestingPrecision);
+
+            // Withdraw percent which is unlocked at that portion
+            if(amountWithdrawing > 0) {
+                sale.token.safeTransfer(msg.sender, amountWithdrawing);
+                emit TokensWithdrawn(msg.sender, amountWithdrawing);
+            }
+        } else {
+            revert("Tokens already withdrawn or portion not unlocked yet.");
+        }
+    }
+
+    /// NFT owners can claim their participation
+    function withdrawTokensFromVault(uint256 portionId, uint256 vaultId) external onlyVaultOwner(vaultId) {
+        require(
+            portionId < vestingPercentPerPortion.length,
+            "Portion id out of range."
+        );
+
+        Participation storage p = vaultToParticipation[vaultId];
 
         if (
             !p.isPortionWithdrawn[portionId] &&
@@ -845,6 +925,28 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         )
     {
         Participation memory p = userToParticipation[_user];
+        return (
+            p.amountBought,
+            p.amountAVAXPaid,
+            p.timeParticipated,
+            p.roundId,
+            p.isPortionWithdrawn
+        );
+    }
+
+    /// @notice     Function to get participation for passed user address
+    function getVaultParticipation(uint256 vaultId)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            bool[] memory
+        )
+    {
+        Participation memory p = vaultToParticipation[vaultId];
         return (
             p.amountBought,
             p.amountAVAXPaid,
