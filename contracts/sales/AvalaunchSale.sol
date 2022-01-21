@@ -7,10 +7,9 @@ import "../interfaces/IAllocationStaking.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
 
-contract AvalaunchSale is Initializable, ReentrancyGuard {
+contract AvalaunchSale is Initializable {
     using ECDSA for bytes32;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -875,7 +874,6 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     )
         external
         onlyAdmin
-        nonReentrant
     {
         // Require that token address does not match with sale token
         require(token != address(sale.token), "Cannot withdraw official sale token.");
