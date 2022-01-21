@@ -14,8 +14,8 @@ contract AirdropSale {
 	// Globals
 	IAdmin public immutable admin;
 	address[] public airdropERC20s;
-	bool public immutable includesAVAX;
-	bool public immutable includesERC20s;
+	bool public includesAVAX;
+	bool public includesERC20s;
 	mapping (address => uint256) public tokenToTotalWithdrawn;
 	mapping (address => bool) public wasClaimed;
 
