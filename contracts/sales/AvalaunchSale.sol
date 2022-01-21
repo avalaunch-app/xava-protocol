@@ -914,6 +914,11 @@ contract AvalaunchSale is Initializable {
             _updateTokenPriceInAVAXTimeLimit != 0 && _updateTokenPriceInAVAXPercentageThreshold != 0,
             "Cannot set zero value."
         );
+        // Require that percentage threshold is less or equal 100%
+        require(
+            _updateTokenPriceInAVAXPercentageThreshold <= 100,
+            "Percentage threshold cannot be higher than 100%"
+        );
         // Set new values
         updateTokenPriceInAVAXPercentageThreshold = _updateTokenPriceInAVAXPercentageThreshold;
         updateTokenPriceInAVAXTimeLimit = _updateTokenPriceInAVAXTimeLimit;
