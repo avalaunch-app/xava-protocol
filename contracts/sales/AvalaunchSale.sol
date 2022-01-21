@@ -575,6 +575,12 @@ contract AvalaunchSale is Initializable {
             "Trying to buy more than allowed."
         );
 
+        // Require that amountOfTokensBuying is less than sale token leftover cap
+        require(
+            amountOfTokensBuying <= sale.amountOfTokensToSell.sub(sale.totalTokensSold),
+            "Trying to buy more than contract has."
+        );
+
         // Increase amount of sold tokens
         sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
 
