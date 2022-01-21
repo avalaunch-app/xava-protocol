@@ -189,7 +189,7 @@ contract AvalaunchSale is Initializable {
         for (uint256 i = 0; i < _unlockingTimes.length; i++) {
             vestingPortionsUnlockTime.push(_unlockingTimes[i]);
             vestingPercentPerPortion.push(_percents[i]);
-            sum += _percents[i];
+            sum = sum.add(_percents[i]);
         }
 
         require(sum == portionVestingPrecision, "Percent distribution issue.");
@@ -449,7 +449,7 @@ contract AvalaunchSale is Initializable {
             // Postpone sale
             round.startTime = round.startTime.add(timeToShift);
             require(
-                round.startTime + timeToShift < sale.saleEnd,
+                round.startTime.add(timeToShift) < sale.saleEnd,
                 "Start time can not be greater than end time."
             );
         }
