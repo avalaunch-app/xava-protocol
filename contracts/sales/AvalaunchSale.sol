@@ -446,12 +446,13 @@ contract AvalaunchSale is Initializable {
         // Iterate through all registered rounds and postpone them
         for (uint256 i = 0; i < roundIds.length; i++) {
             Round storage round = roundIdToRound[roundIds[i]];
-            // Postpone sale
-            round.startTime = round.startTime.add(timeToShift);
+            // Require that timeToShift does not extend sale over it's end
             require(
                 round.startTime.add(timeToShift) < sale.saleEnd,
                 "Start time can not be greater than end time."
             );
+            // Postpone sale
+            round.startTime = round.startTime.add(timeToShift);
         }
     }
 
