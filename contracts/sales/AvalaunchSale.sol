@@ -640,23 +640,21 @@ contract AvalaunchSale is Initializable {
 
         Participation storage p = userToParticipation[msg.sender];
 
-        if (
-            !p.isPortionWithdrawn[portionId] &&
-            vestingPortionsUnlockTime[portionId] <= block.timestamp
-        ) {
-            p.isPortionWithdrawn[portionId] = true;
-            uint256 amountWithdrawing = p
-                .amountBought
-                .mul(vestingPercentPerPortion[portionId])
-                .div(portionVestingPrecision);
+        require(
+            !p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] <= block.timestamp,
+            "Tokens already withdrawn or portion not unlocked yet."
+        );
 
-            // Withdraw percent which is unlocked at that portion
-            if(amountWithdrawing > 0) {
-                sale.token.safeTransfer(msg.sender, amountWithdrawing);
-                emit TokensWithdrawn(msg.sender, amountWithdrawing);
-            }
-        } else {
-            revert("Tokens already withdrawn or portion not unlocked yet.");
+        p.isPortionWithdrawn[portionId] = true;
+        uint256 amountWithdrawing = p
+            .amountBought
+            .mul(vestingPercentPerPortion[portionId])
+            .div(portionVestingPrecision);
+
+        // Withdraw percent which is unlocked at that portion
+        if(amountWithdrawing > 0) {
+            sale.token.safeTransfer(msg.sender, amountWithdrawing);
+            emit TokensWithdrawn(msg.sender, amountWithdrawing);
         }
     }
 
