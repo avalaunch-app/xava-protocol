@@ -66,7 +66,7 @@ contract AirdropSale {
 		// Require that user didn't claim already
 		require(!wasClaimed[beneficiary], "Already claimed!");
 		// Mark that user claimed
-		wasClaimed[msg.sender] = true;
+		wasClaimed[beneficiary] = true;
 
 		// Amounts array's ERC20 distribution starting index
 		uint startIndex = 0;
