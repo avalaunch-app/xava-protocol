@@ -9,7 +9,7 @@ import "../math/SafeMath.sol";
 contract AirdropSale {
 
 	using ECDSA for bytes32;
-	using SafeMath for *;
+	using SafeMath for uint256;
 
 	// Globals
 	IAdmin public admin;
