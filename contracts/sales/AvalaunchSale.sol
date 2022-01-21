@@ -920,7 +920,7 @@ contract AvalaunchSale is Initializable {
     }
 
     /// @notice     Function close setter gate after all params are set
-    function closeGate() external onlyAdmin {
+    function closeGate() external onlyAdmin onlyIfGateOpen {
         // Require that sale is created
         require(sale.isCreated, "closeGate: Sale not created.");
         // Require that sale token is set
