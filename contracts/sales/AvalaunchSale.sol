@@ -517,7 +517,7 @@ contract AvalaunchSale is Initializable {
 
     // Function to participate in the sales
     function participate(
-        bytes memory signature,
+        bytes calldata signature,
         uint256 amount,
         uint256 amountXavaToBurn,
         uint256 roundId
