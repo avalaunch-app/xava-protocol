@@ -497,6 +497,13 @@ contract AvalaunchSale is Initializable {
         onlySaleOwner
         onlyIfGateOpen
     {
+        // Require that setSaleParams was called
+        require(
+            sale.amountOfTokensToSell > 0,
+            "Sale parameters not set."
+        );
+
+        // Mark that tokens are deposited
         sale.tokensDeposited = true;
 
         // Perform safe transfer
