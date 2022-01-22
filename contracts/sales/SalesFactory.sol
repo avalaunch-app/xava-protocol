@@ -34,7 +34,7 @@ contract SalesFactory {
     }
 
     /// @notice     Set allocation staking contract address
-    function setAllocationStaking(address _allocationStaking) public onlyAdmin {
+    function setAllocationStaking(address _allocationStaking) external onlyAdmin {
         require(_allocationStaking != address(0));
         allocationStaking = _allocationStaking;
     }
