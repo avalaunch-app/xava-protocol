@@ -19,6 +19,7 @@ contract SalesFactory {
     // Events
     event SaleDeployed(address saleContract);
     event ImplementationChanged(address implementation);
+    event AllocationStakingSet(address allocationStaking);
 
     // Restricting calls only to sale admin
     modifier onlyAdmin {
@@ -29,6 +30,7 @@ contract SalesFactory {
     constructor (address _adminContract, address _allocationStaking) public {
         admin = IAdmin(_adminContract);
         allocationStaking = _allocationStaking;
+        emit AllocationStakingSet(allocationStaking);
     }
 
     /// @notice     Set allocation staking contract address
