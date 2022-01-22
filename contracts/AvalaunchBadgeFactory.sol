@@ -127,6 +127,11 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	}
 
 	/// @notice 	Function to mint badges to users
+	/** @dev
+	 *	isContract check can be safely used in combination with isAdmin modifier.
+	 *	Therefore, it is impossible to initiate function call from malicious contract constructor
+	 *	and exploit the check.
+	 */
 	function mintBadges(
 		uint256[] calldata badgeIds,
 		address[] calldata receivers
@@ -138,15 +143,18 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 		require(badgeIds.length == receivers.length, "Array length mismatch.");
 
 		for(uint i = 0; i < badgeIds.length; i++) {
+			// Require that receiver is not a contract
+			require(
+				!AddressUpgradeable.isContract(receivers[i]),
+				"Cannot mint badge to untrusted contract."
+			);
+
 			// Require that badge has been created
-			require(badgeIds[i] <= lastCreatedBadgeId, "Badge must be created before mitning.");
+			require(badgeIds[i] <= lastCreatedBadgeId, "Badge must be created before minting.");
 
 			// Mint badge NFT to user
 			_mint(receivers[i], badgeIds[i], 1, "0x0");
 			emit BadgeMint(badgeIds[i], receivers[i]);
-
-			// Increase total minted supply
-			badgeIdToMintedSupply[badgeIds[i]] = badgeIdToMintedSupply[badgeIds[i]].add(1);
 		}
 	}
 
@@ -204,10 +212,15 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	{
 		super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-		// Require that badges are tradeable prior to transfer
 		if(from != address(0)) {
 			for(uint i = 0; i < ids.length; i++) {
+				// Require that badges are tradeable prior to transfer
 				require(badgeIdToTradeability[ids[i]], "Badge not tradeable.");
+			}
+		} else { // In case of minting
+			for(uint i = 0; i < ids.length; i++) {
+				// Increase total minted supply
+				badgeIdToMintedSupply[ids[i]] = badgeIdToMintedSupply[ids[i]].add(amounts[i]);
 			}
 		}
 	}
