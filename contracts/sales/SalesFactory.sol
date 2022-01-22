@@ -9,13 +9,8 @@ contract SalesFactory {
     IAdmin public admin;
     // Allocation staking contract address
     address public allocationStaking;
-
     // Official sale creation flag
     mapping (address => bool) public isSaleCreatedThroughFactory;
-    // Mapping sale owner to sale address
-    mapping(address => address) public saleOwnerToSale;
-    // Mapping token to sale address
-    mapping(address => address) public tokenToSale;
     // Expose so query can be possible only by position as well
     address [] public allSales;
     // Latest sale implementation contract address
@@ -23,7 +18,6 @@ contract SalesFactory {
 
     // Events
     event SaleDeployed(address saleContract);
-    event SaleOwnerAndTokenSetInFactory(address sale, address saleOwner, address saleToken);
     event ImplementationChanged(address implementation);
 
     // Restricting calls only to sale admin
