@@ -509,6 +509,12 @@ contract AvalaunchSale is Initializable {
             "Sale parameters not set."
         );
 
+        // Require that tokens are not deposited
+        require(
+            !sale.tokensDeposited,
+            "Tokens already deposited."
+        )
+
         // Mark that tokens are deposited
         sale.tokensDeposited = true;
 
