@@ -7,12 +7,13 @@ import "../interfaces/IAllocationStaking.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "./SaleVault.sol";
 
-contract AvalaunchSale is ERC721Upgradeable, ReentrancyGuardUpgradeable {
+contract AvalaunchSale is ReentrancyGuardUpgradeable {
     using ECDSA for bytes32;
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     // Pointer to Allocation staking contract, where burnXavaFromUser will be called.
     IAllocationStaking public allocationStakingContract;
@@ -20,6 +21,8 @@ contract AvalaunchSale is ERC721Upgradeable, ReentrancyGuardUpgradeable {
     ISalesFactory public factory;
     // Admin contract
     IAdmin public admin;
+    // Sale Vault NFT contract
+    SaleVault public saleVault;
 
     struct Sale {
         // Token being sold
@@ -111,8 +114,6 @@ contract AvalaunchSale is ERC721Upgradeable, ReentrancyGuardUpgradeable {
     uint256 updateTokenPriceInAVAXLastCallTimestamp;
     // Sale setter gate flag
     bool public gateClosed;
-    // Vault count
-    uint public vaultCount;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner() {
@@ -137,8 +138,8 @@ contract AvalaunchSale is ERC721Upgradeable, ReentrancyGuardUpgradeable {
 
     // Only existing vaults and vault owners can access
     modifier onlyVaultOwner(uint256 vaultID) {
-        require(_exists(vaultID), "Vault does not exist");
-        require(ownerOf(vaultID) == msg.sender, "Vault is not owned by you");
+        require(saleVault.exists(vaultID), "Vault does not exist");
+        require(saleVault.ownerOf(vaultID) == msg.sender, "Vault is not owned by you");
         _;
     }
 
@@ -170,17 +171,17 @@ contract AvalaunchSale is ERC721Upgradeable, ReentrancyGuardUpgradeable {
     // Constructor replacement for upgradable contracts
     function initialize(
         address _admin,
-        address _allocationStaking
+        address _allocationStaking,
+        address _saleVault
     ) public initializer {
         require(_admin != address(0));
         require(_allocationStaking != address(0));
         admin = IAdmin(_admin);
         factory = ISalesFactory(msg.sender);
         allocationStakingContract = IAllocationStaking(_allocationStaking);
+        saleVault = SaleVault(_saleVault);
 
         __ReentrancyGuard_init();
-        __ERC721_init("Sale Vault", "SV");
-        _setBaseURI("ipfs://");
     }
 
     /// @notice         Function to set vesting params
@@ -634,12 +635,9 @@ contract AvalaunchSale is ERC721Upgradeable, ReentrancyGuardUpgradeable {
 
     // Create vault that will hold participation
     function createVault() internal returns (uint256) {
-        uint256 id = vaultCount;
-        vaultCount = vaultCount.add(1);
 
-        assert(vaultCount >= id);
-
-        _mint(msg.sender,id);
+        uint id = saleVault.currentId();
+        saleVault.mint(msg.sender);
 
         return id;
     }

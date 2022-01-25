@@ -4,6 +4,7 @@ require('@nomiclabs/hardhat-ethers')
 require("@nomiclabs/hardhat-web3")
 require('@openzeppelin/hardhat-upgrades')
 require('solidity-coverage');
+require('hardhat-contract-sizer');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -21,8 +22,9 @@ const testPK = "0x56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d80
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  defaultNetwork: 'avash',
+  // defaultNetwork: 'avash',
   networks: {
+    hardhat:{},
     avash: {
       url: 'http://localhost:9650/ext/bc/C/rpc',
       gasPrice: 225000000000,
@@ -65,6 +67,11 @@ module.exports = {
         runs: 200,
       },
     },
+  },
+  contractSizer: {
+    alphaSort: true,
+    runOnCompile: true,
+    disambiguatePaths: false,
   },
 };
 

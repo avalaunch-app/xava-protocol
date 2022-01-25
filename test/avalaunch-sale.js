@@ -10,6 +10,7 @@ describe("AvalaunchSale", function() {
   let XavaToken;
   let SalesFactory;
   let AllocationStaking;
+  let SaleVault;
   let deployer, alice, bob, cedric;
   let ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   let ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
@@ -105,6 +106,11 @@ describe("AvalaunchSale", function() {
     const value = firstOrDefault(params, "participationValue", PARTICIPATION_VALUE);
     const sig = signParticipation(userAddress, participationAmount, participationRound, amountOfXavaToBurn, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
     return AvalaunchSale.connect(registrant).participate(sig, participationAmount, amountOfXavaToBurn, participationRound, {value: value});
+  }
+
+  function migrateToVault(params) {
+    const registrant = firstOrDefault(params, 'sender', deployer);
+    return AvalaunchSale.connect(registrant).migrateToVault();
   }
 
   async function getCurrentBlockTimestamp() {
@@ -2212,6 +2218,139 @@ describe("AvalaunchSale", function() {
 
         // Then
         expect(await AvalaunchSale.getCurrentRound()).to.equal(0);
+      });
+    });
+
+    describe("Vault Participation", async function() {
+      it("Should migrate user's participation vault", async function() {
+        // Given
+        await runFullSetup();
+
+        await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await registerForSale();
+        await setVestingParams();
+
+        await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await XavaToken.approve(AllocationStaking.address, "50000000");
+        await AllocationStaking.deposit(0, "50000000");
+        
+        await participate({amountOfXavaToBurn: 1});
+
+        // When
+        await migrateToVault();
+
+        // Then
+        const saleVault = await AvalaunchSale.saleVault()
+        const vaultContract = await ethers.getContractAt("SaleVault", saleVault);
+
+        const totalSupply = await vaultContract.totalSupply();
+        const participation = await AvalaunchSale.getParticipation(deployer.address);
+        const vaultParticipation = await AvalaunchSale.getVaultParticipation(totalSupply-1);
+        const isParticipated = await AvalaunchSale.isParticipated(deployer.address)
+        const isVaultParticipated = await AvalaunchSale.isVaultParticipated(totalSupply-1)
+
+        expect(vaultParticipation[0]).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
+        expect(vaultParticipation[3]).to.equal(PARTICIPATION_ROUND);
+        expect(vaultParticipation[4].length).to.equal(vestingPercentPerPortion.length);
+        expect(participation[0]).to.equal(0); // amountBougt
+        expect(participation[3]).to.equal(0); // roundId
+        expect(participation[4].length).to.equal(0); // isPortionWithdrawn array
+        expect(totalSupply).to.equal(1);
+        expect(isVaultParticipated).to.be.true;
+        expect(isParticipated).to.be.false;
+        
+      });
+
+      it("Should withdraw vault's participation", async function() {
+        // Given
+        await runFullSetup();
+
+        await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await registerForSale();
+        await setVestingParams();
+
+        const vestingParams = await AvalaunchSale.getVestingInfo();
+        expect(vestingParams[0][0]).to.equal(vestingPortionsUnlockTime[0]);
+        expect(vestingParams[0][1]).to.equal(vestingPortionsUnlockTime[1]);
+        expect(vestingParams[1][0]).to.equal(vestingPercentPerPortion[0]);
+        expect(vestingParams[1][1]).to.equal(vestingPercentPerPortion[1]);
+
+        await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await participate();
+        await migrateToVault();
+
+        await ethers.provider.send("evm_increaseTime", [TOKENS_UNLOCK_TIME_DELTA - ROUNDS_START_DELTAS[0]]);
+        await ethers.provider.send("evm_mine");
+
+        // console.log(await AvalaunchSale.getParticipation(deployer.address));
+
+        await XavaToken.transfer(AvalaunchSale.address, "10000000000000000000");
+        const previousBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
+
+        // When
+        await AvalaunchSale.withdrawTokensFromVault(0,0);
+
+        // Then
+        const currentBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
+        // console.log(parseInt(currentBalance))
+        const withdrawAmount = ((PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX) * 5) / PORTION_VESTING_PRECISION * MULTIPLIER;
+        // console.log(withdrawAmount)
+        expect(currentBalance).to.equal(previousBalance.add(Math.floor(withdrawAmount)));
+
+        const vaultParticipation = await AvalaunchSale.getVaultParticipation(0);
+        expect(vaultParticipation[4].length).to.equal(vestingPercentPerPortion.length);
+        expect(vaultParticipation[4][0]).to.be.true;
+      });
+
+      it("Only new vault owner should withdraw participation", async function() {
+        // Given
+        await runFullSetup();
+
+        await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await registerForSale();
+        await setVestingParams();
+
+        const vestingParams = await AvalaunchSale.getVestingInfo();
+        expect(vestingParams[0][0]).to.equal(vestingPortionsUnlockTime[0]);
+        expect(vestingParams[0][1]).to.equal(vestingPortionsUnlockTime[1]);
+        expect(vestingParams[1][0]).to.equal(vestingPercentPerPortion[0]);
+        expect(vestingParams[1][1]).to.equal(vestingPercentPerPortion[1]);
+
+        await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await participate();
+        await migrateToVault();
+
+        await ethers.provider.send("evm_increaseTime", [TOKENS_UNLOCK_TIME_DELTA - ROUNDS_START_DELTAS[0]]);
+        await ethers.provider.send("evm_mine");
+
+        await XavaToken.transfer(AvalaunchSale.address, "10000000000000000000");
+
+        const saleVault = await AvalaunchSale.saleVault()
+        const vaultContract = await ethers.getContractAt("SaleVault", saleVault);
+
+        // When
+        await vaultContract["safeTransferFrom(address,address,uint256)"](deployer.address, alice.address, 0);
+
+        // Then
+        await expect(AvalaunchSale.withdrawTokens(0))
+          .to.be.reverted;
+        
+        await expect(AvalaunchSale.withdrawTokensFromVault(0,0))
+          .to.be.revertedWith("Vault is not owned by you");
+          
+        await AvalaunchSale.connect(alice).withdrawTokensFromVault(0,0);
       });
     });
   });

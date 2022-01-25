@@ -4,7 +4,8 @@
   "description": "",
   "scripts": {
     "test": "hardhat test",
-    "compile": "hardhat compile"
+    "compile": "hardhat compile",
+    "sizer": "hardhat size-contracts"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +19,8 @@
     "dotenv": "^8.6.0",
     "git-module": "0.0.8",
     "hardhat-web3": "^1.0.1",
-    "scrypt": "github:barrysteyn/node-scrypt#fb60a8d3c158fe115a624b5ffa7480f3a24b03fb"
+    "scrypt": "github:barrysteyn/node-scrypt#fb60a8d3c158fe115a624b5ffa7480f3a24b03fb",
+    "sha3": "^2.1.4"
   },
   "devDependencies": {
     "@chainlink/contracts": "0.0.10",
@@ -41,6 +43,7 @@
     "form-data": "^4.0.0",
     "git-branch": "^2.0.1",
     "hardhat": "2.5.0",
+    "hardhat-contract-sizer": "^2.4.0",
     "isomorphic-fetch": "^3.0.0",
     "solidity-coverage": "^0.7.16",
     "stochasm": "^0.5.0",
