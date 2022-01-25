@@ -633,22 +633,14 @@ contract AvalaunchSale is ReentrancyGuardUpgradeable {
         emit TokensSold(msg.sender, amountOfTokensBuying);
     }
 
-    // Create vault that will hold participation
-    function createVault() internal returns (uint256) {
-
-        uint id = saleVault.currentId();
-        saleVault.mint(msg.sender);
-
-        return id;
-    }
-
-    // Migrate participation detauls from user to vault NFT
+    // Migrate participation details from user to vault NFT
     function migrateToVault() external {
-
-        uint256 vaultId = createVault();
 
         require(isParticipated[msg.sender] 
             && userToParticipation[msg.sender].amountBought > 0,"No participation found");
+
+        uint256 vaultId = saleVault.currentId();
+        saleVault.mint(msg.sender);
 
         vaultToParticipation[vaultId] = userToParticipation[msg.sender];
         vaultToRoundRegisteredFor[vaultId] = addressToRoundRegisteredFor[msg.sender];
