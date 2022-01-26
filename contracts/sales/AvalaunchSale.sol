@@ -336,10 +336,12 @@ contract AvalaunchSale is Initializable {
         require(startTimes.length > 0);
 
         uint256 lastTimestamp = 0;
+
+        require(startTimes[0] > registration.registrationTimeEnds);
+        require(startTimes[0] >= block.timestamp);
+
         for (uint256 i = 0; i < startTimes.length; i++) {
-            require(startTimes[i] > registration.registrationTimeEnds);
             require(startTimes[i] < sale.saleEnd);
-            require(startTimes[i] >= block.timestamp);
             require(maxParticipations[i] > 0);
             require(startTimes[i] > lastTimestamp);
             lastTimestamp = startTimes[i];
@@ -509,10 +511,11 @@ contract AvalaunchSale is Initializable {
             "Sale parameters not set."
         );
 
+        // Require that tokens are not deposited
         require(
             !sale.tokensDeposited,
-            "Tokens are already deposited."
-        );
+            "Tokens already deposited."
+        )
 
         // Mark that tokens are deposited
         sale.tokensDeposited = true;
