@@ -5,12 +5,14 @@ import "../interfaces/IAdmin.sol";
 import "../interfaces/ISalesFactory.sol";
 import "../interfaces/IAllocationStaking.sol";
 import "../interfaces/IERC20Metadata.sol";
+import "../interfaces/IDexalotPortfolio.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
 
 contract AvalaunchSale is Initializable, ReentrancyGuard {
+
     using ECDSA for bytes32;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -21,6 +23,8 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     ISalesFactory public factory;
     // Admin contract
     IAdmin public admin;
+    // Pointer to dexalot portfolio smart-contract
+    IDexalotPortfolio public dexalotPortfolio;
 
     struct Sale {
         // Token being sold
@@ -104,8 +108,13 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     uint256 updateTokenPriceInAVAXTimeLimit;
     // Token price in AVAX latest update timestamp
     uint256 updateTokenPriceInAVAXLastCallTimestamp;
+    // If Dexalot Withdrawals are supported
+    bool public supportsDexalotWithdraw;
+    // Represent amount of seconds before 0 portion unlock users can at earliest move their tokens to dexalot
+    uint256 public dexalotUnlockTime;
     // Sale setter gate flag
     bool public gateClosed;
+
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner() {
@@ -266,6 +275,22 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
             sale.amountOfTokensToSell,
             sale.saleEnd
         );
+    }
+
+    /**
+     * @notice  If sale supports early withdrawals to Dexalot.
+     */
+    function setAndSupportDexalotPortfolio(
+        address _dexalotPortfolio,
+        uint256 _dexalotUnlockTime
+    )
+    external
+    onlyAdmin
+    {
+        require(address(dexalotPortfolio) == address(0x0), "Dexalot Portfolio already set.");
+        dexalotPortfolio = IDexalotPortfolio(_dexalotPortfolio);
+        dexalotUnlockTime = _dexalotUnlockTime;
+        supportsDexalotWithdraw = true;
     }
 
     // @notice     Function to retroactively set sale token address, can be called only once,
