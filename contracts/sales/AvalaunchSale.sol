@@ -726,12 +726,7 @@ contract AvalaunchSale is Initializable {
                 !p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] <= block.timestamp,
                 "Tokens already withdrawn or portion not unlocked yet."
             );
-        } else { // if portion id == 0
-            require(
-                block.timestamp >= dexalotUnlockTime,
-                "First portion Dexalot deposit not unlocked yet."
-            );
-        }
+        } // modifier checks for portionId == 0 case
 
         // Mark portion as withdrawn
         p.isPortionWithdrawn[portionId] = true;
@@ -810,10 +805,8 @@ contract AvalaunchSale is Initializable {
                     eligible = true;
                 }
             } else { // if portion id == 0
-                if(block.timestamp >= dexalotUnlockTime) {
-                    eligible = true;
-                }
-            }
+                eligible = true;
+            } // modifier checks for portionId == 0 case
 
             if(eligible) {
                 // Mark participation as withdrawn
