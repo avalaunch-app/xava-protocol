@@ -5,6 +5,7 @@ import "../interfaces/IAdmin.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "../interfaces/IDexalotPortfolio.sol";
 import "../interfaces/ISalesFactory.sol";
 import "../interfaces/IAllocationStaking.sol";
 
@@ -19,6 +20,8 @@ contract AvalaunchSale {
     ISalesFactory public factory;
     // Admin contract
     IAdmin public admin;
+    // Pointer to dexalot portfolio smart-contract
+    IDexalotPortfolio public dexalotPortfolio;
 
     struct Sale {
         // Token being sold
@@ -100,6 +103,10 @@ contract AvalaunchSale {
     uint256 public registrationDepositAVAX;
     // Accounting total AVAX collected, after sale admin can withdraw this
     uint256 public registrationFees;
+    // If Dexalot Withdrawals are supported
+    bool public supportsDexalotWithdraw;
+    // Represent amount of seconds before 0 portion unlock users can at earliest move their tokens to dexalot
+    uint256 public dexalotUnlockTime;
 
     // Restricting calls only to sale owner
     modifier onlySaleOwner() {
@@ -111,6 +118,19 @@ contract AvalaunchSale {
         require(
             admin.isAdmin(msg.sender),
             "Only admin can call this function."
+        );
+        _;
+    }
+
+    // Secure all Dexalot Portfolio interactions
+    modifier dexalotChecks() {
+        require(
+            supportsDexalotWithdraw,
+            "Dexalot Portfolio withdrawal not supported."
+        );
+        require(
+            block.timestamp >= dexalotUnlockTime,
+            "Dexalot Portfolio withdrawal not unlocked."
         );
         _;
     }
@@ -139,6 +159,7 @@ contract AvalaunchSale {
         uint256 maxParticipation
     );
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
+    event TokensWithdrawnToDexalot(address user, uint256 amount);
 
     // Constructor, always initialized through SalesFactory
     constructor(address _admin, address _allocationStaking) public {
@@ -246,6 +267,23 @@ contract AvalaunchSale {
             sale.saleEnd,
             sale.tokensUnlockTime
         );
+    }
+
+    /**
+     * @notice  If sale supports early withdrawals to Dexalot.
+     */
+    function setAndSupportDexalotPortfolio(
+        address _dexalotPortfolio,
+        uint256 _dexalotUnlockTime
+    )
+    external
+    onlyAdmin
+    {
+        require(address(dexalotPortfolio) == address(0x0), "Dexalot Portfolio already set.");
+        require(_dexalotPortfolio != address(0x0), "Cannot set zero address as Dexalot Portfolio.");
+        dexalotPortfolio = IDexalotPortfolio(_dexalotPortfolio);
+        dexalotUnlockTime = _dexalotUnlockTime;
+        supportsDexalotWithdraw = true;
     }
 
     // @notice     Function to retroactively set sale token address, can be called only once,
@@ -587,6 +625,45 @@ contract AvalaunchSale {
         }
     }
 
+    /// Users can deposit their participation to Dexalot Portfolio
+    function withdrawTokensToDexalot(uint256 portionId) external dexalotChecks {
+
+        require(
+            portionId < vestingPercentPerPortion.length,
+            "Portion id out of range."
+        );
+
+        // Retrieve participation from storage
+        Participation storage p = userToParticipation[msg.sender];
+
+        require(
+            !p.isPortionWithdrawn[portionId],
+            "Tokens already withdrawn or portion not unlocked yet."
+        );
+
+        // Mark portion as withdrawn
+        p.isPortionWithdrawn[portionId] = true;
+
+        // Compute amount withdrawing
+        uint256 amountWithdrawing = p
+            .amountBought
+            .mul(vestingPercentPerPortion[portionId])
+            .div(portionVestingPrecision);
+
+        // Withdraw percent which is unlocked at that portion
+        if(amountWithdrawing > 0) {
+            // Approve token spending to Dexalot Portfolio
+            sale.token.approve(address(dexalotPortfolio), amountWithdrawing);
+
+            // Deposit tokens to dexalot contract - Withdraw from sale contract
+            dexalotPortfolio.depositTokenFromContract(
+                msg.sender, getTokenSymbolBytes32(), amountWithdrawing
+            );
+            // Trigger event
+            emit TokensWithdrawnToDexalot(msg.sender, amountWithdrawing);
+        }
+    }
+
     // Expose function where user can withdraw multiple unlocked portions at once.
     function withdrawMultiplePortions(uint256 [] calldata portionIds) external {
         uint256 totalToWithdraw = 0;
@@ -614,6 +691,45 @@ contract AvalaunchSale {
         if(totalToWithdraw > 0) {
             sale.token.safeTransfer(msg.sender, totalToWithdraw);
             emit TokensWithdrawn(msg.sender, totalToWithdraw);
+        }
+    }
+
+    // Expose function where user can withdraw multiple unlocked portions to Dexalot Portfolio at once
+    function withdrawMultiplePortionsToDexalot(uint256 [] calldata portionIds) external dexalotChecks {
+
+        uint256 totalToWithdraw = 0;
+
+        // Retrieve participation from storage
+        Participation storage p = userToParticipation[msg.sender];
+
+        for(uint i=0; i < portionIds.length; i++) {
+            uint256 portionId = portionIds[i];
+            require(portionId < vestingPercentPerPortion.length);
+
+            if (!p.isPortionWithdrawn[portionId]) {
+                // Mark participation as withdrawn
+                p.isPortionWithdrawn[portionId] = true;
+                // Compute amount withdrawing
+                uint256 amountWithdrawing = p
+                    .amountBought
+                    .mul(vestingPercentPerPortion[portionId])
+                    .div(portionVestingPrecision);
+                // Withdraw percent which is unlocked at that portion
+                totalToWithdraw = totalToWithdraw.add(amountWithdrawing);
+            }
+        }
+
+        if(totalToWithdraw > 0) {
+            // Approve token spending to Dexalot Portfolio
+            sale.token.approve(address(dexalotPortfolio), totalToWithdraw);
+
+            // Deposit tokens to dexalot contract - Withdraw from sale contract
+            dexalotPortfolio.depositTokenFromContract(
+                msg.sender, getTokenSymbolBytes32(), totalToWithdraw
+            );
+
+            // Trigger an event
+            emit TokensWithdrawnToDexalot(msg.sender, totalToWithdraw);
         }
     }
 
