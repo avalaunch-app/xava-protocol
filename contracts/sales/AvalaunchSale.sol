@@ -192,11 +192,12 @@ contract AvalaunchSale is Initializable {
 
         uint256 sum;
 
+        // Require that locking times are later than sale end
+        require(_unlockingTimes[0] > sale.saleEnd, "Unlock time must be after the sale ends.");
+
         // Set vesting portions percents and unlock times
         for (uint256 i = 0; i < _unlockingTimes.length; i++) {
-            if(i == 0) {
-                require(_unlockingTimes[0] > sale.saleEnd, "Unlock time must be after the sale ends.");
-            } else {
+            if(i > 0) {
                 require(_unlockingTimes[i] > _unlockingTimes[i-1], "Unlock time must be greater than previous.");
             }
             vestingPortionsUnlockTime.push(_unlockingTimes[i]);
