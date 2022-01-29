@@ -8,11 +8,9 @@ import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/IDexalotPortfolio.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
 
-contract AvalaunchSale is Initializable, ReentrancyGuard {
-
+contract AvalaunchSale is Initializable {
     using ECDSA for bytes32;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -115,7 +113,6 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     // Sale setter gate flag
     bool public gateClosed;
 
-
     // Restricting calls only to sale owner
     modifier onlySaleOwner() {
         require(msg.sender == sale.saleOwner, "OnlySaleOwner:: Restricted");
@@ -195,11 +192,17 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
 
         uint256 sum;
 
+        // Require that locking times are later than sale end
+        require(_unlockingTimes[0] > sale.saleEnd, "Unlock time must be after the sale ends.");
+
         // Set vesting portions percents and unlock times
         for (uint256 i = 0; i < _unlockingTimes.length; i++) {
+            if(i > 0) {
+                require(_unlockingTimes[i] > _unlockingTimes[i-1], "Unlock time must be greater than previous.");
+            }
             vestingPortionsUnlockTime.push(_unlockingTimes[i]);
             vestingPercentPerPortion.push(_percents[i]);
-            sum += _percents[i];
+            sum = sum.add(_percents[i]);
         }
 
         require(sum == portionVestingPrecision, "Percent distribution issue.");
@@ -357,10 +360,12 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         require(startTimes.length > 0);
 
         uint256 lastTimestamp = 0;
+
+        require(startTimes[0] > registration.registrationTimeEnds);
+        require(startTimes[0] >= block.timestamp);
+
         for (uint256 i = 0; i < startTimes.length; i++) {
-            require(startTimes[i] > registration.registrationTimeEnds);
             require(startTimes[i] < sale.saleEnd);
-            require(startTimes[i] >= block.timestamp);
             require(maxParticipations[i] > 0);
             require(startTimes[i] > lastTimestamp);
             lastTimestamp = startTimes[i];
@@ -472,12 +477,13 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         // Iterate through all registered rounds and postpone them
         for (uint256 i = 0; i < roundIds.length; i++) {
             Round storage round = roundIdToRound[roundIds[i]];
-            // Postpone sale
-            round.startTime = round.startTime.add(timeToShift);
+            // Require that timeToShift does not extend sale over it's end
             require(
-                round.startTime + timeToShift < sale.saleEnd,
+                round.startTime.add(timeToShift) < sale.saleEnd,
                 "Start time can not be greater than end time."
             );
+            // Postpone sale
+            round.startTime = round.startTime.add(timeToShift);
         }
     }
 
@@ -523,6 +529,19 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
         onlySaleOwner
         onlyIfGateOpen
     {
+        // Require that setSaleParams was called
+        require(
+            sale.amountOfTokensToSell > 0,
+            "Sale parameters not set."
+        );
+
+        // Require that tokens are not deposited
+        require(
+            !sale.tokensDeposited,
+            "Tokens already deposited."
+        );
+
+        // Mark that tokens are deposited
         sale.tokensDeposited = true;
 
         // Perform safe transfer
@@ -535,7 +554,7 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
 
     // Function to participate in the sales
     function participate(
-        bytes memory signature,
+        bytes calldata signature,
         uint256 amount,
         uint256 amountXavaToBurn,
         uint256 roundId
@@ -594,6 +613,12 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
             "Trying to buy more than allowed."
         );
 
+        // Require that amountOfTokensBuying is less than sale token leftover cap
+        require(
+            amountOfTokensBuying <= sale.amountOfTokensToSell.sub(sale.totalTokensSold),
+            "Trying to buy more than contract has."
+        );
+
         // Increase amount of sold tokens
         sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
 
@@ -647,23 +672,21 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
 
         Participation storage p = userToParticipation[msg.sender];
 
-        if (
-            !p.isPortionWithdrawn[portionId] &&
-            vestingPortionsUnlockTime[portionId] <= block.timestamp
-        ) {
-            p.isPortionWithdrawn[portionId] = true;
-            uint256 amountWithdrawing = p
-                .amountBought
-                .mul(vestingPercentPerPortion[portionId])
-                .div(portionVestingPrecision);
+        require(
+            !p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] <= block.timestamp,
+            "Tokens already withdrawn or portion not unlocked yet."
+        );
 
-            // Withdraw percent which is unlocked at that portion
-            if(amountWithdrawing > 0) {
-                sale.token.safeTransfer(msg.sender, amountWithdrawing);
-                emit TokensWithdrawn(msg.sender, amountWithdrawing);
-            }
-        } else {
-            revert("Tokens already withdrawn or portion not unlocked yet.");
+        p.isPortionWithdrawn[portionId] = true;
+        uint256 amountWithdrawing = p
+            .amountBought
+            .mul(vestingPercentPerPortion[portionId])
+            .div(portionVestingPrecision);
+
+        // Withdraw percent which is unlocked at that portion
+        if(amountWithdrawing > 0) {
+            sale.token.safeTransfer(msg.sender, amountWithdrawing);
+            emit TokensWithdrawn(msg.sender, amountWithdrawing);
         }
     }
 
@@ -900,7 +923,6 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
     )
         external
         onlyAdmin
-        nonReentrant
     {
         // Require that token address does not match with sale token
         require(token != address(sale.token), "Cannot withdraw official sale token.");
@@ -922,13 +944,18 @@ contract AvalaunchSale is Initializable, ReentrancyGuard {
             _updateTokenPriceInAVAXTimeLimit != 0 && _updateTokenPriceInAVAXPercentageThreshold != 0,
             "Cannot set zero value."
         );
+        // Require that percentage threshold is less or equal 100%
+        require(
+            _updateTokenPriceInAVAXPercentageThreshold <= 100,
+            "Percentage threshold cannot be higher than 100%"
+        );
         // Set new values
         updateTokenPriceInAVAXPercentageThreshold = _updateTokenPriceInAVAXPercentageThreshold;
         updateTokenPriceInAVAXTimeLimit = _updateTokenPriceInAVAXTimeLimit;
     }
 
     /// @notice     Function close setter gate after all params are set
-    function closeGate() external onlyAdmin {
+    function closeGate() external onlyAdmin onlyIfGateOpen {
         // Require that sale is created
         require(sale.isCreated, "closeGate: Sale not created.");
         // Require that sale token is set

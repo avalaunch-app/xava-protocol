@@ -43,10 +43,10 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 
 	function initialize(
 		address _admin,
-		string memory _uri,
-		string memory _contractURI
+		string calldata _uri,
+		string calldata _contractURI
 	)
-	public
+	external
 	initializer
 	{
 		__ERC1155_init(_uri);
@@ -59,7 +59,7 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 
 	/// @notice 	Function to pause the nft transfer related ops
 	function pause()
-	public
+	external
 	onlyAdmin
 	{
 		_pause();
@@ -67,7 +67,7 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 
 	/// @notice 	Function to unpause the nft transfer related ops
 	function unpause()
-	public
+	external
 	onlyAdmin
 	{
 		_unpause();
@@ -75,9 +75,9 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 
 	/// @notice 	Uri setter
 	function setNewUri(
-		string memory _newUri
+		string calldata _newUri
 	)
-	public
+	external
 	onlyAdmin
 	{
 		_setURI(_newUri);
@@ -85,9 +85,9 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 
 	/// @notice 	Contract level uri setter
 	function setNewContractUri(
-		string memory _contractURI
+		string calldata _contractURI
 	)
-	public
+	external
 	onlyAdmin
 	{
 		contractURI = _contractURI;
@@ -96,9 +96,9 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	/// @notice 	Function to create badges
 	/// @dev		Necessary for minting
 	function createBadges(
-		uint256[] memory badgeIds,
-		uint8[] memory multipliers,
-		bool[] memory tradeability
+		uint256[] calldata badgeIds,
+		uint8[] calldata multipliers,
+		bool[] calldata tradeability
 	)
 	external
 	onlyAdmin
@@ -111,7 +111,7 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 		);
 
 		// Create badges
-		for(uint32 i = 0; i < badgeIds.length; i++) {
+		for(uint i = 0; i < badgeIds.length; i++) {
 			// Require that new badge has proper id
 			require(badgeIds[i] == lastCreatedBadgeId.add(1), "Invalid badge id.");
 			// Set new lastly created badge id
@@ -127,6 +127,11 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	}
 
 	/// @notice 	Function to mint badges to users
+	/** @dev
+	 *	isContract check can be safely used in combination with isAdmin modifier.
+	 *	Therefore, it is impossible to initiate function call from malicious contract constructor
+	 *	and exploit the check.
+	 */
 	function mintBadges(
 		uint256[] calldata badgeIds,
 		address[] calldata receivers
@@ -138,21 +143,24 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 		require(badgeIds.length == receivers.length, "Array length mismatch.");
 
 		for(uint i = 0; i < badgeIds.length; i++) {
+			// Require that receiver is not a contract
+			require(
+				!AddressUpgradeable.isContract(receivers[i]),
+				"Cannot mint badge to untrusted contract."
+			);
+
 			// Require that badge has been created
-			require(badgeIds[i] <= lastCreatedBadgeId, "Badge must be created before mitning.");
+			require(badgeIds[i] <= lastCreatedBadgeId, "Badge must be created before minting.");
 
 			// Mint badge NFT to user
 			_mint(receivers[i], badgeIds[i], 1, "0x0");
 			emit BadgeMint(badgeIds[i], receivers[i]);
-
-			// Increase total minted supply
-			badgeIdToMintedSupply[badgeIds[i]] = badgeIdToMintedSupply[badgeIds[i]].add(1);
 		}
 	}
 
 	/// @notice 	Contract level uri getter
 	function getContractURI()
-	public
+	external
 	view
 	returns
 	(string memory)
@@ -204,10 +212,15 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	{
 		super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-		// Require that badges are tradeable prior to transfer
 		if(from != address(0)) {
 			for(uint i = 0; i < ids.length; i++) {
+				// Require that badges are tradeable prior to transfer
 				require(badgeIdToTradeability[ids[i]], "Badge not tradeable.");
+			}
+		} else { // In case of minting
+			for(uint i = 0; i < ids.length; i++) {
+				// Increase total minted supply
+				badgeIdToMintedSupply[ids[i]] = badgeIdToMintedSupply[ids[i]].add(amounts[i]);
 			}
 		}
 	}

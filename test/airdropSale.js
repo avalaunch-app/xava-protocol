@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
-const { signTokenWithdrawal } = require("./helpers/signatures.js");
+const { signMultipleTokenWithdrawal } = require("./helpers/signatures.js");
 
 const DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 const BAD_DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff89";
@@ -8,6 +8,7 @@ const BAD_DEPLOYER_PRIVATE_KEY = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5e
 let Admin;
 let deployer, alice, bob, cedric;
 let airdropInstance, airdropTokenInstance, airdropTokenInstance2;
+let amounts, hashedAmounts;
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const AIRDROP_TOKEN_TOTAL_SUPPLY = "1000000000000000000000000000";
@@ -50,28 +51,34 @@ describe("Airdrop", () => {
                 to: ethers.provider._getAddress(airdropInstance.address),
                 value: ethers.utils.parseEther(value)
             });
+
+            amounts = [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT + 1, WITHDRAW_AMOUNT + 2];
+
+            hashedAmounts = ethers.utils.keccak256(
+                ethers.utils.solidityPack(['uint256[]'], [[amounts[0], amounts[1], amounts[2]]])
+            );
         });
 
         describe("WithdrawTokens", () => {
             it("Should withdraw tokens with proper signature", async () => {
-                const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
-                expect(await airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT, WITHDRAW_AMOUNT]))
+                const sig = signMultipleTokenWithdrawal(alice.address, hashedAmounts, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
+                expect(await airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.emit(airdropInstance, "SentAVAX")
                     .withArgs(alice.address, WITHDRAW_AMOUNT);
             });
 
             it("Should not withdraw tokens with invalid signature", async () => {
-                const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, BAD_DEPLOYER_PRIVATE_KEY);
-                await expect(airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT, WITHDRAW_AMOUNT]))
+                const sig = signMultipleTokenWithdrawal(alice.address, hashedAmounts, airdropInstance.address, BAD_DEPLOYER_PRIVATE_KEY);
+                await expect(airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.be.revertedWith('Not eligible to claim tokens!');
             });
 
             it("Should not withdraw tokens second time", async () => {
-                const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
-                expect(await airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT, WITHDRAW_AMOUNT]))
+                const sig = signMultipleTokenWithdrawal(alice.address, hashedAmounts, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
+                expect(await airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.emit(airdropInstance, "SentAVAX")
-                    .withArgs(alice.address, WITHDRAW_AMOUNT);
-                await expect(airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT, WITHDRAW_AMOUNT]))
+                    .withArgs(alice.address, amounts[0]);
+                await expect(airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.be.revertedWith("Already claimed!");
             });
         });
@@ -92,28 +99,41 @@ describe("Airdrop", () => {
 
             await airdropTokenInstance.transfer(airdropInstance.address, "10000000000000000");
             await airdropTokenInstance2.transfer(airdropInstance.address, "10000000000000000");
+
+            hashedAmounts = ethers.utils.keccak256(
+                ethers.utils.solidityPack(
+                    ['uint256', 'uint256'],
+                    [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT]
+                )
+            );
+
+            amounts = [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT + 1];
+
+            hashedAmounts = ethers.utils.keccak256(
+                ethers.utils.solidityPack(['uint256[]'], [[amounts[0], amounts[1]]])
+            );
         });
 
         describe("WithdrawTokens", () => {
             it("Should withdraw tokens with proper signature", async () => {
-                const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
-                expect(await airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT]))
+                const sig = signMultipleTokenWithdrawal(alice.address, hashedAmounts, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
+                expect(await airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.emit(airdropInstance, "SentERC20")
                     .withArgs(alice.address, airdropTokenInstance.address, WITHDRAW_AMOUNT);
             });
 
             it("Should not withdraw tokens with invalid signature", async () => {
-                const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, BAD_DEPLOYER_PRIVATE_KEY);
-                await expect(airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT]))
+                const sig = signMultipleTokenWithdrawal(alice.address, hashedAmounts, airdropInstance.address, BAD_DEPLOYER_PRIVATE_KEY);
+                await expect(airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.be.revertedWith('Not eligible to claim tokens!');
             });
 
             it("Should not withdraw tokens second time", async () => {
-                const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
-                expect(await airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT]))
+                const sig = signMultipleTokenWithdrawal(alice.address, hashedAmounts, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
+                expect(await airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.emit(airdropInstance, "SentERC20")
-                    .withArgs(alice.address, airdropTokenInstance.address, WITHDRAW_AMOUNT);
-                await expect(airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT, WITHDRAW_AMOUNT]))
+                    .withArgs(alice.address, airdropTokenInstance.address, amounts[0]);
+                await expect(airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.be.revertedWith("Already claimed!");
             });
         });
@@ -130,28 +150,34 @@ describe("Airdrop", () => {
                 to: ethers.provider._getAddress(airdropInstance.address),
                 value: ethers.utils.parseEther(value)
             });
+
+            amounts = [WITHDRAW_AMOUNT];
+
+            hashedAmounts = ethers.utils.keccak256(
+                ethers.utils.solidityPack(['uint256[]'], [[amounts[0]]])
+            );
         });
 
         describe("WithdrawTokens", () => {
             it("Should withdraw tokens with proper signature", async () => {
-                const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
-                expect(await airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT]))
+                const sig = signMultipleTokenWithdrawal(alice.address, hashedAmounts, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
+                expect(await airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.emit(airdropInstance, "SentAVAX")
-                    .withArgs(alice.address, WITHDRAW_AMOUNT);
+                    .withArgs(alice.address, amounts[0]);
             });
 
             it("Should not withdraw tokens with invalid signature", async () => {
-                const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, BAD_DEPLOYER_PRIVATE_KEY);
-                await expect(airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT]))
+                const sig = signMultipleTokenWithdrawal(alice.address, hashedAmounts, airdropInstance.address, BAD_DEPLOYER_PRIVATE_KEY);
+                await expect(airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.be.revertedWith('Not eligible to claim tokens!');
             });
 
             it("Should not withdraw tokens second time", async () => {
-                const sig = signTokenWithdrawal(alice.address, WITHDRAW_AMOUNT, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
-                expect(await airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT]))
+                const sig = signMultipleTokenWithdrawal(alice.address, hashedAmounts, airdropInstance.address, DEPLOYER_PRIVATE_KEY);
+                expect(await airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.emit(airdropInstance, "SentAVAX")
-                    .withArgs(alice.address, WITHDRAW_AMOUNT);
-                await expect(airdropInstance.connect(alice).withdrawTokens(sig, [WITHDRAW_AMOUNT]))
+                    .withArgs(alice.address, amounts[0]);
+                await expect(airdropInstance.connect(alice).withdrawTokens(sig, amounts))
                     .to.be.revertedWith("Already claimed!");
             });
         });
