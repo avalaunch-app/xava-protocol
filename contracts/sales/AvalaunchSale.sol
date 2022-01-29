@@ -5,6 +5,7 @@ import "../interfaces/IAdmin.sol";
 import "../interfaces/ISalesFactory.sol";
 import "../interfaces/IAllocationStaking.sol";
 import "../interfaces/IERC20Metadata.sol";
+import "../interfaces/IDexalotPortfolio.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
@@ -20,6 +21,8 @@ contract AvalaunchSale is Initializable {
     ISalesFactory public factory;
     // Admin contract
     IAdmin public admin;
+    // Pointer to dexalot portfolio smart-contract
+    IDexalotPortfolio public dexalotPortfolio;
 
     struct Sale {
         // Token being sold
@@ -103,6 +106,10 @@ contract AvalaunchSale is Initializable {
     uint256 updateTokenPriceInAVAXTimeLimit;
     // Token price in AVAX latest update timestamp
     uint256 updateTokenPriceInAVAXLastCallTimestamp;
+    // If Dexalot Withdrawals are supported
+    bool public supportsDexalotWithdraw;
+    // Represent amount of seconds before 0 portion unlock users can at earliest move their tokens to dexalot
+    uint256 public dexalotUnlockTime;
     // Sale setter gate flag
     bool public gateClosed;
 
@@ -270,6 +277,22 @@ contract AvalaunchSale is Initializable {
             sale.amountOfTokensToSell,
             sale.saleEnd
         );
+    }
+
+    /**
+     * @notice  If sale supports early withdrawals to Dexalot.
+     */
+    function setAndSupportDexalotPortfolio(
+        address _dexalotPortfolio,
+        uint256 _dexalotUnlockTime
+    )
+    external
+    onlyAdmin
+    {
+        require(address(dexalotPortfolio) == address(0x0), "Dexalot Portfolio already set.");
+        dexalotPortfolio = IDexalotPortfolio(_dexalotPortfolio);
+        dexalotUnlockTime = _dexalotUnlockTime;
+        supportsDexalotWithdraw = true;
     }
 
     // @notice     Function to retroactively set sale token address, can be called only once,
