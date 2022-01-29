@@ -721,10 +721,17 @@ contract AvalaunchSale is Initializable {
         // Retrieve participation from storage
         Participation storage p = userToParticipation[msg.sender];
 
-        require(
-            !p.isPortionWithdrawn[portionId],
-            "Tokens already withdrawn or portion not unlocked yet."
-        );
+        if(portionId > 0) {
+            require(
+                !p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] <= block.timestamp,
+                "Tokens already withdrawn or portion not unlocked yet."
+            );
+        } else { // if portion id == 0
+            require(
+                block.timestamp >= dexalotUnlockTime,
+                "First portion Dexalot deposit not unlocked yet."
+            );
+        }
 
         // Mark portion as withdrawn
         p.isPortionWithdrawn[portionId] = true;
@@ -796,7 +803,19 @@ contract AvalaunchSale is Initializable {
             uint256 portionId = portionIds[i];
             require(portionId < vestingPercentPerPortion.length);
 
-            if (!p.isPortionWithdrawn[portionId]) {
+            bool eligible;
+
+            if(portionId > 0) {
+                if(!p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] <= block.timestamp) {
+                    eligible = true;
+                }
+            } else { // if portion id == 0
+                if(block.timestamp >= dexalotUnlockTime) {
+                    eligible = true;
+                }
+            }
+
+            if(eligible) {
                 // Mark participation as withdrawn
                 p.isPortionWithdrawn[portionId] = true;
                 // Compute amount withdrawing
