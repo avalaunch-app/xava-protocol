@@ -14,6 +14,11 @@ contract AvalaunchGovernance is AccessControl {
     bytes32 public constant SALE_ADMIN_ROLE = keccak256('SALE_ADMIN');
     bytes32 public constant STAKE_ADMIN_ROLE = keccak256('STAKE_ADMIN');
 
+    modifier onlyAdmin() {
+        require(hasRole(ADMIN_ROLE, msg.sender), "Only admin can setup roles.");
+        _;
+    }
+
     constructor(
         address _leadAdmin,
         address _saleAdmin,
@@ -31,11 +36,16 @@ contract AvalaunchGovernance is AccessControl {
     }
 
     // setup a new role with an initial account
-    function setupRole(bytes32 role, address account) external {
-        require(hasRole(ADMIN_ROLE, msg.sender), "Only admin can setup roles.");
+    function setupRole(bytes32 role, address account) external onlyAdmin {
         require(!__roles.contains(role), "Role already exists.");
         _setupRole(role, account);
         __roles.add(role);
+    }
+
+    // remove already existing role
+    function removeRole(bytes32 role) external onlyAdmin {
+        require(__roles.contains(role), "Role does not exists.");
+        __roles.remove(role);
     }
 
     // view if '_address' is 'SALE_ADMIN_ROLE' member
@@ -63,7 +73,7 @@ contract AvalaunchGovernance is AccessControl {
         uint256 len = __roles.length();
         bytes32 [] memory __rolesArr = new bytes32[](len);
 
-        for(uint256 i = 0; i < __roles.length(); i++) {
+        for(uint256 i = 0; i < len; i++) {
             __rolesArr[i] = __roles.at(i);
         }
 
