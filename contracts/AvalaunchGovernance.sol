@@ -15,7 +15,7 @@ contract AvalaunchGovernance is AccessControl {
     bytes32 public constant STAKE_ADMIN_ROLE = keccak256('STAKE_ADMIN');
 
     modifier onlyAdmin() {
-        require(hasRole(ADMIN_ROLE, msg.sender), "Only admin can setup roles.");
+        require(hasRole(ADMIN_ROLE, _msgSender()), "Only admin can setup roles.");
         _;
     }
 
@@ -35,6 +35,12 @@ contract AvalaunchGovernance is AccessControl {
         _setupRole(STAKE_ADMIN_ROLE, _stakeAdmin);
     }
 
+    // role granting function with existance check
+    function grantRole(bytes32 role, address account) public override onlyAdmin {
+        require(__roles.contains(role), "Role does not exist.");
+        super.grantRole(role, account);
+    }
+
     // setup a new role with an initial account
     function setupRole(bytes32 role, address account) external onlyAdmin {
         require(!__roles.contains(role), "Role already exists.");
@@ -44,28 +50,20 @@ contract AvalaunchGovernance is AccessControl {
 
     // remove already existing role
     function removeRole(bytes32 role) external onlyAdmin {
-        require(__roles.contains(role), "Role does not exists.");
+        require(__roles.contains(role), "Role does not exist.");
         __roles.remove(role);
     }
 
-    // view if '_address' is 'SALE_ADMIN_ROLE' member
-    function hasAdminRole(address account) external view returns (bool) {
-        return hasRole(ADMIN_ROLE, account);
-    }
+    // structure wide role check for permission granting
+    function hasExistingRole(string memory role, address account) external view returns (bool){
+        bytes32 _role;
 
-    // view if '_address' is 'SALE_ADMIN_ROLE' member
-    function hasSaleAdminRole(address account) external view returns (bool) {
-        return hasRole(SALE_ADMIN_ROLE, account);
-    }
+        assembly {
+            _role := mload(add(role, 32))
+        }
 
-    // view if '_address' is 'STAKE_ADMIN_ROLE' member
-    function hasStakeAdminRole(address account) external view returns (bool) {
-        return hasRole(STAKE_ADMIN_ROLE, account);
-    }
-
-    // view if '_address' is a member of any relevant role
-    function isAdmin(address account) external view returns (bool) {
-        return hasRole(ADMIN_ROLE, account) || hasRole(SALE_ADMIN_ROLE, account) || hasRole(STAKE_ADMIN_ROLE, account);
+        require(__roles.contains(_role), "Role does not exist.");
+        return hasRole(_role, account);
     }
 
     // retrieve all administrative roles
