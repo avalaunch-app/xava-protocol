@@ -1070,8 +1070,8 @@ contract AvalaunchSale is Initializable {
 
     /// @notice     Function to get sale.token symbol and parse as bytes32
     function getTokenSymbolBytes32() internal view returns (bytes32 _symbol) {
-        // get token symbol and convert it to bytes memory
-        bytes memory _bytes = bytes(IERC20Metadata(address(sale.token)).symbol());
+        // get token symbol as string memory
+        string memory _bytes = IERC20Metadata(address(sale.token)).symbol();
         // parse token symbol to bytes32 format - to fit dexalot function interface
         assembly {
             _symbol := mload(add(_bytes, 32))
