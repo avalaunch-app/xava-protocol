@@ -10,6 +10,7 @@ contract AvalaunchGovernance is AccessControl {
     EnumerableSet.Bytes32Set private __roles;
 
     // admin roles
+    bytes32 public constant ADMIN_ROLE = DEFAULT_ADMIN_ROLE;
     bytes32 public constant SALE_ADMIN_ROLE = keccak256('SALE_ADMIN');
     bytes32 public constant STAKE_ADMIN_ROLE = keccak256('STAKE_ADMIN');
 
@@ -19,8 +20,8 @@ contract AvalaunchGovernance is AccessControl {
         address _stakeAdmin
     ) public {
         // setup initial roles
-        __roles.add(DEFAULT_ADMIN_ROLE);
-        _setupRole(DEFAULT_ADMIN_ROLE, _leadAdmin);
+        __roles.add(ADMIN_ROLE);
+        _setupRole(ADMIN_ROLE, _leadAdmin);
 
         __roles.add(SALE_ADMIN_ROLE);
         _setupRole(SALE_ADMIN_ROLE, _saleAdmin);
@@ -31,9 +32,15 @@ contract AvalaunchGovernance is AccessControl {
 
     // setup a new role with an initial account
     function setupRole(bytes32 role, address account) external {
+        require(hasRole(ADMIN_ROLE, msg.sender), "Only admin can setup roles.");
         require(!__roles.contains(role), "Role already exists.");
         _setupRole(role, account);
         __roles.add(role);
+    }
+
+    // view if '_address' is 'SALE_ADMIN_ROLE' member
+    function hasAdminRole(address account) external view returns (bool) {
+        return hasRole(ADMIN_ROLE, account);
     }
 
     // view if '_address' is 'SALE_ADMIN_ROLE' member
@@ -47,8 +54,8 @@ contract AvalaunchGovernance is AccessControl {
     }
 
     // view if '_address' is a member of any relevant role
-    function hasAdminRole(address account) external view returns (bool) {
-        return hasRole(DEFAULT_ADMIN_ROLE, account) || hasRole(SALE_ADMIN_ROLE, account) || hasRole(STAKE_ADMIN_ROLE, account);
+    function isAdmin(address account) external view returns (bool) {
+        return hasRole(ADMIN_ROLE, account) || hasRole(SALE_ADMIN_ROLE, account) || hasRole(STAKE_ADMIN_ROLE, account);
     }
 
     // retrieve all administrative roles
