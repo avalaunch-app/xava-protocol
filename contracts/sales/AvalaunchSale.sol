@@ -57,6 +57,7 @@ contract AvalaunchSale {
         uint256 timeParticipated;
         uint256 roundId;
         bool[] isPortionWithdrawn;
+        bool[] isPortionWithdrawnToDexalot;
     }
 
     // Round structure
@@ -557,7 +558,9 @@ contract AvalaunchSale {
         // Increase amount of AVAX raised
         sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
 
-        bool[] memory _isPortionWithdrawn = new bool[](
+        // Empty bool array used to be set as initial for 'isPortionWithdrawn' and 'isPortionWithdrawnToDexalot'
+        // Size determined by number of sale portions
+        bool[] memory _empty = new bool[](
             vestingPortionsUnlockTime.length
         );
 
@@ -567,7 +570,8 @@ contract AvalaunchSale {
             amountAVAXPaid: msg.value,
             timeParticipated: block.timestamp,
             roundId: roundId,
-            isPortionWithdrawn: _isPortionWithdrawn
+            isPortionWithdrawn: _empty,
+            isPortionWithdrawnToDexalot: _empty
         });
 
         // Staking round only.
@@ -645,6 +649,8 @@ contract AvalaunchSale {
 
         // Mark portion as withdrawn
         p.isPortionWithdrawn[portionId] = true;
+        // Mark portion as withdrawn to dexalot
+        p.isPortionWithdrawnToDexalot[portionId] = true;
 
         // Compute amount withdrawing
         uint256 amountWithdrawing = p
@@ -696,7 +702,8 @@ contract AvalaunchSale {
         }
     }
 
-    // Expose function where user can withdraw multiple unlocked portions to Dexalot Portfolio at once
+    /// Expose function where user can withdraw multiple unlocked portions to Dexalot Portfolio at once
+    /// @dev first portion can be deposited before it's unlocking time, while others can only after
     function withdrawMultiplePortionsToDexalot(uint256 [] calldata portionIds) external dexalotChecks {
 
         uint256 totalToWithdraw = 0;
@@ -721,6 +728,8 @@ contract AvalaunchSale {
             if(eligible) {
                 // Mark participation as withdrawn
                 p.isPortionWithdrawn[portionId] = true;
+                // Mark portion as withdrawn to dexalot
+                p.isPortionWithdrawnToDexalot[portionId] = true;
                 // Compute amount withdrawing
                 uint256 amountWithdrawing = p
                     .amountBought
