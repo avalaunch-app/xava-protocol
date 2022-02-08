@@ -571,7 +571,8 @@ contract AvalaunchSale is Initializable {
         bytes calldata signature,
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId
+        uint256 roundId,
+        uint256 signatureExpirationTimestamp
     ) external payable {
 
         require(roundId != 0, "Round can not be 0.");
@@ -594,10 +595,14 @@ contract AvalaunchSale is Initializable {
                 msg.sender,
                 amount,
                 amountXavaToBurn,
-                roundId
+                roundId,
+                signatureExpirationTimestamp
             ),
             "Invalid signature. Verification failed"
         );
+
+        // Check if signature has expired
+        require(block.timestamp < signatureExpirationTimestamp, "Signature expired.");
 
         // Check user haven't participated before
         require(!isParticipated[msg.sender], "User can participate only once.");
@@ -963,7 +968,8 @@ contract AvalaunchSale is Initializable {
         address user,
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 round
+        uint256 round,
+        uint signatureExpirationTimestamp
     ) public view returns (bool) {
         return
             admin.isAdmin(
@@ -972,7 +978,8 @@ contract AvalaunchSale is Initializable {
                     user,
                     amount,
                     amountXavaToBurn,
-                    round
+                    round,
+                    signatureExpirationTimestamp
                 )
             );
     }
@@ -987,7 +994,8 @@ contract AvalaunchSale is Initializable {
         address user,
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId
+        uint256 roundId,
+        uint256 signatureExpirationTimestamp
     ) public view returns (address) {
         bytes32 hash = keccak256(
             abi.encodePacked(
@@ -995,6 +1003,7 @@ contract AvalaunchSale is Initializable {
                 amount,
                 amountXavaToBurn,
                 roundId,
+                signatureExpirationTimestamp,
                 address(this)
             )
         );
