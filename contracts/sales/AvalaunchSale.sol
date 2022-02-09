@@ -5,6 +5,7 @@ import "../interfaces/IAdmin.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/IDexalotPortfolio.sol";
 import "../interfaces/ISalesFactory.sol";
 import "../interfaces/IAllocationStaking.sol";
@@ -630,6 +631,7 @@ contract AvalaunchSale {
     }
 
     /// Users can deposit their participation to Dexalot Portfolio
+    /// @dev first portion can be deposited before it's unlocking time, while others can only after
     function withdrawTokensToDexalot(uint256 portionId) external dexalotChecks {
 
         require(
@@ -953,5 +955,15 @@ contract AvalaunchSale {
         returns (uint256[] memory, uint256[] memory)
     {
         return (vestingPortionsUnlockTime, vestingPercentPerPortion);
+    }
+
+    /// @notice     Function to get sale.token symbol and parse as bytes32
+    function getTokenSymbolBytes32() internal view returns (bytes32 _symbol) {
+        // get token symbol as string memory
+        string memory symbol = IERC20Metadata(address(sale.token)).symbol();
+        // parse token symbol to bytes32 format - to fit dexalot function interface
+        assembly {
+            _symbol := mload(add(symbol, 32))
+        }
     }
 }
