@@ -15,6 +15,8 @@ task("accounts", "Prints the list of accounts", async () => {
   }
 });
 
+const testPK = "0x56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027";
+
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
@@ -38,18 +40,18 @@ module.exports = {
         "0x750839e9dbbd2a0910efe40f50b2f3b2f2f59f5580bb4b83bd8c1201cf9a010a"
       ]
     },
-    staging: {
+    fuji: {
       url: 'https://api.avax-test.network/ext/bc/C/rpc',
       gasPrice: 225000000000,
       chainId: 43113,
-      accounts: [process.env.PK]
+      accounts: [process.env.PK || testPK]
     },
     mainnet: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
       gasPrice: 50000000000,
       chainId: 43114,
       timeout: 900000000,
-      accounts: [process.env.PK]
+      accounts: [process.env.PK || testPK]
     },
     local: {
       url: 'http://localhost:8545',
@@ -63,7 +65,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 185
+            runs: 180
           },
         },
       },
