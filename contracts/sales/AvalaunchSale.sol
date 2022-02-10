@@ -124,19 +124,6 @@ contract AvalaunchSale {
         _;
     }
 
-    // Secure all Dexalot Portfolio interactions
-    modifier dexalotChecks() {
-        require(
-            supportsDexalotWithdraw,
-            "Dexalot Portfolio withdrawal not supported."
-        );
-        require(
-            block.timestamp >= dexalotUnlockTime,
-            "Dexalot Portfolio withdrawal not unlocked."
-        );
-        _;
-    }
-
     // Events
     event TokensSold(address user, uint256 amount);
     event UserRegistered(address user, uint256 roundId);
@@ -646,7 +633,10 @@ contract AvalaunchSale {
 
     /// Users can deposit their participation to Dexalot Portfolio
     /// @dev first portion can be deposited before it's unlocking time, while others can only after
-    function withdrawTokensToDexalot(uint256 portionId) external dexalotChecks {
+    function withdrawTokensToDexalot(uint256 portionId) external {
+
+        // Security check
+        performDexalotChecks();
 
         require(
             portionId < vestingPercentPerPortion.length,
@@ -725,7 +715,10 @@ contract AvalaunchSale {
 
     /// Expose function where user can withdraw multiple unlocked portions to Dexalot Portfolio at once
     /// @dev first portion can be deposited before it's unlocking time, while others can only after
-    function withdrawMultiplePortionsToDexalot(uint256 [] calldata portionIds) external dexalotChecks {
+    function withdrawMultiplePortionsToDexalot(uint256 [] calldata portionIds) external {
+
+        // Security check
+        performDexalotChecks();
 
         uint256 totalToWithdraw = 0;
 
@@ -968,6 +961,18 @@ contract AvalaunchSale {
         returns (uint256[] memory, uint256[] memory)
     {
         return (vestingPortionsUnlockTime, vestingPercentPerPortion);
+    }
+
+    /// @notice     Function to secure dexalot portfolio interactions
+    function performDexalotChecks() internal view {
+        require(
+            supportsDexalotWithdraw,
+            "Dexalot Portfolio withdrawal not supported."
+        );
+        require(
+            block.timestamp >= dexalotUnlockTime,
+            "Dexalot Portfolio withdrawal not unlocked."
+        );
     }
 
     /// @notice     Function to get sale.token symbol and parse as bytes32
