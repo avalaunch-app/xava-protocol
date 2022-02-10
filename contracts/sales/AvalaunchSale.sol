@@ -8,8 +8,6 @@ import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/IDexalotPortfolio.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "../interfaces/ISalesFactory.sol";
-import "../interfaces/IAllocationStaking.sol";
 
 contract AvalaunchSale {
     using ECDSA for bytes32;
@@ -678,8 +676,8 @@ contract AvalaunchSale {
 
         // Withdraw percent which is unlocked at that portion
         if(amountWithdrawing > 0) {
-            // Approve token spending to Dexalot Portfolio
-            sale.token.approve(address(dexalotPortfolio), amountWithdrawing);
+            // Transfer tokens to user's wallet prior to dexalot deposit
+            sale.token.safeTransfer(msg.sender, amountWithdrawing);
 
             // Deposit tokens to dexalot contract - Withdraw from sale contract
             dexalotPortfolio.depositTokenFromContract(
@@ -764,8 +762,8 @@ contract AvalaunchSale {
         }
 
         if(totalToWithdraw > 0) {
-            // Approve token spending to Dexalot Portfolio
-            sale.token.approve(address(dexalotPortfolio), totalToWithdraw);
+            // Transfer tokens to user's wallet prior to dexalot deposit
+            sale.token.safeTransfer(msg.sender, totalToWithdraw);
 
             // Deposit tokens to dexalot contract - Withdraw from sale contract
             dexalotPortfolio.depositTokenFromContract(
