@@ -955,41 +955,19 @@ contract AvalaunchSale is Initializable {
         return admin.isAdmin(messageHash.recover(signature));
     }
 
-    // Function to check if admin was the message signer
-    function checkParticipationSignature(
-        bytes memory signature,
-        address user,
-        uint256 amount,
-        uint256 amountXavaToBurn,
-        uint256 round,
-        uint signatureExpirationTimestamp
-    ) public view returns (bool) {
-        return
-            admin.isAdmin(
-                getParticipationSigner(
-                    signature,
-                    user,
-                    amount,
-                    amountXavaToBurn,
-                    round,
-                    signatureExpirationTimestamp
-                )
-            );
-    }
-
     /// @notice     Check who signed the message
     /// @param      signature is the message allowing user to participate in sale
     /// @param      user is the address of user for which we're signing the message
     /// @param      amount is the maximal amount of tokens user can buy
     /// @param      roundId is the Id of the round user is participating.
-    function getParticipationSigner(
+    function checkParticipationSignature(
         bytes memory signature,
         address user,
         uint256 amount,
         uint256 amountXavaToBurn,
         uint256 roundId,
         uint256 signatureExpirationTimestamp
-    ) public view returns (address) {
+    ) public view returns (bool) {
         bytes32 hash = keccak256(
             abi.encodePacked(
                 user,
@@ -1001,7 +979,7 @@ contract AvalaunchSale is Initializable {
             )
         );
         bytes32 messageHash = hash.toEthSignedMessageHash();
-        return messageHash.recover(signature);
+        return admin.isAdmin(messageHash.recover(signature));
     }
 
     /// @notice     Function to get participation for passed user address
