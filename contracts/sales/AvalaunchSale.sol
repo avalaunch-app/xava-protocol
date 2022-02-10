@@ -129,19 +129,6 @@ contract AvalaunchSale is Initializable {
         _;
     }
 
-    // Secure all Dexalot Portfolio interactions
-    modifier dexalotChecks() {
-        require(
-            supportsDexalotWithdraw,
-            "Dexalot Portfolio withdrawal not supported."
-        );
-        require(
-            block.timestamp >= dexalotUnlockTime,
-            "Dexalot Portfolio withdrawal not unlocked."
-        );
-        _;
-    }
-
     // Restricting setter calls after gate closing
     modifier onlyIfGateOpen() {
         require(!gateClosed, "Setter gate is closed.");
@@ -719,7 +706,10 @@ contract AvalaunchSale is Initializable {
 
     /// Users can deposit their participation to Dexalot Portfolio
     /// @dev first portion can be deposited before it's unlocking time, while others can only after
-    function withdrawTokensToDexalot(uint256 portionId) external dexalotChecks {
+    function withdrawTokensToDexalot(uint256 portionId) external {
+
+        // Security check
+        performDexalotChecks();
 
         require(
             portionId < vestingPercentPerPortion.length,
@@ -798,7 +788,10 @@ contract AvalaunchSale is Initializable {
 
     /// Expose function where user can withdraw multiple unlocked portions to Dexalot Portfolio at once
     /// @dev first portion can be deposited before it's unlocking time, while others can only after
-    function withdrawMultiplePortionsToDexalot(uint256 [] calldata portionIds) external dexalotChecks {
+    function withdrawMultiplePortionsToDexalot(uint256 [] calldata portionIds) external {
+
+        // Security check
+        performDexalotChecks();
 
         uint256 totalToWithdraw = 0;
 
@@ -1083,6 +1076,18 @@ contract AvalaunchSale is Initializable {
         // Set new values
         updateTokenPriceInAVAXPercentageThreshold = _updateTokenPriceInAVAXPercentageThreshold;
         updateTokenPriceInAVAXTimeLimit = _updateTokenPriceInAVAXTimeLimit;
+    }
+
+    /// @notice     Function to secure dexalot portfolio interactions
+    function performDexalotChecks() internal view {
+        require(
+            supportsDexalotWithdraw,
+            "Dexalot Portfolio withdrawal not supported."
+        );
+        require(
+            block.timestamp >= dexalotUnlockTime,
+            "Dexalot Portfolio withdrawal not unlocked."
+        );
     }
 
     /// @notice     Function to get sale.token symbol and parse as bytes32
