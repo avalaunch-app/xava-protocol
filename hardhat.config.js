@@ -65,7 +65,16 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 1
+            runs: 180
+          },
+        },
+      },
+      "contracts/sales/SalesFactory.sol": {
+        version: "0.6.12",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 180
           },
         },
       },
