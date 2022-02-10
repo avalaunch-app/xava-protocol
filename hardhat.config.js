@@ -4,6 +4,7 @@ require('@nomiclabs/hardhat-ethers')
 require("@nomiclabs/hardhat-web3")
 require('@openzeppelin/hardhat-upgrades')
 require('solidity-coverage');
+require('hardhat-gas-reporter');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -56,6 +57,11 @@ module.exports = {
     local: {
       url: 'http://localhost:8545',
     },
+  },
+  gasReporter: {
+    currency: 'USD',
+    gasPrice: 100,
+    enabled: true
   },
   solidity: {
     compilers: [ {version: "0.6.12"} ],

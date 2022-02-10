@@ -16,6 +16,7 @@
     "bn.js": "^5.2.0",
     "dotenv": "^8.6.0",
     "git-module": "0.0.8",
+    "hardhat-gas-reporter": "^1.0.7",
     "hardhat-web3": "^1.0.1",
     "scrypt": "github:barrysteyn/node-scrypt#fb60a8d3c158fe115a624b5ffa7480f3a24b03fb"
   },
