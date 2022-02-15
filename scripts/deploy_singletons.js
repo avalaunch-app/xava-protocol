@@ -39,7 +39,7 @@ async function main() {
             salesFactory.address,
             c.depositFeePercent,
             c.depositFeePrecision
-        ]
+        ], { unsafeAllow: ['delegatecall'] }
     );
     await allocationStaking.deployed()
     console.log('AllocationStaking Proxy deployed to:', allocationStaking.address);
