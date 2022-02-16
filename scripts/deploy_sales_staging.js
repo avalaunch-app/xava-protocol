@@ -45,10 +45,10 @@ const main = async () => {
     // fundamental timestamps
     const registrationStart = await getCurrentBlockTimestamp() + 300;
     const registrationEnd = registrationStart + 600;
-    const validatorRound = registrationEnd + 300;
-    const stakingRound = validatorRound + 600;
-    const saleEndTime = stakingRound + 600;
-    const tokensUnlockTime = saleEndTime + 300;
+    const validatorRound = registrationEnd + 450;
+    const stakingRound = validatorRound + 450;
+    const saleEndTime = stakingRound + 450;
+    const tokensUnlockTime = saleEndTime + 2000;
     // vesting
     const unlockingTimes = [tokensUnlockTime + 300, tokensUnlockTime + 600, tokensUnlockTime + 900];
     const percents = [3333, 3333, 3334];
