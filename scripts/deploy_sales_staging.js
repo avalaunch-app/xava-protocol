@@ -44,10 +44,10 @@ const main = async () => {
     const totalTokens = ethers.utils.parseEther("1000000").toString();
     // fundamental timestamps
     const registrationStart = await getCurrentBlockTimestamp() + 300;
-    const registrationEnd = registrationStart + 600;
-    const validatorRound = registrationEnd + 450;
-    const stakingRound = validatorRound + 450;
-    const saleEndTime = stakingRound + 450;
+    const registrationEnd = registrationStart + 900;
+    const validatorRound = registrationEnd + 900;
+    const stakingRound = validatorRound + 900;
+    const saleEndTime = stakingRound + 900;
     const tokensUnlockTime = saleEndTime + 2000;
     // vesting
     const unlockingTimes = [tokensUnlockTime + 300, tokensUnlockTime + 600, tokensUnlockTime + 900];
@@ -101,6 +101,24 @@ const main = async () => {
     // add dexalot portfolio support
     await sale.setAndSupportDexalotPortfolio(dexalotPortfolio, dexalotUnlockingTime);
     console.log(' - Dexalot Support Added.');
+
+    console.log("Config:");
+    console.log({
+        saleAddress: lastDeployedSale,
+        saleToken: saleToken.address,
+        saleOwner,
+        tokenPriceInAvax,
+        totalTokens,
+        saleEndTime,
+        tokensUnlockTime,
+        registrationStart,
+        registrationEnd,
+        validatorRound,
+        stakingRound,
+        registrationDepositAVAX,
+        unlockingTimes,
+        percents
+    });
 
     console.log(boldOut('Done!'));
 }
