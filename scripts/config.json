@@ -16,7 +16,7 @@
       "0x3Fa80eAe09D3006A230e3eB8244C2035bABF8273"
     ],
     "allocationStakingRPS": "0.01",
-    "delayBeforeStart": 500,
+    "delayBeforeStart": 200,
     "depositFeePercent": "2",
     "depositFeePrecision": "100",
     "initialRewardsAllocationStaking": "5000000",

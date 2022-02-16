@@ -77,12 +77,12 @@
         "AllocationStaking": "0x297E4853c7bb699dC324B252397A5638D82B2e32"
     },
     "staging_dexalot": {
-        "XavaToken": "0x5D370a6189F89603FaB67e9C68383e63F7B6A262",
+        "XavaToken": "0x65a62f0AB08Ef416Af5E67E3c94CC126DCFb60b1",
         "DevTokenAlloStaking": "0x027D2E627209f1cebA52ADc8A5aFE9318459b44B",
-        "Admin": "0x2346d3A6fb18Ff3ae590Ea31d9e41E6AB8c9f5EB",
-        "SalesFactory": "0x385488FfbFf2265DaC31d38497b616fA6cc81231",
-        "AllocationStaking": "0x378c144CA5d6044C65baA873A4A6013fa38C80F1",
-        "ProxyAdmin": "0x4Ed5B9C2C3E0689d516F312e88b12D96D2548A66",
+        "Admin": "0xA627e28Ffc06Ea1b468157f638d562Aa5405563b",
+        "SalesFactory": "0xFD343Bdc502C504CA0627f91711B38ea89a916c3",
+        "AllocationStaking": "0x480F4613e3b6f52C8207571aaA8d0Ce3601Be419",
+        "ProxyAdmin": "0x796EC8bee2871dD820F176730669848d909914c0",
         "LatestSale": "0x2F8C6987FbCC65Aac9F15eCEf407c15C9fea9020"
     }
 }
