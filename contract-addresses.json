@@ -63,7 +63,14 @@
     },
     "local": {
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
-        "Admin": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE"
+        "Admin": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+        "SalesFactory": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+        "XavaToken": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+        "AllocationStaking": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+        "ProxyAdmin": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+        "DevTokenAlloStaking": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+        "latestStagingSale": "0x78cf6DF6f2Ab5728D62fE194a0BD086d7E14B08C",
+        "LatestSale": "0xcE03842f04769804204D8582Fb38da7931e6067b"
     },
     "staging": {
         "Admin": "0x42B0C4c2ce5DB3e50c64209Cf296cdFb213a4129",
@@ -83,6 +90,6 @@
         "SalesFactory": "0xFD343Bdc502C504CA0627f91711B38ea89a916c3",
         "AllocationStaking": "0x480F4613e3b6f52C8207571aaA8d0Ce3601Be419",
         "ProxyAdmin": "0x796EC8bee2871dD820F176730669848d909914c0",
-        "LatestSale": "0x2933bC4BA6724399121010E2eC366230D98CA063"
+        "LatestSale": "0xF9462796a8C4CD6F8E5989Ba2EC323099C7Db2B4"
     }
 }
