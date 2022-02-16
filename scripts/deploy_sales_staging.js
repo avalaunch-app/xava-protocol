@@ -53,6 +53,9 @@ const main = async () => {
     const unlockingTimes = [tokensUnlockTime + 300, tokensUnlockTime + 600, tokensUnlockTime + 900];
     const percents = [3333, 3333, 3334];
     const maxVestingTimeShift = 2592000;
+    // dexalot
+    const dexalotPortfolio = "0x780380eB4787775b07dfa60fB11C2CdAD6A44f7C";
+    const dexalotUnlockingTime = tokensUnlockTime - 600;
     // misc
     const portionVestingPrecision = 10000;
     const stakingRoundId = 2;
@@ -70,7 +73,7 @@ const main = async () => {
         stakingRoundId,
         registrationDepositAVAX
     )).wait();
-    console.log(' - Sale Params set successfully.');
+    console.log(' - Sale params set successfully.');
 
     // set sale registration time
     await sale.setRegistrationTime(
@@ -89,6 +92,15 @@ const main = async () => {
     // set vesting parameters
     await sale.setVestingParams(unlockingTimes, percents, maxVestingTimeShift);
     console.log(' - Vesting parameters set successfully.');
+
+    // deposit tokens to sale contract
+    await(await saleToken.approve(sale.address, totalTokens)).wait();
+    await sale.depositTokens();
+    console.log(' - Tokens deposited.');
+
+    // add dexalot portfolio support
+    await sale.setAndSupportDexalotPortfolio(dexalotPortfolio, dexalotUnlockingTime);
+    console.log(' - Dexalot Support Added.');
 
     console.log(boldOut('Done!'));
 }
