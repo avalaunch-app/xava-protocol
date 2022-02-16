@@ -20,7 +20,7 @@ const main = async () => {
 
     // retrieve the sale deployed and save the address
     const lastDeployedSale = await salesFactory.getLastDeployedSale();
-    saveContractAddress(hre.network.name,'latestStagingSale', lastDeployedSale);
+    saveContractAddress(hre.network.name,'LatestSale', lastDeployedSale);
     console.log(`Deployed sale address: ${greenOut(lastDeployedSale)}`);
     console.log('Sub-operations:');
     // instantiate deployed sale contract

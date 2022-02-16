@@ -75,5 +75,14 @@
         "MCK1": "0xc87cd7FaA48eDF2CD28A524E982FFBe3779fe70F",
         "MOCK-TOKEN": "0xD95d874e6bc638A25ec7FbA5224b21f5e18B308f",
         "AllocationStaking": "0x297E4853c7bb699dC324B252397A5638D82B2e32"
+    },
+    "staging_dexalot": {
+        "XavaToken": "0x5D370a6189F89603FaB67e9C68383e63F7B6A262",
+        "DevTokenAlloStaking": "0x027D2E627209f1cebA52ADc8A5aFE9318459b44B",
+        "Admin": "0x2346d3A6fb18Ff3ae590Ea31d9e41E6AB8c9f5EB",
+        "SalesFactory": "0x385488FfbFf2265DaC31d38497b616fA6cc81231",
+        "AllocationStaking": "0x378c144CA5d6044C65baA873A4A6013fa38C80F1",
+        "ProxyAdmin": "0x4Ed5B9C2C3E0689d516F312e88b12D96D2548A66",
+        "LatestSale": "0x2F8C6987FbCC65Aac9F15eCEf407c15C9fea9020"
     }
 }
