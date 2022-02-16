@@ -34,7 +34,7 @@ const main = async () => {
 
     // deploy sale token
     const saleTokenFactory = await hre.ethers.getContractFactory("XavaToken");
-    const saleToken = await saleTokenFactory.deploy("Sale Test Token", "STT", "1000000000000000000000000000", 18);
+    const saleToken = await saleTokenFactory.deploy("Sale Token 1", "ST1", "1000000000000000000000000000", 18);
     await saleToken.deployed();
     console.log(` - Sale token deployed to: ${greenOut(saleToken.address)}`);
 
