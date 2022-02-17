@@ -2,7 +2,10 @@ const hre = require("hardhat");
 const { saveContractAddress, getSavedContractAddresses } = require('./utils')
 const { redOut, greenOut } = require('./styling');
 const config = require("./saleConfig.json");
-const { ethers } = hre;
+const { ethers } = hre
+
+const delay = ms => new Promise(res => setTimeout(res, ms));
+const delayLength = 3000;
 
 async function main() {
 
@@ -13,6 +16,8 @@ async function main() {
 
     await(await salesFactory.deploySale()).wait();
     console.log('Sale is deployed successfully.');
+
+    await delay(delayLength);
 
     const lastDeployedSale = await salesFactory.getLastDeployedSale();
     console.log('Deployed Sale address is: ', lastDeployedSale);
@@ -54,12 +59,16 @@ async function main() {
     )).wait();
     console.log('Sale Params set successfully.');
 
+    await delay(delayLength);
+
     console.log('Setting registration time.');
     await sale.setRegistrationTime(
         registrationStart,
         registrationEnd
     );
     console.log('Registration time set.');
+
+    await delay(delayLength);
 
     console.log('Setting rounds.');
     await sale.setRounds(
@@ -74,6 +83,8 @@ async function main() {
     console.log('Percents: ', percents);
     console.log('Precision for vesting: ', c['portionVestingPrecision']);
     console.log('Max vesting time shift in seconds: ', c['maxVestingTimeShift']);
+
+    await delay(delayLength);
 
     console.log('Setting vesting params.');
     await sale.setVestingParams(unlockingTimes, percents, c['maxVestingTimeShift']);
