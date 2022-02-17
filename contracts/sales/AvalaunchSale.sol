@@ -936,6 +936,7 @@ contract AvalaunchSale {
             uint256,
             uint256,
             uint256,
+            bool[] memory,
             bool[] memory
         )
     {
