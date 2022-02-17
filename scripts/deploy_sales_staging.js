@@ -44,22 +44,22 @@ const main = async () => {
     const totalTokens = ethers.utils.parseEther("1000000").toString();
     // fundamental timestamps
     const registrationStart = await getCurrentBlockTimestamp() + 300;
-    const registrationEnd = registrationStart + 1800;
-    const validatorRound = registrationEnd + 900;
-    const stakingRound = validatorRound + 900;
-    const saleEndTime = stakingRound + 900;
-    const tokensUnlockTime = saleEndTime + 3600;
+    const registrationEnd = registrationStart + 600;
+    const validatorRound = registrationEnd + 300;
+    const stakingRound = validatorRound + 300;
+    const saleEndTime = stakingRound + 300;
+    const tokensUnlockTime = saleEndTime + 600;
     // vesting
     const unlockingTimes = [tokensUnlockTime + 300, tokensUnlockTime + 600, tokensUnlockTime + 900];
     const percents = [3333, 3333, 3334];
     const maxVestingTimeShift = 2592000;
     // dexalot
     const dexalotPortfolio = "0x780380eB4787775b07dfa60fB11C2CdAD6A44f7C";
-    const dexalotUnlockingTime = tokensUnlockTime - 1800;
+    const dexalotUnlockingTime = tokensUnlockTime - 300;
     // misc
     const portionVestingPrecision = 10000;
     const stakingRoundId = 2;
-    const registrationDepositAVAX = 1;
+    const registrationDepositAVAX = ethers.utils.parseEther('1').toString();
 
     // set proper sale parameters
     await(await sale.setSaleParams(
