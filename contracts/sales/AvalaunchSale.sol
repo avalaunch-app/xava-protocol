@@ -945,7 +945,8 @@ contract AvalaunchSale {
             p.amountAVAXPaid,
             p.timeParticipated,
             p.roundId,
-            p.isPortionWithdrawn
+            p.isPortionWithdrawn,
+            p.isPortionWithdrawnToDexalot
         );
     }
 
