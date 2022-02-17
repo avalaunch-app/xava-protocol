@@ -15,6 +15,8 @@
     "stakingRoundId": 2,
     "registrationDepositAVAX": "1",
     "maxVestingTimeShift": 2592000,
+    "dexalotPortfolio": "0x6F8205cf222dD4C6615991C7F604F366526B5C6E",
+    "dexalotUnlockingTime": 1645614000,
     "unlockingTimes": [
       1653588000,
       1654192800,
