@@ -87,9 +87,9 @@
         "XavaToken": "0x65a62f0AB08Ef416Af5E67E3c94CC126DCFb60b1",
         "DevTokenAlloStaking": "0x027D2E627209f1cebA52ADc8A5aFE9318459b44B",
         "Admin": "0xA627e28Ffc06Ea1b468157f638d562Aa5405563b",
-        "SalesFactory": "0xFD343Bdc502C504CA0627f91711B38ea89a916c3",
+        "SalesFactory": "0x926115b494471eC4Df3b35e95c2dDc934A8A7406",
         "AllocationStaking": "0x480F4613e3b6f52C8207571aaA8d0Ce3601Be419",
         "ProxyAdmin": "0x796EC8bee2871dD820F176730669848d909914c0",
-        "LatestSale": "0xcC6ccbfE08588Fa5a5942D51E39011E2112aD253"
+        "LatestSale": "0x66210FA1B4e22EA854FA428fB03909b20d3c9425"
     }
 }
