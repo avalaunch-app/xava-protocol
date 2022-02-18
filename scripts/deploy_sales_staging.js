@@ -34,7 +34,7 @@ const main = async () => {
 
     // deploy sale token
     const saleTokenFactory = await hre.ethers.getContractFactory("XavaToken");
-    const saleToken = await saleTokenFactory.deploy("Sale Token 1", "ST1", "1000000000000000000000000000", 18);
+    const saleToken = await saleTokenFactory.deploy("Sale Token 5", "ST5", "1000000000000000000000000000", 18);
     await saleToken.deployed();
     console.log(` - Sale token deployed to: ${greenOut(saleToken.address)}`);
 
@@ -43,14 +43,14 @@ const main = async () => {
     const tokenPriceInAvax = ethers.utils.parseEther("0.00005").toString();
     const totalTokens = ethers.utils.parseEther("1000000").toString();
     // fundamental timestamps
-    const registrationStart = await getCurrentBlockTimestamp() + 300;
-    const registrationEnd = registrationStart + 600;
+    const registrationStart = await getCurrentBlockTimestamp() + 150;
+    const registrationEnd = registrationStart + 300;
     const validatorRound = registrationEnd + 300;
     const stakingRound = validatorRound + 300;
     const saleEndTime = stakingRound + 300;
     const tokensUnlockTime = saleEndTime + 600;
     // vesting
-    const unlockingTimes = [tokensUnlockTime + 300, tokensUnlockTime + 600, tokensUnlockTime + 900];
+    const unlockingTimes = [tokensUnlockTime, tokensUnlockTime + 200, tokensUnlockTime + 400];
     const percents = [3333, 3333, 3334];
     const maxVestingTimeShift = 2592000;
     // dexalot
@@ -117,7 +117,8 @@ const main = async () => {
         stakingRound,
         registrationDepositAVAX,
         unlockingTimes,
-        percents
+        percents,
+        dexalotUnlockingTime
     });
 
     console.log(boldOut('Done!'));
