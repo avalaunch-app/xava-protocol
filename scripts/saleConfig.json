@@ -7,7 +7,7 @@
     "saleOwner": "0x0ea4e560f0ED6AB4461D9833F2807c2fC4C7327f",
     "registrationStartAt": 1645196400,
     "registrationLength": 270000,
-    "delayBetweenRegistrationAndSale": 86400,
+    "delayBetweenRegistrationAndSale": 43200,
     "validatorRoundLength": 32400,
     "stakingRoundLength": 54000,
     "TGE": 1645898400,
