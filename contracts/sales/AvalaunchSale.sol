@@ -719,10 +719,13 @@ contract AvalaunchSale is Initializable {
         // Retrieve participation from storage
         Participation storage p = userToParticipation[msg.sender];
 
+        // Require that portion is not withdrawn
+        require(!p.isPortionWithdrawn[portionId], "Portion already withdrawn.");
+
         if(portionId > 0) {
             require(
-                !p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] <= block.timestamp,
-                "Tokens already withdrawn or portion not unlocked yet."
+                vestingPortionsUnlockTime[portionId] <= block.timestamp,
+                "Portion not unlocked yet."
             );
         } // modifier checks for portionId == 0 case
 
@@ -804,13 +807,15 @@ contract AvalaunchSale is Initializable {
 
             bool eligible;
 
-            if(portionId > 0) {
-                if(!p.isPortionWithdrawn[portionId] && vestingPortionsUnlockTime[portionId] <= block.timestamp) {
+            if(!p.isPortionWithdrawn[portionId]) {
+                if(portionId > 0) {
+                    if(vestingPortionsUnlockTime[portionId] <= block.timestamp) {
+                        eligible = true;
+                    }
+                } else { // if portion id == 0
                     eligible = true;
-                }
-            } else { // if portion id == 0
-                eligible = true;
-            } // modifier checks for portionId == 0 case
+                } // modifier checks for portionId == 0 case
+            }
 
             if(eligible) {
                 // Mark participation as withdrawn
@@ -991,6 +996,7 @@ contract AvalaunchSale is Initializable {
             uint256,
             uint256,
             uint256,
+            bool[] memory,
             bool[] memory
         )
     {
@@ -1000,7 +1006,8 @@ contract AvalaunchSale is Initializable {
             p.amountAVAXPaid,
             p.timeParticipated,
             p.roundId,
-            p.isPortionWithdrawn
+            p.isPortionWithdrawn,
+            p.isPortionWithdrawnToDexalot
         );
     }
 
