@@ -16,6 +16,7 @@ describe("AvalaunchSale", function() {
   let sigExp =  3000000000;
   let vestingPortionsUnlockTime = [];
   let vestingPercentPerPortion = [];
+  let tokenPriceInUSD = 10;
 
   const DECIMALS = 18; // Working with non-18 decimals
   const MULTIPLIER = (10 ** DECIMALS).toString();
@@ -124,7 +125,7 @@ describe("AvalaunchSale", function() {
 
     return await AvalaunchSale.setSaleParams(
         token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
-        saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+        saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX, tokenPriceInUSD
     );
   }
 
@@ -246,7 +247,7 @@ describe("AvalaunchSale", function() {
         // When
         await AvalaunchSale.setSaleParams(
             token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
-            saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+            saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX, tokenPriceInUSD
         );
 
         // Then
@@ -286,9 +287,9 @@ describe("AvalaunchSale", function() {
         // When
         expect(await AvalaunchSale.setSaleParams(
             token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
-            saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+            saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX, tokenPriceInUSD
         )).to.emit(AvalaunchSale, "SaleCreated")
-        .withArgs(saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd);
+        .withArgs(saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokenPriceInUSD);
       });
 
       it("Should not set sale parameters if sale is already created", async function() {
