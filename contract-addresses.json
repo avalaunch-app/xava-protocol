@@ -75,7 +75,7 @@
         "Sale-Heroes Chained":"0x41Ed99efeab7f5e82Cc2ba69FA1b81F7aBB7b064",
         "Sale-Heroes of NFT":"0xfBDBC5774fD483F69007591b819Ba0ca27f379F6",
         "Sale-DeFiato":"0x6aD36c94b91E9499C9DFbA65CBe53cEfF5D45aC5",
-        "Sale-Dexalot":"0x6168BBf5EF2001981C8B300723D7f300f01871fF",
+        "Sale-Dexalot":"0x6168BBf5EF2001981C8B300723D7f300f01871fF"
     },
     "local": {
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
@@ -106,6 +106,6 @@
         "SalesFactory": "0x926115b494471eC4Df3b35e95c2dDc934A8A7406",
         "AllocationStaking": "0x480F4613e3b6f52C8207571aaA8d0Ce3601Be419",
         "ProxyAdmin": "0x796EC8bee2871dD820F176730669848d909914c0",
-        "LatestSale": "0x66210FA1B4e22EA854FA428fB03909b20d3c9425"
+        "LatestSale": "0x7A87825eAB59C6d9007451dd4023623714D33876"
     }
 }
