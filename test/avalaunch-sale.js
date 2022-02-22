@@ -149,9 +149,9 @@ describe("AvalaunchSale", function() {
 
   async function setVestingParams() {
     const blockTimestamp = await getCurrentBlockTimestamp();
-    vestingPortionsUnlockTime = [blockTimestamp + 10, blockTimestamp + 20];
+    vestingPortionsUnlockTime = [blockTimestamp + SALE_END_DELTA + 25, blockTimestamp + SALE_END_DELTA + 35];
     vestingPercentPerPortion = [5, 95];
-    await AvalaunchSale.setVestingParams([blockTimestamp + 10, blockTimestamp + 20], [5, 95], 500000);
+    await AvalaunchSale.setVestingParams(vestingPortionsUnlockTime, vestingPercentPerPortion, 500000);
   }
 
   async function depositTokens() {
@@ -636,6 +636,14 @@ describe("AvalaunchSale", function() {
         // Then
         const sale = await AvalaunchSale.sale();
         expect(sale[0]).to.equal(XavaToken2.address);
+      });
+
+      it("Should add Dexalot Support", async function () {
+        const unlockTime = await getCurrentBlockTimestamp() + 100000;
+        await AvalaunchSale.setAndSupportDexalotPortfolio(ONE_ADDRESS, unlockTime);
+
+        expect(await AvalaunchSale.dexalotPortfolio()).to.equal(ONE_ADDRESS);
+        expect(await AvalaunchSale.dexalotUnlockTime()).to.equal(unlockTime);
       });
     });
   });
