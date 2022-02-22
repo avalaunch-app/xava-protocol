@@ -221,6 +221,16 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 		return lastCreatedBadgeId;
 	}
 
+	function isMarketplaceVerified(
+		address marketplace
+	)
+	external
+	view
+	returns (bool)
+	{
+		return verifiedMarketplaces[marketplace];
+	}
+
 	function _beforeTokenTransfer(
 		address operator,
 		address from,
