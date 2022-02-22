@@ -47,6 +47,8 @@ contract AvalaunchSale is Initializable {
         uint256 totalAVAXRaised;
         // Sale end time
         uint256 saleEnd;
+        // Price of the token quoted in USD
+        uint256 tokenPriceInUSD;
     }
 
     // Participation structure
@@ -145,7 +147,8 @@ contract AvalaunchSale is Initializable {
         address saleOwner,
         uint256 tokenPriceInAVAX,
         uint256 amountOfTokensToSell,
-        uint256 saleEnd
+        uint256 saleEnd,
+        uint256 tokenPriceInUSD
     );
     event RegistrationTimeSet(
         uint256 registrationTimeStarts,
@@ -240,7 +243,8 @@ contract AvalaunchSale is Initializable {
         uint256 _saleEnd,
         uint256 _portionVestingPrecision,
         uint256 _stakingRoundId,
-        uint256 _registrationDepositAVAX
+        uint256 _registrationDepositAVAX,
+        uint256 _tokenPriceInUSD
     )
         external
         onlyAdmin
@@ -252,8 +256,9 @@ contract AvalaunchSale is Initializable {
         );
         require(
             _tokenPriceInAVAX != 0 &&
-                _amountOfTokensToSell != 0 &&
-                _saleEnd > block.timestamp,
+            _amountOfTokensToSell != 0 &&
+            _saleEnd > block.timestamp &&
+            _tokenPriceInUSD != 0,
             "setSaleParams: Bad input"
         );
         require(_portionVestingPrecision >= 100, "Should be at least 100");
@@ -266,6 +271,7 @@ contract AvalaunchSale is Initializable {
         sale.tokenPriceInAVAX = _tokenPriceInAVAX;
         sale.amountOfTokensToSell = _amountOfTokensToSell;
         sale.saleEnd = _saleEnd;
+        sale.tokenPriceInUSD = _tokenPriceInUSD;
 
         // Deposit in AVAX, sent during the registration
         registrationDepositAVAX = _registrationDepositAVAX;
@@ -278,7 +284,8 @@ contract AvalaunchSale is Initializable {
             sale.saleOwner,
             sale.tokenPriceInAVAX,
             sale.amountOfTokensToSell,
-            sale.saleEnd
+            sale.saleEnd,
+            sale.tokenPriceInUSD
         );
     }
 
