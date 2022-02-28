@@ -206,8 +206,8 @@ contract AllocationStaking is OwnableUpgradeable {
 
     function setTokensUnlockTime(uint256 _pid, address _user, uint256 _tokensUnlockTime) external onlyVerifiedSales {
         UserInfo storage user = userInfo[_pid][_user];
-        // Require that tokens are currently unlocked
-        require(user.tokensUnlockTime <= block.timestamp);
+        // Require that new unlock time is later than current one
+        require(user.tokensUnlockTime <= _tokensUnlockTime);
         user.tokensUnlockTime = _tokensUnlockTime;
         // Add sale to the array of sales user registered for.
         user.salesRegistered.push(msg.sender);
