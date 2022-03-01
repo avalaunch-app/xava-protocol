@@ -48,6 +48,8 @@ contract AvalaunchSale {
         uint256 saleEnd;
         // When tokens can be withdrawn
         uint256 tokensUnlockTime;
+        // Price of the token quoted in USD
+        uint256 tokenPriceInUSD;
     }
 
     // Participation structure
@@ -135,7 +137,8 @@ contract AvalaunchSale {
         uint256 tokenPriceInAVAX,
         uint256 amountOfTokensToSell,
         uint256 saleEnd,
-        uint256 tokensUnlockTime
+        uint256 tokensUnlockTime,
+        uint256 tokenPriceInUSD
     );
     event RegistrationTimeSet(
         uint256 registrationTimeStarts,
@@ -220,7 +223,8 @@ contract AvalaunchSale {
         uint256 _tokensUnlockTime,
         uint256 _portionVestingPrecision,
         uint256 _stakingRoundId,
-        uint256 _registrationDepositAVAX
+        uint256 _registrationDepositAVAX,
+        uint256 _tokenPriceInUSD
     )
         external
         onlyAdmin
@@ -232,9 +236,10 @@ contract AvalaunchSale {
         );
         require(
             _tokenPriceInAVAX != 0 &&
-                _amountOfTokensToSell != 0 &&
-                _saleEnd > block.timestamp &&
-                _tokensUnlockTime > block.timestamp,
+            _amountOfTokensToSell != 0 &&
+            _saleEnd > block.timestamp &&
+            _tokensUnlockTime > block.timestamp &&
+            _tokenPriceInUSD != 0,
             "setSaleParams: Bad input"
         );
         require(_portionVestingPrecision >= 100, "Should be at least 100");
@@ -248,6 +253,7 @@ contract AvalaunchSale {
         sale.amountOfTokensToSell = _amountOfTokensToSell;
         sale.saleEnd = _saleEnd;
         sale.tokensUnlockTime = _tokensUnlockTime;
+        sale.tokenPriceInUSD = _tokenPriceInUSD;
 
         // Deposit in AVAX, sent during the registration
         registrationDepositAVAX = _registrationDepositAVAX;
@@ -261,7 +267,8 @@ contract AvalaunchSale {
             sale.tokenPriceInAVAX,
             sale.amountOfTokensToSell,
             sale.saleEnd,
-            sale.tokensUnlockTime
+            sale.tokensUnlockTime,
+            sale.tokenPriceInUSD
         );
     }
 
