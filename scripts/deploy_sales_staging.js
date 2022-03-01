@@ -34,7 +34,7 @@ const main = async () => {
 
     // deploy sale token
     const saleTokenFactory = await hre.ethers.getContractFactory("XavaToken");
-    const saleToken = await saleTokenFactory.deploy("Sale Token 5", "ST5", "1000000000000000000000000000", 18);
+    const saleToken = await saleTokenFactory.deploy("Test Token 7", "TT7", "1000000000000000000000000000", 18);
     await saleToken.deployed();
     console.log(` - Sale token deployed to: ${greenOut(saleToken.address)}`);
 
@@ -42,12 +42,13 @@ const main = async () => {
     // token amount & pricing
     const tokenPriceInAvax = ethers.utils.parseEther("0.00005").toString();
     const totalTokens = ethers.utils.parseEther("1000000").toString();
+    const tokenPriceInUSD = 100000; // Six decimals USD value (100000 => 0.1$)
     // fundamental timestamps
     const registrationStart = await getCurrentBlockTimestamp() + 150;
-    const registrationEnd = registrationStart + 300;
-    const validatorRound = registrationEnd + 300;
-    const stakingRound = validatorRound + 300;
-    const saleEndTime = stakingRound + 300;
+    const registrationEnd = registrationStart + 1200;
+    const validatorRound = registrationEnd + 600;
+    const stakingRound = validatorRound + 1200;
+    const saleEndTime = stakingRound + 1200;
     const tokensUnlockTime = saleEndTime + 600;
     // vesting
     const unlockingTimes = [tokensUnlockTime, tokensUnlockTime + 200, tokensUnlockTime + 400];
@@ -71,7 +72,8 @@ const main = async () => {
         tokensUnlockTime,
         portionVestingPrecision,
         stakingRoundId,
-        registrationDepositAVAX
+        registrationDepositAVAX,
+        tokenPriceInUSD
     )).wait();
     console.log(' - Sale params set successfully.');
 
@@ -108,6 +110,7 @@ const main = async () => {
         saleToken: saleToken.address,
         saleOwner,
         tokenPriceInAvax,
+        tokenPriceInUSD,
         totalTokens,
         saleEndTime,
         tokensUnlockTime,
