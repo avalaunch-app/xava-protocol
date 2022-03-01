@@ -89,23 +89,12 @@
         "LatestSale": "0xcE03842f04769804204D8582Fb38da7931e6067b"
     },
     "staging": {
-        "Admin": "0x42B0C4c2ce5DB3e50c64209Cf296cdFb213a4129",
-        "SalesFactory": "0x7a7075d6bEbF87AADB8D1AD0A94C83111b512b61",
-        "AllocationStakingProxy": "0x297E4853c7bb699dC324B252397A5638D82B2e32",
-        "ProxyAdmin": "0x796EC8bee2871dD820F176730669848d909914c0",
-        "XavaToken": "0x468e36a251B33CF093EB48Cfe9796721747E376B",
-        "DevTokenAlloStaking": "0x08abB4B963d4Aa95349708f2cE979cF5f2d4d75a",
-        "MCK1": "0xc87cd7FaA48eDF2CD28A524E982FFBe3779fe70F",
-        "MOCK-TOKEN": "0xD95d874e6bc638A25ec7FbA5224b21f5e18B308f",
-        "AllocationStaking": "0x297E4853c7bb699dC324B252397A5638D82B2e32"
-    },
-    "staging_dexalot": {
-        "XavaToken": "0x65a62f0AB08Ef416Af5E67E3c94CC126DCFb60b1",
+        "XavaToken": "0x64E7AB33C8764a9285cbd48A3b5977c51D2eE645",
         "DevTokenAlloStaking": "0x027D2E627209f1cebA52ADc8A5aFE9318459b44B",
-        "Admin": "0xA627e28Ffc06Ea1b468157f638d562Aa5405563b",
-        "SalesFactory": "0x926115b494471eC4Df3b35e95c2dDc934A8A7406",
-        "AllocationStaking": "0x480F4613e3b6f52C8207571aaA8d0Ce3601Be419",
-        "ProxyAdmin": "0x796EC8bee2871dD820F176730669848d909914c0",
-        "LatestSale": "0x7A87825eAB59C6d9007451dd4023623714D33876"
+        "Admin": "0xEE79Ba6D078aF95e5b1CFd0b3807e2Ae1D66C843",
+        "SalesFactory": "0x1A88E47C749FBDAC1cE66e137fb9F54bA6EfbB81",
+        "AllocationStakingProxy": "0x8BeBB9907c72708442BD4195Bd354A9bAdC2a816",
+        "ProxyAdmin": "0x4Ed5B9C2C3E0689d516F312e88b12D96D2548A66",
+        "LatestSale": "0x14c624128636f1e815B16c3B0347de24961583ac"
     }
 }
