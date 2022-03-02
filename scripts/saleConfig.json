@@ -11,7 +11,7 @@
     "validatorRoundLength": 32400,
     "stakingRoundLength": 54000,
     "TGE": "1647151200",
-    "portionVestingPrecision": 100,
+    "portionVestingPrecision": 10000,
     "stakingRoundId": 2,
     "registrationDepositAVAX": "1",
     "maxVestingTimeShift": 2592000,
