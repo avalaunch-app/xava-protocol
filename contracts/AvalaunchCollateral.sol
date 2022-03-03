@@ -12,22 +12,29 @@ contract AvalaunchCollateral is Initializable {
     Admin public admin;
 
     uint256 public totalFeesCollected;
-    address public beneficiary;
+    address public moderator;
 
+    mapping (address => bool) public isSaleApprovedByModerator;
     mapping (address => uint256) public userBalance;
 
     event DepositedCollateral(address wallet, uint256 amountDeposited, uint256 timestamp);
     event WithdrawnCollateral(address wallet, uint256 amountWithdrawn, uint256 timestamp);
     event FeeTaken(address sale, uint256 participationAmount, uint256 feeAmount);
+    event ApprovedSale(address sale);
 
     modifier onlyAdmin {
         require(admin.isAdmin(msg.sender), "Only admin.");
         _;
     }
 
+    modifier onlyModerator {
+        require(msg.sender == moderator, "Only moderator.");
+        _;
+    }
+
     function initialize(address _beneficiary, address _admin) external initializer {
         require(_beneficiary != address(0x0));
-        beneficiary = _beneficiary;
+        moderator = _beneficiary;
         admin = Admin(_admin);
     }
 
@@ -73,29 +80,33 @@ contract AvalaunchCollateral is Initializable {
     onlyAdmin
     {
         require(amountAVAX.add(participationFeeAVAX) >= userBalance[user], "Not enough collateral.");
+        // Reduce user balance
         userBalance[msg.sender] = userBalance[msg.sender].sub(amountAVAX.add(participationFeeAVAX));
-
         // Increase total fees collected
         totalFeesCollected = totalFeesCollected.add(participationFeeAVAX);
         // Transfer AVAX fee immediately to beneficiary
-        safeTransferAVAX(beneficiary, participationFeeAVAX);
+        safeTransferAVAX(moderator, participationFeeAVAX);
+        // Trigger event
+        emit FeeTaken(saleAddress, amountAVAX, participationFeeAVAX);
         // Participate
         IAvalaunchSale(saleAddress).autoParticipate{
             value: amountAVAX
         }(signature, amount, amountXavaToBurn, roundId, user);
-
-        // Trigger event
-        emit FeeTaken(saleAddress, amountAVAX, participationFeeAVAX);
     }
 
+    function setModerator(address _moderator) onlyModerator external {
+        require(_moderator != address(0x0), "Moderator can not be 0x0");
+        moderator = _moderator;
+    }
+
+    function approveSale(address saleAddress) onlyModerator external {
+        // Set that sale is approved by moderator
+        isSaleApprovedByModerator[saleAddress] = true;
+        // Trigger event
+        emit ApprovedSale(saleAddress);
+    }
 
     function getTVL() external view returns (uint256) {
         return address(this).balance;
-    }
-
-    function setBeneficiary(address _newBeneficiary) external {
-        require(msg.sender == beneficiary, "Only beneficiary.");
-        require(_newBeneficiary != address(0x0), "Beneficiary can not be 0x0");
-        beneficiary = _newBeneficiary;
     }
 }
