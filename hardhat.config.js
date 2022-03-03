@@ -4,8 +4,7 @@ require('@nomiclabs/hardhat-ethers')
 require("@nomiclabs/hardhat-web3")
 require('@openzeppelin/hardhat-upgrades')
 require('solidity-coverage');
-require('hardhat-contract-sizer');
-require("hardhat-gas-reporter");
+require('hardhat-gas-reporter');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
