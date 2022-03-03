@@ -11,13 +11,9 @@ contract AvalaunchCollateral is Initializable {
 
     Admin public admin;
 
-    struct Fee {
-        uint256 totalCollected;
-        uint256 totalWithdrawn;
-    }
-
-    Fee public fee;
+    uint256 public totalFeesCollected;
     address public beneficiary;
+
     mapping (address => uint256) public userBalance;
 
     event DepositedCollateral(address wallet, uint256 amountDeposited, uint256 timestamp);
@@ -79,10 +75,10 @@ contract AvalaunchCollateral is Initializable {
         require(amountAVAX.add(participationFeeAVAX) >= userBalance[user], "Not enough collateral.");
         userBalance[msg.sender] = userBalance[msg.sender].sub(amountAVAX.add(participationFeeAVAX));
 
-        // TODO: Add verification layer that sale is verified, and supports autobuy
-        // Increase participation fee
-        fee.totalCollected = fee.totalCollected.add(participationFeeAVAX);
-
+        // Increase total fees collected
+        totalFeesCollected = totalFeesCollected.add(participationFeeAVAX);
+        // Transfer AVAX fee immediately to beneficiary
+        safeTransferAVAX(beneficiary, participationFeeAVAX);
         // Participate
         IAvalaunchSale(saleAddress).autoParticipate{
             value: amountAVAX
@@ -92,21 +88,14 @@ contract AvalaunchCollateral is Initializable {
         emit FeeTaken(saleAddress, amountAVAX, participationFeeAVAX);
     }
 
+
     function getTVL() external view returns (uint256) {
         return address(this).balance;
     }
 
-    function getTotalFeesCollected() external view returns (uint256) {
-        return fee.totalCollected;
+    function setBeneficiary(address _newBeneficiary) external {
+        require(msg.sender == beneficiary, "Only beneficiary.");
+        require(_newBeneficiary != address(0x0), "Beneficiary can not be 0x0");
+        beneficiary = _newBeneficiary;
     }
-
-    function getTotalFeesWithdrawn() external view returns (uint256) {
-        return fee.totalWithdrawn;
-    }
-
-    function getTotalFeesAvailable() external view returns (uint256) {
-        return fee.totalCollected.sub(fee.totalWithdrawn);
-    }
-
-
 }
