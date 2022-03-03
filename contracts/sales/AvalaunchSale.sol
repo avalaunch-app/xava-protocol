@@ -6,6 +6,7 @@ import "../interfaces/ISalesFactory.sol";
 import "../interfaces/IAllocationStaking.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/IDexalotPortfolio.sol";
+import "../interfaces/ICollateral.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
@@ -20,6 +21,8 @@ contract AvalaunchSale {
     ISalesFactory public factory;
     // Admin contract
     IAdmin public admin;
+    // Avalaunch collateral contract
+    ICollateral public collateral;
     // Pointer to dexalot portfolio smart-contract
     IDexalotPortfolio public dexalotPortfolio;
 
@@ -100,6 +103,8 @@ contract AvalaunchSale {
     uint256 public portionVestingPrecision;
     // Added configurable round ID for staking round
     uint256 public stakingRoundId;
+    // Configurable round Id for autoBuy round
+    uint256 public autoBuyRoundId;
     // Max vesting time shift
     uint256 public maxVestingTimeShift;
     // Registration deposit AVAX, which will be paid during the registration, and returned back during the participation.
@@ -153,12 +158,13 @@ contract AvalaunchSale {
     event TokensWithdrawnToDexalot(address user, uint256 amount);
 
     // Constructor, always initialized through SalesFactory
-    constructor(address _admin, address _allocationStaking) public {
+    constructor(address _admin, address _allocationStaking, address _collateral) public {
         require(_admin != address(0));
         require(_allocationStaking != address(0));
         admin = IAdmin(_admin);
         factory = ISalesFactory(msg.sender);
         allocationStakingContract = IAllocationStaking(_allocationStaking);
+        collateral = ICollateral(_collateral);
     }
 
     /// @notice         Function to set vesting params
@@ -261,6 +267,8 @@ contract AvalaunchSale {
         portionVestingPrecision = _portionVestingPrecision;
         // Set staking round id
         stakingRoundId = _stakingRoundId;
+        // Set autoBuy round id
+        autoBuyRoundId = _stakingRoundId.add(1);
         // Emit event
         emit SaleCreated(
             sale.saleOwner,
@@ -606,6 +614,113 @@ contract AvalaunchSale {
 
         emit RegistrationAVAXRefunded(msg.sender, registrationDepositAVAX);
         emit TokensSold(msg.sender, amountOfTokensBuying);
+    }
+
+    function participateCollateral(
+        bytes calldata signature,
+        address user,
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId
+    )
+        external
+        payable
+    {
+        // Require that AvalaunchCollateral is a caller
+        require(msg.sender == address(collateral), "Only AvalaunchCollateral may call this function.");
+
+        // Disallow non-admin calls
+        require(admin.isAdmin(tx.origin), "Initial call must come from admin.");
+
+        // Require that round id fits autoBuy round id
+        require(roundId == autoBuyRoundId, "Accepting only autoBuy round calls.");
+
+        // Require that user participation doesn't cross maximum
+        require(
+            amount <= roundIdToRound[addressToRoundRegisteredFor[user]].maxParticipation,
+            "Overflowing maximal participation for this round."
+        );
+
+        // Verify the signature
+        require(
+            checkParticipationSignature(
+                signature,
+                user,
+                amount,
+                amountXavaToBurn,
+                roundId
+            ),
+            "Invalid signature. Verification failed"
+        );
+
+        // Check user haven't participated before
+        require(!isParticipated[user], "User can participate only once.");
+
+        // Require that action is being performed in valid round
+        require(
+            roundId == getCurrentRound(),
+            "You can not participate in this round."
+        );
+
+        // Compute the amount of tokens user is buying
+        uint256 amountOfTokensBuying = (msg.value).mul(one).div(
+            sale.tokenPriceInAVAX
+        );
+
+        // Must buy more than 0 tokens
+        require(amountOfTokensBuying > 0, "Can't buy 0 tokens");
+
+        // Check in terms of user allocation
+        require(
+            amountOfTokensBuying <= amount,
+            "Trying to buy more than allowed."
+        );
+
+        // Increase amount of sold tokens
+        sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
+
+        // Increase amount of AVAX raised
+        sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
+
+        // Empty bool array used to be set as initial for 'isPortionWithdrawn' and 'isPortionWithdrawnToDexalot'
+        // Size determined by number of sale portions
+        bool[] memory _empty = new bool[](
+            vestingPortionsUnlockTime.length
+        );
+
+        // Create participation object
+        Participation memory p = Participation({
+            amountBought: amountOfTokensBuying,
+            amountAVAXPaid: msg.value,
+            timeParticipated: block.timestamp,
+            roundId: roundId,
+            isPortionWithdrawn: _empty,
+            isPortionWithdrawnToDexalot: _empty
+        });
+
+        // Staking round only.
+        if (addressToRoundRegisteredFor[user] == stakingRoundId) {
+            // Burn XAVA from this user.
+            allocationStakingContract.redistributeXava(
+                0,
+                user,
+                amountXavaToBurn
+            );
+        }
+
+        // Add participation for user.
+        userToParticipation[user] = p;
+        // Mark user is participated
+        isParticipated[user] = true;
+        // Increment number of participants in the Sale.
+        numberOfParticipants++;
+        // Decrease of available registration fees
+        registrationFees = registrationFees.sub(registrationDepositAVAX);
+        // Transfer registration deposit amount in AVAX back to the users.
+        safeTransferAVAX(user, registrationDepositAVAX);
+
+        emit RegistrationAVAXRefunded(user, registrationDepositAVAX);
+        emit TokensSold(user, amountOfTokensBuying);
     }
 
     /// Users can claim their participation

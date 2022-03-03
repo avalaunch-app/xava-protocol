@@ -9,6 +9,7 @@ contract SalesFactory {
 
     IAdmin public admin;
     address public allocationStaking;
+    address public collateral;
 
     mapping (address => bool) public isSaleCreatedThroughFactory;
 
@@ -26,9 +27,10 @@ contract SalesFactory {
         _;
     }
 
-    constructor (address _adminContract, address _allocationStaking) public {
+    constructor (address _adminContract, address _allocationStaking, address _collateral) public {
         admin = IAdmin(_adminContract);
         allocationStaking = _allocationStaking;
+        collateral = _collateral;
     }
 
     // Set allocation staking contract address.
@@ -42,7 +44,7 @@ contract SalesFactory {
     external
     onlyAdmin
     {
-        AvalaunchSale sale = new AvalaunchSale(address(admin), allocationStaking);
+        AvalaunchSale sale = new AvalaunchSale(address(admin), allocationStaking, collateral);
 
         isSaleCreatedThroughFactory[address(sale)] = true;
         allSales.push(address(sale));
