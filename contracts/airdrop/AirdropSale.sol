@@ -9,10 +9,10 @@ import "../math/SafeMath.sol";
 contract AirdropSale {
 
 	using ECDSA for bytes32;
-	using SafeMath for *;
+	using SafeMath for uint256;
 
 	// Globals
-	IAdmin public admin;
+	IAdmin public immutable admin;
 	address[] public airdropERC20s;
 	bool public includesAVAX;
 	bool public includesERC20s;
@@ -59,12 +59,14 @@ contract AirdropSale {
 		// Get beneficiary address
 		address beneficiary = msg.sender;
 
+		// Hash amounts array to get a compact and unique value for signing
+		bytes32 hashedAmounts = keccak256(abi.encodePacked(amounts));
 		// Validate signature
-		require(checkSignature(signature, beneficiary, amounts[0]), "Not eligible to claim tokens!");
+		require(checkSignature(signature, beneficiary, hashedAmounts), "Not eligible to claim tokens!");
 		// Require that user didn't claim already
 		require(!wasClaimed[beneficiary], "Already claimed!");
 		// Mark that user claimed
-		wasClaimed[msg.sender] = true;
+		wasClaimed[beneficiary] = true;
 
 		// Amounts array's ERC20 distribution starting index
 		uint startIndex = 0;
@@ -99,15 +101,15 @@ contract AirdropSale {
 	}
 
 	// Get who signed the message based on the params
-	function getSigner(bytes memory signature, address beneficiary, uint256 amount) public view returns (address) {
-		bytes32 hash = keccak256(abi.encodePacked(beneficiary, amount, address(this)));
+	function getSigner(bytes memory signature, address beneficiary, bytes32 hashedAmounts) public view returns (address) {
+		bytes32 hash = keccak256(abi.encode(beneficiary, hashedAmounts, address(this)));
 		bytes32 messageHash = hash.toEthSignedMessageHash();
 		return messageHash.recover(signature);
 	}
 
 	// Check that signature is valid, and is signed by Admin wallets
-	function checkSignature(bytes memory signature, address beneficiary, uint256 amount) public view returns (bool) {
-		return admin.isAdmin(getSigner(signature, beneficiary, amount));
+	function checkSignature(bytes memory signature, address beneficiary, bytes32 hashedAmounts) public view returns (bool) {
+		return admin.isAdmin(getSigner(signature, beneficiary, hashedAmounts));
 	}
 
 	// Safe transfer AVAX to users

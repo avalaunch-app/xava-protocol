@@ -221,7 +221,7 @@ contract AllocationStaking is OwnableUpgradeable {
     function setTokensUnlockTime(uint256 _pid, address _user, uint256 _tokensUnlockTime) external onlyVerifiedSales {
         UserInfo storage user = userInfo[_pid][_user];
 
-        // Set user.tokensUnlockTime only if new timestamp is grater
+        // Set user.tokensUnlockTime only if new timestamp is greater
         // Serves for parallel sale registrations
         if(user.tokensUnlockTime < _tokensUnlockTime) {
             user.tokensUnlockTime = _tokensUnlockTime;

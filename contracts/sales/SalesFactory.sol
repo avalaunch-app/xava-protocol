@@ -10,13 +10,8 @@ contract SalesFactory {
     IAdmin public admin;
     // Allocation staking contract address
     address public allocationStaking;
-
     // Official sale creation flag
     mapping (address => bool) public isSaleCreatedThroughFactory;
-    // Mapping sale owner to sale address
-    mapping(address => address) public saleOwnerToSale;
-    // Mapping token to sale address
-    mapping(address => address) public tokenToSale;
     // Expose so query can be possible only by position as well
     address [] public allSales;
     // Latest sale implementation contract address
@@ -24,8 +19,8 @@ contract SalesFactory {
 
     // Events
     event SaleDeployed(address saleContract);
-    event SaleOwnerAndTokenSetInFactory(address sale, address saleOwner, address saleToken);
     event ImplementationChanged(address implementation);
+    event AllocationStakingSet(address allocationStaking);
 
     // Restricting calls only to sale admin
     modifier onlyAdmin {
@@ -36,10 +31,11 @@ contract SalesFactory {
     constructor (address _adminContract, address _allocationStaking) public {
         admin = IAdmin(_adminContract);
         allocationStaking = _allocationStaking;
+        emit AllocationStakingSet(allocationStaking);
     }
 
     /// @notice     Set allocation staking contract address
-    function setAllocationStaking(address _allocationStaking) public onlyAdmin {
+    function setAllocationStaking(address _allocationStaking) external onlyAdmin {
         require(_allocationStaking != address(0));
         allocationStaking = _allocationStaking;
     }

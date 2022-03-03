@@ -14,9 +14,10 @@ describe("AvalaunchSale", function() {
   let deployer, alice, bob, cedric;
   let ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   let ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
-
+  let sigExp =  3000000000;
   let vestingPortionsUnlockTime = [];
   let vestingPercentPerPortion = [];
+  let tokenPriceInUSD = 10;
 
   const DECIMALS = 18; // Working with non-18 decimals
   const MULTIPLIER = (10 ** DECIMALS).toString();
@@ -84,12 +85,12 @@ describe("AvalaunchSale", function() {
     return generateSignature(digest, privateKey);
   }
 
-  function signParticipation(userAddress, amount, roundId, amountOfXavaToBurn, contractAddress, privateKey) {
+  function signParticipation(userAddress, amount, roundId, amountOfXavaToBurn, signatureExpirationTimestamp, contractAddress, privateKey) {
     // compute keccak256(abi.encodePacked(user, amount, roundId))
     const digest = ethers.utils.keccak256(
       ethers.utils.solidityPack(
-        ['address', 'uint256', 'uint256', 'uint256', 'address'],
-        [userAddress, amount, amountOfXavaToBurn, roundId, contractAddress]
+        ['address', 'uint256', 'uint256', 'uint256', 'uint256','address'],
+        [userAddress, amount, amountOfXavaToBurn, roundId, signatureExpirationTimestamp, contractAddress]
       )
     );
 
@@ -104,8 +105,8 @@ describe("AvalaunchSale", function() {
     const participationRound = firstOrDefault(params, "participationRound", PARTICIPATION_ROUND);
     const amountOfXavaToBurn = firstOrDefault(params, "amountOfXavaToBurn", AMOUNT_OF_XAVA_TO_BURN);
     const value = firstOrDefault(params, "participationValue", PARTICIPATION_VALUE);
-    const sig = signParticipation(userAddress, participationAmount, participationRound, amountOfXavaToBurn, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
-    return AvalaunchSale.connect(registrant).participate(sig, participationAmount, amountOfXavaToBurn, participationRound, {value: value});
+    const sig = signParticipation(userAddress, participationAmount, participationRound, amountOfXavaToBurn, sigExp, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+    return AvalaunchSale.connect(registrant).participate(sig, participationAmount, amountOfXavaToBurn, participationRound, sigExp, {value: value});
   }
 
   function migrateToVault(params) {
@@ -130,7 +131,7 @@ describe("AvalaunchSale", function() {
 
     return await AvalaunchSale.setSaleParams(
         token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
-        saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+        saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX, tokenPriceInUSD
     );
   }
 
@@ -154,9 +155,9 @@ describe("AvalaunchSale", function() {
 
   async function setVestingParams() {
     const blockTimestamp = await getCurrentBlockTimestamp();
-    vestingPortionsUnlockTime = [blockTimestamp + 10, blockTimestamp + 20];
+    vestingPortionsUnlockTime = [blockTimestamp + SALE_END_DELTA + 25, blockTimestamp + SALE_END_DELTA + 35];
     vestingPercentPerPortion = [5, 95];
-    await AvalaunchSale.setVestingParams([blockTimestamp + 10, blockTimestamp + 20], [5, 95], 500000);
+    await AvalaunchSale.setVestingParams(vestingPortionsUnlockTime, vestingPercentPerPortion, 500000);
   }
 
   async function depositTokens() {
@@ -252,7 +253,7 @@ describe("AvalaunchSale", function() {
         // When
         await AvalaunchSale.setSaleParams(
             token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
-            saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+            saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX, tokenPriceInUSD
         );
 
         // Then
@@ -292,9 +293,9 @@ describe("AvalaunchSale", function() {
         // When
         expect(await AvalaunchSale.setSaleParams(
             token, saleOwner, tokenPriceInAVAX, amountOfTokensToSell,
-            saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX
+            saleEnd, PORTION_VESTING_PRECISION, stakingRoundId, REGISTRATION_DEPOSIT_AVAX, tokenPriceInUSD
         )).to.emit(AvalaunchSale, "SaleCreated")
-        .withArgs(saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd);
+        .withArgs(saleOwner, tokenPriceInAVAX, amountOfTokensToSell, saleEnd, tokenPriceInUSD);
       });
 
       it("Should not set sale parameters if sale is already created", async function() {
@@ -641,6 +642,14 @@ describe("AvalaunchSale", function() {
         // Then
         const sale = await AvalaunchSale.sale();
         expect(sale[0]).to.equal(XavaToken2.address);
+      });
+
+      it("Should add Dexalot Support", async function () {
+        const unlockTime = await getCurrentBlockTimestamp() + 100000;
+        await AvalaunchSale.setAndSupportDexalotPortfolio(ONE_ADDRESS, unlockTime);
+
+        expect(await AvalaunchSale.dexalotPortfolio()).to.equal(ONE_ADDRESS);
+        expect(await AvalaunchSale.dexalotUnlockTime()).to.equal(unlockTime);
       });
     });
   });
@@ -1256,50 +1265,50 @@ describe("AvalaunchSale", function() {
     describe("Check participation signature", async function() {
       it("Should succeed for valid signature", async function() {
         // Given
-        const sig = signParticipation(deployer.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+        const sig = signParticipation(deployer.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, await getCurrentBlockTimestamp() + 10, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1)).to.be.true;
+        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1,  await getCurrentBlockTimestamp() + 10,)).to.be.true;
       });
 
       it("Should fail if signature is for a different user", async function() {
         // Given
-        const sig = signParticipation(alice.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+        const sig = signParticipation(alice.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, await getCurrentBlockTimestamp() + 10, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1)).to.be.false;
+        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1, await getCurrentBlockTimestamp() + 10)).to.be.false;
       });
 
       it("Should fail if signature is for a different amount", async function() {
         // Given
-        const sig = signParticipation(deployer.address, 200, 1, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+        const sig = signParticipation(deployer.address, 200, 1, AMOUNT_OF_XAVA_TO_BURN, await getCurrentBlockTimestamp() + 10, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1)).to.be.false;
+        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1, await getCurrentBlockTimestamp() + 10)).to.be.false;
       });
 
       it("Should fail if signature is for a different roundId", async function() {
         // Given
-        const sig = signParticipation(deployer.address, 100, 2, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+        const sig = signParticipation(deployer.address, 100, 2, AMOUNT_OF_XAVA_TO_BURN, await getCurrentBlockTimestamp() + 10, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1)).to.be.false;
+        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1, await getCurrentBlockTimestamp() + 10)).to.be.false;
       });
 
       it("Should fail if signature is for a different contract", async function() {
         // Given
-        const sig = signParticipation(deployer.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, XavaToken.address, DEPLOYER_PRIVATE_KEY);
+        const sig = signParticipation(deployer.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, await getCurrentBlockTimestamp() + 10, XavaToken.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1)).to.be.false;
+        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1, await getCurrentBlockTimestamp() + 10)).to.be.false;
       });
 
       it("Should revert if signature has wrong length", async function() {
         // Given
-        const sig = signParticipation(deployer.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+        const sig = signParticipation(deployer.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, await getCurrentBlockTimestamp() + 10, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        await expect(AvalaunchSale.checkParticipationSignature(sig.slice(1), deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1)).to.be.revertedWith("ECDSA: invalid signature length");
+        await expect(AvalaunchSale.checkParticipationSignature(sig.slice(1), deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1, await getCurrentBlockTimestamp() + 10)).to.be.revertedWith("ECDSA: invalid signature length");
       });
 
       it("Should revert if signature has wrong format", async function() {
@@ -1307,27 +1316,27 @@ describe("AvalaunchSale", function() {
         const sig = Buffer.alloc(32 + 32 + 1);
 
         // Then
-        await expect(AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1)).to.be.revertedWith("ECDSA: invalid signature 'v' value");
+        await expect(AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1, await getCurrentBlockTimestamp() + 10)).to.be.revertedWith("ECDSA: invalid signature 'v' value");
       });
 
       it("Should fail if signer is sale owner and not admin", async function() {
         // Given
         await runFullSetup();
         await Admin.removeAdmin(deployer.address);
-        const sig = signParticipation(deployer.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+        const sig = signParticipation(deployer.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, await getCurrentBlockTimestamp() + 10, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1)).to.be.false;
+        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1, await getCurrentBlockTimestamp() + 10)).to.be.false;
       });
 
       it("Should fail if signer is neither sale owner nor admin", async function() {
         // Given
         await runFullSetupNoDeposit({saleOwner: alice.address});
         await Admin.removeAdmin(deployer.address);
-        const sig = signParticipation(deployer.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+        const sig = signParticipation(deployer.address, 100, 1, AMOUNT_OF_XAVA_TO_BURN, await getCurrentBlockTimestamp() + 10, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1)).to.be.false;
+        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1, await getCurrentBlockTimestamp() + 10)).to.be.false;
       });
 
       it("Should fail if signature is applied to hash instead of prefixed EthereumSignedMessage hash", async function() {
@@ -1343,7 +1352,7 @@ describe("AvalaunchSale", function() {
         const sig = Buffer.concat([r, s, vb]);
 
         // Then
-        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1)).to.be.false;
+        expect(await AvalaunchSale.checkParticipationSignature(sig, deployer.address, 100, AMOUNT_OF_XAVA_TO_BURN, 1, await getCurrentBlockTimestamp() + 10)).to.be.false;
       });
     });
   });
@@ -1466,10 +1475,10 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_mine");
 
         // When
-        const sig = signParticipation(alice.address, PARTICIPATION_AMOUNT, PARTICIPATION_ROUND, AMOUNT_OF_XAVA_TO_BURN, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
+        const sig = signParticipation(alice.address, PARTICIPATION_AMOUNT, PARTICIPATION_ROUND, AMOUNT_OF_XAVA_TO_BURN, await getCurrentBlockTimestamp() + 10, AvalaunchSale.address, DEPLOYER_PRIVATE_KEY);
 
         // Then
-        await expect(AvalaunchSale.participate(sig, PARTICIPATION_AMOUNT, AMOUNT_OF_XAVA_TO_BURN, PARTICIPATION_ROUND, {value: PARTICIPATION_VALUE}))
+        await expect(AvalaunchSale.participate(sig, PARTICIPATION_AMOUNT, AMOUNT_OF_XAVA_TO_BURN, PARTICIPATION_ROUND, await getCurrentBlockTimestamp() + 10, {value: PARTICIPATION_VALUE}))
           .to.be.revertedWith("Invalid signature. Verification failed");
       });
 

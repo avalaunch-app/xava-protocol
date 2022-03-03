@@ -29,6 +29,18 @@ function signTokenWithdrawal(beneficiary, amount, contractAddress, privateKey) {
     return generateSignature(digest, privateKey);
 }
 
+function signMultipleTokenWithdrawal(beneficiary, hashedAmounts, contractAddress, privateKey) {
+    const coder = new ethers.utils.AbiCoder;
+    const digest = ethers.utils.keccak256(
+        coder.encode(
+            ['address', 'bytes32', 'address'],
+            [beneficiary, hashedAmounts, contractAddress]
+        )
+    );
+    return generateSignature(digest, privateKey);
+}
+
 module.exports = {
-    signTokenWithdrawal
+    signTokenWithdrawal,
+    signMultipleTokenWithdrawal
 }
