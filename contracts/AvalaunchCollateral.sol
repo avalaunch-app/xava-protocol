@@ -89,7 +89,6 @@ contract AvalaunchCollateral is Initializable {
      *          by taking funds from his collateral.
      *          Function is restricted only to admins.
      * @param   saleAddress is the address of the sale contract in which admin participates
-     * @param   signature is the signature which backend gives as additional safeguard
      * @param   amountAVAX is the amount of AVAX which will be taken from user to get him an allocation.
      * @param   amount is the amount of tokens user is allowed to buy (maximal)
      * @param   amountXavaToBurn is the amount of XAVA which will be taken from user and redistributed across
