@@ -505,26 +505,36 @@ contract AvalaunchSale {
 
     // Participate function for collateral auto-buy
     function autoParticipate(
-        bytes calldata signature,
-        uint256 amount,
-        uint256 amountXavaToBurn,
-        uint256 roundId,
-        address user
-    ) external payable {
-        require(msg.sender == address(collateral), "Only collateral contract may call this function.");
-        require(admin.isAdmin(tx.origin), "Call must originate from an admin.");
-        _participate(user, msg.value, amount, amountXavaToBurn, roundId, signature);
-    }
-
-    // Participate function for manual participation
-    function participate(
-        bytes calldata signature,
+        address user,
         uint256 amount,
         uint256 amountXavaToBurn,
         uint256 roundId
     ) external payable {
+        require(msg.sender == address(collateral), "Only collateral contract may call this function.");
+        require(admin.isAdmin(tx.origin), "Call must originate from an admin.");
+        _participate(user, msg.value, amount, amountXavaToBurn, roundId);
+    }
+
+    // Participate function for manual participation
+    function participate(
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId,
+        bytes calldata signature
+    ) external payable {
         require(msg.sender == tx.origin, "Allow only direct calls.");
-        _participate(msg.sender, msg.value, amount, amountXavaToBurn, roundId, signature);
+        // Verify the signature
+        require(
+            checkParticipationSignature(
+                signature,
+                msg.sender,
+                amount,
+                amountXavaToBurn,
+                roundId
+            ),
+            "Invalid signature. Verification failed"
+        );
+        _participate(msg.sender, msg.value, amount, amountXavaToBurn, roundId);
     }
 
 
@@ -534,8 +544,7 @@ contract AvalaunchSale {
         uint256 amountAVAX,
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId,
-        bytes calldata signature
+        uint256 roundId
     ) internal {
 
         require(roundId != 0, "Round can not be 0.");
@@ -549,18 +558,6 @@ contract AvalaunchSale {
         require(
             addressToRoundRegisteredFor[user] == roundId,
             "Not registered for this round"
-        );
-
-        // Verify the signature
-        require(
-            checkParticipationSignature(
-                signature,
-                user,
-                amount,
-                amountXavaToBurn,
-                roundId
-            ),
-            "Invalid signature. Verification failed"
         );
 
         // Check user haven't participated before
