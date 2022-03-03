@@ -22,6 +22,7 @@ contract AvalaunchCollateral is Initializable {
 
     event DepositedCollateral(address wallet, uint256 amountDeposited, uint256 timestamp);
     event WithdrawnCollateral(address wallet, uint256 amountWithdrawn, uint256 timestamp);
+    event FeeTaken(address sale, uint256 participationAmount, uint256 feeAmount);
 
     modifier onlyAdmin {
         require(admin.isAdmin(msg.sender), "Only admin.");
@@ -87,6 +88,8 @@ contract AvalaunchCollateral is Initializable {
             value: amountAVAX
         }(signature, amount, amountXavaToBurn, roundId, user);
 
+        // Trigger event
+        emit FeeTaken(saleAddress, amountAVAX, participationFeeAVAX);
     }
 
     function getTVL() external view returns (uint256) {
