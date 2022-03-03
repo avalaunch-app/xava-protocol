@@ -2,10 +2,14 @@ pragma solidity ^0.6.12;
 
 import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "./math/SafeMath.sol";
+import "./interfaces/IAvalaunchSale.sol";
+import "./Admin.sol";
 
 contract AvalaunchCollateral is Initializable {
 
     using SafeMath for *;
+
+    Admin public admin;
 
     struct Fee {
         uint256 totalCollected;
@@ -19,10 +23,15 @@ contract AvalaunchCollateral is Initializable {
     event DepositedCollateral(address wallet, uint256 amountDeposited, uint256 timestamp);
     event WithdrawnCollateral(address wallet, uint256 amountWithdrawn, uint256 timestamp);
 
+    modifier onlyAdmin {
+        require(admin.isAdmin(msg.sender), "Only admin.");
+        _;
+    }
 
-    function initialize(address _beneficiary) external initializer {
+    function initialize(address _beneficiary, address _admin) external initializer {
         require(_beneficiary != address(0x0));
         beneficiary = _beneficiary;
+        admin = Admin(_admin);
     }
 
     // Internal function to handle safe transfer
@@ -51,6 +60,33 @@ contract AvalaunchCollateral is Initializable {
             _amount,
             block.timestamp
         );
+    }
+
+    function autoParticipate(
+        address saleAddress,
+        bytes calldata signature,
+        uint256 amountAVAX,
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId,
+        address user,
+        uint256 participationFeeAVAX
+    )
+    external
+    onlyAdmin
+    {
+        require(amountAVAX.add(participationFeeAVAX) >= userBalance[user], "Not enough collateral.");
+        userBalance[msg.sender] = userBalance[msg.sender].sub(amountAVAX.add(participationFeeAVAX));
+
+        // TODO: Add verification layer that sale is verified, and supports autobuy
+        // Increase participation fee
+        fee.totalCollected = fee.totalCollected.add(participationFeeAVAX);
+
+        // Participate
+        IAvalaunchSale(saleAddress).autoParticipate{
+            value: amountAVAX
+        }(signature, amount, amountXavaToBurn, roundId, user);
+
     }
 
     function getTVL() external view returns (uint256) {
