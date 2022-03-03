@@ -1,16 +1,17 @@
 pragma solidity ^0.6.12;
 
 import "@openzeppelin/contracts/proxy/Initializable.sol";
+import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "./math/SafeMath.sol";
 import "./interfaces/IAvalaunchSale.sol";
 import "./Admin.sol";
 
 contract AvalaunchCollateral is Initializable {
 
+    using ECDSA for bytes32;
     using SafeMath for *;
 
     Admin public admin;
-
     // Accounting total fees collected by the contract
     uint256 public totalFeesCollected;
     // Moderator of the contract.
@@ -96,6 +97,7 @@ contract AvalaunchCollateral is Initializable {
      * @param   roundId is the ID of the round for which participation is being taken.
      * @param   user is the address of user on whose behalf this action is being done.
      * @param   participationFeeAVAX is the FEE amount which is taken by Avalaunch for this service.
+     * @param   permitSignature is the approval from user side to take his funds for specific sale address
      */
     function autoParticipate(
         address saleAddress,
@@ -104,11 +106,15 @@ contract AvalaunchCollateral is Initializable {
         uint256 amountXavaToBurn,
         uint256 roundId,
         address user,
-        uint256 participationFeeAVAX
+        uint256 participationFeeAVAX,
+        bytes calldata permitSignature
     )
     external
     onlyAdmin
     {
+        // Verify that user approved with his signature this feature
+        require(verifyUserPermitSignature(user, saleAddress, permitSignature), "Permit signature invalid.");
+
         require(amountAVAX.add(participationFeeAVAX) >= userBalance[user], "Not enough collateral.");
         // Reduce user balance
         userBalance[msg.sender] = userBalance[msg.sender].sub(amountAVAX.add(participationFeeAVAX));
@@ -142,6 +148,34 @@ contract AvalaunchCollateral is Initializable {
         isSaleApprovedByModerator[saleAddress] = true;
         // Trigger event
         emit ApprovedSale(saleAddress);
+    }
+
+    /**
+     * @notice  Function to verify that user gave permission that his collateral can be
+     *          and used to participate in the specific sale
+     * @param   user is the address of user
+     * @param   saleContract is the address of sale contract which user allowed admin to participate
+     *          on his behalf
+     * @param   permitSignature is the message signed by user, allowing admin to send transaction on his behalf
+     */
+    function verifyUserPermitSignature(
+        address user,
+        address saleContract,
+        bytes calldata permitSignature
+    )
+    public
+    view
+    returns (bool) {
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                "Turn AutoBUY ON.",
+                saleContract
+            )
+        );
+
+        bytes32 messageHash = hash.toEthSignedMessageHash();
+        address signer = messageHash.recover(permitSignature);
+        return signer == user;
     }
 
     /**
