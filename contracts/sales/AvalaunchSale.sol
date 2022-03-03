@@ -507,13 +507,35 @@ contract AvalaunchSale {
         );
     }
 
-    // Function to participate in the sales
+    function autoParticipate(
+        bytes calldata signature,
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId,
+        address user
+    ) external payable {
+        require(msg.sender == collateral);
+    }
+
     function participate(
         bytes calldata signature,
         uint256 amount,
         uint256 amountXavaToBurn,
         uint256 roundId
     ) external payable {
+        _participate(signature, msg.value, amount, amountXavaToBurn, roundId, msg.sender);
+    }
+
+
+    // Function to participate in the sales
+    function _participate(
+        bytes calldata signature,
+        uint256 amountAVAX, //replace msg.value with amountAVAX
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId,
+        address user
+    ) internal {
 
         require(roundId != 0, "Round can not be 0.");
 

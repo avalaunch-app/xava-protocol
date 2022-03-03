@@ -25,7 +25,6 @@ contract AvalaunchCollateral is Initializable {
         beneficiary = _beneficiary;
     }
 
-
     // Internal function to handle safe transfer
     function safeTransferAVAX(address to, uint256 value) internal {
         (bool success, ) = to.call{value: value}(new bytes(0));
@@ -53,7 +52,6 @@ contract AvalaunchCollateral is Initializable {
             block.timestamp
         );
     }
-
 
     function getTVL() external view returns (uint256) {
         return address(this).balance;
