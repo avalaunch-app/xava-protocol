@@ -16,8 +16,8 @@ contract AvalaunchCollateral is Initializable {
     address public beneficiary;
     mapping (address => uint256) public userBalance;
 
-    event DepositedCollateral(address wallet, uint256 amountDeposited, uint8 timestamp);
-    event WithdrawnCollateral(address wallet, uint256 amountWithdrawn, uint8 timestamp);
+    event DepositedCollateral(address wallet, uint256 amountDeposited, uint256 timestamp);
+    event WithdrawnCollateral(address wallet, uint256 amountWithdrawn, uint256 timestamp);
 
 
     function initialize(address _beneficiary) external initializer {
