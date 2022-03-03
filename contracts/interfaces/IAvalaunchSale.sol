@@ -6,7 +6,6 @@ pragma solidity ^0.6.12;
  */
 interface IAvalaunchSale {
     function autoParticipate(
-        bytes calldata signature,
         uint256 amount,
         uint256 amountXavaToBurn,
         uint256 roundId,

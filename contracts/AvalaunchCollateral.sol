@@ -100,7 +100,6 @@ contract AvalaunchCollateral is Initializable {
      */
     function autoParticipate(
         address saleAddress,
-        bytes calldata signature,
         uint256 amountAVAX,
         uint256 amount,
         uint256 amountXavaToBurn,
@@ -123,7 +122,7 @@ contract AvalaunchCollateral is Initializable {
         // Participate
         IAvalaunchSale(saleAddress).autoParticipate{
             value: amountAVAX
-        }(signature, amount, amountXavaToBurn, roundId, user);
+        }(amount, amountXavaToBurn, roundId, user);
     }
 
     /**
