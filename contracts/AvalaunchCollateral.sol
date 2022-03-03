@@ -114,10 +114,10 @@ contract AvalaunchCollateral is Initializable {
     {
         // Verify that user approved with his signature this feature
         require(verifyUserPermitSignature(user, saleAddress, permitSignature), "Permit signature invalid.");
-
-        require(amountAVAX.add(participationFeeAVAX) >= userBalance[user], "Not enough collateral.");
+        // Require that user deposited enough collateral
+        require(amountAVAX.add(participationFeeAVAX) <= userBalance[user], "Not enough collateral.");
         // Reduce user balance
-        userBalance[msg.sender] = userBalance[msg.sender].sub(amountAVAX.add(participationFeeAVAX));
+        userBalance[user] = userBalance[user].sub(amountAVAX.add(participationFeeAVAX));
         // Increase total fees collected
         totalFeesCollected = totalFeesCollected.add(participationFeeAVAX);
         // Transfer AVAX fee immediately to beneficiary
@@ -164,7 +164,7 @@ contract AvalaunchCollateral is Initializable {
         bytes calldata permitSignature
     )
     public
-    view
+    pure
     returns (bool) {
         bytes32 hash = keccak256(
             abi.encodePacked(
