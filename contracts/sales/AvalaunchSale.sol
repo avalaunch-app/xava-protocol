@@ -7,10 +7,10 @@ import "../interfaces/IAllocationStaking.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "./SaleVault.sol";
 
-contract AvalaunchSale is ReentrancyGuardUpgradeable {
+contract AvalaunchSale is Initializable {
     using ECDSA for bytes32;
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -167,6 +167,7 @@ contract AvalaunchSale is ReentrancyGuardUpgradeable {
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
     event GateClosed(uint256 time);
     event ParticipationMigrated(address user, uint256 vaultId);
+    event VaultBurned(address user, uint256 vaultId);
 
     // Constructor replacement for upgradable contracts
     function initialize(
@@ -180,8 +181,6 @@ contract AvalaunchSale is ReentrancyGuardUpgradeable {
         factory = ISalesFactory(msg.sender);
         allocationStakingContract = IAllocationStaking(_allocationStaking);
         saleVault = SaleVault(_saleVault);
-
-        __ReentrancyGuard_init();
     }
 
     /// @notice         Function to set vesting params
@@ -639,6 +638,17 @@ contract AvalaunchSale is ReentrancyGuardUpgradeable {
         require(isParticipated[msg.sender] 
             && userToParticipation[msg.sender].amountBought > 0,"No participation found");
 
+        // Check if there are portions left to withdraw
+        Participation storage p = userToParticipation[msg.sender];
+
+        uint portionsLeft;
+
+        for(uint i=0; i < p.isPortionWithdrawn.length; i++) {
+            if(!p.isPortionWithdrawn[i]) portionsLeft++;
+        }
+
+        require(portionsLeft > 0, "All portions withdrawn");
+
         uint256 vaultId = saleVault.currentId();
         saleVault.mint(msg.sender);
 
@@ -654,14 +664,28 @@ contract AvalaunchSale is ReentrancyGuardUpgradeable {
         emit ParticipationMigrated(msg.sender, vaultId);
     }
 
-    /// Users can claim their participation
-    function withdrawTokens(uint256 portionId) external {
-        require(
-            portionId < vestingPercentPerPortion.length,
-            "Portion id out of range."
-        );
+    // Migrate participation details from user to vault NFT
+    function burnVault(uint vaultId) external onlyVaultOwner(vaultId) {
 
-        Participation storage p = userToParticipation[msg.sender];
+        // Check if there are portions left to withdraw
+        Participation storage p = vaultToParticipation[vaultId];
+
+        uint portionsLeft;
+
+        for(uint i=0; i < p.isPortionWithdrawn.length; i++) {
+            if(!p.isPortionWithdrawn[i]) portionsLeft++;
+        }
+
+        require(portionsLeft == 0, "Not all portions withdrawn");
+
+        // Burn NFT
+        saleVault.burn(vaultId);
+
+        emit VaultBurned(msg.sender, vaultId);
+    }
+
+    /// Helper function to claim participation
+    function _withdrawTokens(uint256 portionId, Participation storage p) internal {
 
         if (
             !p.isPortionWithdrawn[portionId] &&
@@ -681,6 +705,18 @@ contract AvalaunchSale is ReentrancyGuardUpgradeable {
         } else {
             revert("Tokens already withdrawn or portion not unlocked yet.");
         }
+    }
+
+    /// Users can claim their participation
+    function withdrawTokens(uint256 portionId) external {
+        require(
+            portionId < vestingPercentPerPortion.length,
+            "Portion id out of range."
+        );
+
+        Participation storage p = userToParticipation[msg.sender];
+
+        _withdrawTokens(portionId, p);
     }
 
     /// NFT owners can claim their participation
@@ -692,31 +728,13 @@ contract AvalaunchSale is ReentrancyGuardUpgradeable {
 
         Participation storage p = vaultToParticipation[vaultId];
 
-        if (
-            !p.isPortionWithdrawn[portionId] &&
-            vestingPortionsUnlockTime[portionId] <= block.timestamp
-        ) {
-            p.isPortionWithdrawn[portionId] = true;
-            uint256 amountWithdrawing = p
-                .amountBought
-                .mul(vestingPercentPerPortion[portionId])
-                .div(portionVestingPrecision);
-
-            // Withdraw percent which is unlocked at that portion
-            if(amountWithdrawing > 0) {
-                sale.token.safeTransfer(msg.sender, amountWithdrawing);
-                emit TokensWithdrawn(msg.sender, amountWithdrawing);
-            }
-        } else {
-            revert("Tokens already withdrawn or portion not unlocked yet.");
-        }
+        _withdrawTokens(portionId, p);
     }
 
-    // Expose function where user can withdraw multiple unlocked portions at once.
-    function withdrawMultiplePortions(uint256 [] calldata portionIds) external {
-        uint256 totalToWithdraw = 0;
+    /// Helper function for multiple portions withdrawal
+    function _withdrawMultiplePortions(uint256 [] calldata portionIds, Participation storage p) internal {
 
-        Participation storage p = userToParticipation[msg.sender];
+        uint256 totalToWithdraw = 0;
 
         for(uint i=0; i < portionIds.length; i++) {
             uint256 portionId = portionIds[i];
@@ -740,6 +758,28 @@ contract AvalaunchSale is ReentrancyGuardUpgradeable {
             sale.token.safeTransfer(msg.sender, totalToWithdraw);
             emit TokensWithdrawn(msg.sender, totalToWithdraw);
         }
+    }
+
+    // Expose function where a vault owner can withdraw multiple unlocked portions at once.
+    function withdrawMultiplePortions(uint256 [] calldata portionIds) external {
+
+        Participation storage p = userToParticipation[msg.sender];
+
+        _withdrawMultiplePortions(portionIds, p);
+        
+    }
+
+    // Expose function where user can withdraw multiple unlocked portions at once.
+    function withdrawMultiplePortionsFromVault(
+        uint256 [] calldata portionIds,
+        uint vaultId
+    ) 
+        external 
+        onlyVaultOwner(vaultId)
+    {
+        Participation storage p = vaultToParticipation[vaultId];
+
+        _withdrawMultiplePortions(portionIds, p);
     }
 
     // Internal function to handle safe transfer
@@ -967,7 +1007,6 @@ contract AvalaunchSale is ReentrancyGuardUpgradeable {
     )
         external
         onlyAdmin
-        nonReentrant
     {
         // Require that token address does not match with sale token
         require(token != address(sale.token), "Cannot withdraw official sale token.");

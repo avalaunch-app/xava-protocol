@@ -2221,7 +2221,7 @@ describe("AvalaunchSale", function() {
       });
     });
 
-    describe("Vault Participation", async function() {
+    only("Vault Participation", async function() {
       it("Should migrate user's participation vault", async function() {
         // Given
         await runFullSetup();
@@ -2262,6 +2262,74 @@ describe("AvalaunchSale", function() {
         expect(totalSupply).to.equal(1);
         expect(isVaultParticipated).to.be.true;
         expect(isParticipated).to.be.false;
+        
+      });
+
+      it("Should not be able to migrate to vault if all portions are withdrawn", async function() {
+        // Given
+        await runFullSetup();
+
+        await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await registerForSale();
+        await setVestingParams();
+
+        await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await XavaToken.approve(AllocationStaking.address, "50000000");
+        await AllocationStaking.deposit(0, "50000000");  
+        
+        await participate({amountOfXavaToBurn: 1});
+
+        await ethers.provider.send("evm_increaseTime", [3*TOKENS_UNLOCK_TIME_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        // When        
+        await AvalaunchSale.withdrawMultiplePortions([0,1]);
+
+        // Then
+        await expect(migrateToVault()).to.be.revertedWith("All portions withdrawn")
+        
+      });
+
+      it("Should be able to burn a vault only when all portions are withdrawn", async function() {
+        // Given
+        await runFullSetup();
+
+        await ethers.provider.send("evm_increaseTime", [REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await registerForSale();
+        await setVestingParams();
+
+        await ethers.provider.send("evm_increaseTime", [ROUNDS_START_DELTAS[0] - REGISTRATION_TIME_STARTS_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await XavaToken.approve(AllocationStaking.address, "50000000");
+        await AllocationStaking.deposit(0, "50000000");
+        
+        await participate({amountOfXavaToBurn: 1});
+        await migrateToVault();
+
+        await ethers.provider.send("evm_increaseTime", [3*TOKENS_UNLOCK_TIME_DELTA]);
+        await ethers.provider.send("evm_mine");
+
+        await expect(AvalaunchSale.burnVault(0)).to.be.revertedWith("Not all portions withdrawn")
+
+        const saleVault = await AvalaunchSale.saleVault()
+        const vaultContract = await ethers.getContractAt("SaleVault", saleVault);
+
+        // When        
+        await AvalaunchSale.withdrawMultiplePortionsFromVault([0,1],0);
+        await vaultContract.approve(AvalaunchSale.address, 0);
+        await AvalaunchSale.burnVault(0);
+
+        // Then
+        const vaultParticipation = await AvalaunchSale.getVaultParticipation(0);
+        expect(vaultParticipation[4]).to.eql(Array(vestingPercentPerPortion.length).fill(true));
+        await expect(vaultContract.ownerOf(0)).to.be.revertedWith("ERC721: owner query for nonexistent token")
         
       });
 
