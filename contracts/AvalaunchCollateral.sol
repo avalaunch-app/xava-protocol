@@ -1,14 +1,12 @@
 pragma solidity ^0.6.12;
 
 import "@openzeppelin/contracts/proxy/Initializable.sol";
-import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "./math/SafeMath.sol";
 import "./interfaces/IAvalaunchSale.sol";
 import "./Admin.sol";
 
 contract AvalaunchCollateral is Initializable {
 
-    using ECDSA for bytes32;
     using SafeMath for *;
 
     Admin public admin;
@@ -20,6 +18,17 @@ contract AvalaunchCollateral is Initializable {
     mapping (address => bool) public isSaleApprovedByModerator;
     // User to his collateral balance
     mapping (address => uint256) public userBalance;
+
+    // String types
+    string public constant EIP712_DOMAIN = "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)";
+    string public constant AUTOBUY_TYPE = "AutoBuy(string confirmationMessage,address sale)";
+
+    // Hashed string types
+    bytes32 public constant EIP712_DOMAIN_TYPEHASH = keccak256(abi.encodePacked(EIP712_DOMAIN));
+    bytes32 public constant AUTOBUY_TYPEHASH = keccak256(abi.encodePacked(AUTOBUY_TYPE));
+
+    // Domain separator hash
+    bytes32 public DOMAIN_SEPARATOR;
 
     event DepositedCollateral(address wallet, uint256 amountDeposited, uint256 timestamp);
     event WithdrawnCollateral(address wallet, uint256 amountWithdrawn, uint256 timestamp);
@@ -42,11 +51,25 @@ contract AvalaunchCollateral is Initializable {
      *          proceeds from the fees, and has permissions to approve sales for autobuy
      * @param   _admin is the address of Admin contract
      */
-    function initialize(address _moderator, address _admin) external initializer {
+    function initialize(address _moderator, address _admin, uint256 chainId) external initializer {
+        // Perform zero address checks
         require(_moderator != address(0x0), "Moderator can not be 0x0.");
         require(_admin != address(0x0), "Admin can not be 0x0.");
+
+        // Assign globals
         moderator = _moderator;
         admin = Admin(_admin);
+
+        // Compute domain separator
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPEHASH,
+                keccak256("Avalaunch.app"),
+                keccak256("1"),
+                chainId,
+                address(this)
+            )
+        );
     }
 
     // Internal function to handle safe transfer
@@ -161,21 +184,36 @@ contract AvalaunchCollateral is Initializable {
     function verifyUserPermitSignature(
         address user,
         address saleContract,
-        bytes calldata permitSignature
+        bytes memory permitSignature
     )
     public
-    pure
-    returns (bool) {
-        bytes32 hash = keccak256(
-            abi.encodePacked(
+    view
+    returns (bool)
+    {
+        // Generate v4 signature hash
+        bytes32 hash = keccak256(abi.encodePacked(
+            "\\x19\\x01",
+            DOMAIN_SEPARATOR,
+            keccak256(abi.encode(
+                AUTOBUY_TYPEHASH,
                 "Turn AutoBUY ON.",
                 saleContract
-            )
-        );
+            ))
+        ));
 
-        bytes32 messageHash = hash.toEthSignedMessageHash();
-        address signer = messageHash.recover(permitSignature);
-        return signer == user;
+        // Divide the signature in r, s and v variables
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r := mload(add(permitSignature, 0x20))
+            s := mload(add(permitSignature, 0x40))
+            v := byte(0, mload(add(permitSignature, 0x60)))
+        }
+
+        return user == ecrecover(hash, v, r, s);
     }
 
     /**
