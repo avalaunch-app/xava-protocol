@@ -169,7 +169,8 @@ contract AvalaunchSale is Initializable {
     // Constructor replacement for upgradable contracts
     function initialize(
         address _admin,
-        address _allocationStaking
+        address _allocationStaking,
+        address _collateral
     ) public initializer {
         require(_admin != address(0));
         require(_allocationStaking != address(0));
