@@ -1,6 +1,7 @@
 pragma solidity ^0.6.12;
 
 import "@openzeppelin/contracts/proxy/Initializable.sol";
+import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "./math/SafeMath.sol";
 import "./interfaces/IAvalaunchSale.sol";
 import "./Admin.sol";
@@ -16,18 +17,21 @@ contract AvalaunchCollateral is Initializable {
     address public moderator;
     // Mapping if sale is approved by moderator for the autobuys
     mapping (address => bool) public isSaleApprovedByModerator;
+    // Mapping if signature is used
+    mapping (bytes => bool) public isSignatureUsed;
+    // Mapping for autoBuy users per sale
+    mapping (address => mapping (address => bool)) public saleAutoBuyers;
     // User to his collateral balance
     mapping (address => uint256) public userBalance;
 
-    // String types
-    string public constant EIP712_DOMAIN = "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)";
-    string public constant AUTOBUY_TYPE = "AutoBuy(string confirmationMessage,address sale)";
-
-    // Hashed string types
-    bytes32 public constant EIP712_DOMAIN_TYPEHASH = keccak256(abi.encodePacked(EIP712_DOMAIN));
+    // AUTOBUY - TYPE / TYPEHASH / MESSAGEHASH
+    string public constant AUTOBUY_TYPE = "AutoBuy(string confirmationMessage,address saleAddress)";
     bytes32 public constant AUTOBUY_TYPEHASH = keccak256(abi.encodePacked(AUTOBUY_TYPE));
+    bytes32 public constant AUTOBUY_MESSAGEHASH = keccak256("Turn AutoBUY ON.");
 
-    // Domain separator hash
+    // DOMAIN - TYPE / TYPEHASH / SEPARATOR
+    string public constant EIP712_DOMAIN = "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)";
+    bytes32 public constant EIP712_DOMAIN_TYPEHASH = keccak256(abi.encodePacked(EIP712_DOMAIN));
     bytes32 public DOMAIN_SEPARATOR;
 
     event DepositedCollateral(address wallet, uint256 amountDeposited, uint256 timestamp);
@@ -64,7 +68,7 @@ contract AvalaunchCollateral is Initializable {
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 EIP712_DOMAIN_TYPEHASH,
-                keccak256("Avalaunch.app"),
+                keccak256("AvalaunchApp"),
                 keccak256("1"),
                 chainId,
                 address(this)
@@ -135,6 +139,16 @@ contract AvalaunchCollateral is Initializable {
     external
     onlyAdmin
     {
+        // Require that sale contract is approved by moderator
+        require(isSaleApprovedByModerator[saleAddress], "Sale contract not approved by moderator.");
+        // Require that signature is not used
+        require(!isSignatureUsed[permitSignature], "Signature already used.");
+        // Mark signature as used
+        isSignatureUsed[permitSignature] = true;
+        // Require that user does not have autoBuy activated
+        require(!saleAutoBuyers[saleAddress][user], "User autoBuy already active.");
+        // Mark autoBuy as active for user
+        saleAutoBuyers[saleAddress][user] = true;
         // Verify that user approved with his signature this feature
         require(verifyUserPermitSignature(user, saleAddress, permitSignature), "Permit signature invalid.");
         // Require that user deposited enough collateral
@@ -191,29 +205,21 @@ contract AvalaunchCollateral is Initializable {
     returns (bool)
     {
         // Generate v4 signature hash
-        bytes32 hash = keccak256(abi.encodePacked(
-            "\\x19\\x01",
-            DOMAIN_SEPARATOR,
-            keccak256(abi.encode(
-                AUTOBUY_TYPEHASH,
-                "Turn AutoBUY ON.",
-                saleContract
-            ))
-        ));
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                keccak256(
+                    abi.encode(
+                        AUTOBUY_TYPEHASH,
+                        AUTOBUY_MESSAGEHASH,
+                        saleContract
+                    )
+                )
+            )
+        );
 
-        // Divide the signature in r, s and v variables
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            r := mload(add(permitSignature, 0x20))
-            s := mload(add(permitSignature, 0x40))
-            v := byte(0, mload(add(permitSignature, 0x60)))
-        }
-
-        return user == ecrecover(hash, v, r, s);
+        return user == ECDSA.recover(hash, permitSignature);
     }
 
     /**
