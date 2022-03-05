@@ -523,6 +523,8 @@ contract AvalaunchSale {
         bytes calldata signature
     ) external payable {
         require(msg.sender == tx.origin, "Allow only direct calls.");
+        // Require that user doesn't have autoBuy activated
+        require(!collateral.saleAutoBuyers(address(this), msg.sender), "Cannot participate manually, autoBuy activated.");
         // Verify the signature
         require(
             checkParticipationSignature(
