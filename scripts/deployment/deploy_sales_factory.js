@@ -6,7 +6,7 @@ async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
 
     const SalesFactory = await ethers.getContractFactory("SalesFactory");
-    const salesFactory = await SalesFactory.deploy(contracts['Admin'], contracts['AllocationStakingProxy']);
+    const salesFactory = await SalesFactory.deploy(contracts['Admin'], contracts['AllocationStakingProxy'], contracts['AvalaunchCollateral']);
     await salesFactory.deployed();
 
     saveContractAddress(hre.network.name, "SalesFactory", salesFactory.address);
