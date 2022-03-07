@@ -96,7 +96,7 @@
         "AllocationStakingProxy": "0x8BeBB9907c72708442BD4195Bd354A9bAdC2a816",
         "ProxyAdmin": "0x4Ed5B9C2C3E0689d516F312e88b12D96D2548A66",
         "LatestSale": "0x7c55D55266DF8DCbCf59360Bd463C1aA0806Dc51",
-        "AvalaunchCollateral": "0x650864E84097456C1F3b7b9A15A0579070172d96",
-        "AvalaunchCollateralProxy": "0x12E789228dd05Df78BD01523A8EA6bF2b70220Fe"
+        "AvalaunchCollateral": "0xbF83d56216F617CE268fc4b98e463fc12fD4479c",
+        "AvalaunchCollateralProxy": "0x8e1006B991c626b9760C408E8df4e18D7715576B"
     }
 }
