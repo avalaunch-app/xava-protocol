@@ -10,6 +10,8 @@ contract SalesFactory {
     IAdmin public admin;
     // Allocation staking contract address
     address public allocationStaking;
+    // Collateral contract address
+    address public collateral;
     // Official sale creation flag
     mapping (address => bool) public isSaleCreatedThroughFactory;
     // Expose so query can be possible only by position as well
@@ -28,10 +30,11 @@ contract SalesFactory {
         _;
     }
 
-    constructor (address _adminContract, address _allocationStaking) public {
+    constructor (address _adminContract, address _allocationStaking, address _collateral) public {
         admin = IAdmin(_adminContract);
         allocationStaking = _allocationStaking;
         emit AllocationStakingSet(allocationStaking);
+        collateral = _collateral;
     }
 
     /// @notice     Set allocation staking contract address
@@ -65,7 +68,7 @@ contract SalesFactory {
         SaleVault vault = new SaleVault("Sale Vault","SV","ipfs://", msg.sender, sale);
 
         // Initialize sale
-        (bool success, ) = sale.call(abi.encodeWithSignature("initialize(address,address,address)", address(admin), allocationStaking, address(vault)));
+        (bool success, ) = sale.call(abi.encodeWithSignature("initialize(address,address,address,address)", address(admin), allocationStaking, address(vault), collateral));
         require(success, "Initialization failed.");
 
         // Mark sale as created through official factory
