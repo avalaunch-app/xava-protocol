@@ -7,6 +7,9 @@ const getCurrentBlockTimestamp = async () => {
     return (await ethers.provider.getBlock('latest')).timestamp;
 }
 
+const delay = ms => new Promise(res => setTimeout(res, ms));
+const delayLength = 3000;
+
 const main = async () => {
 
     const contracts = getSavedContractAddresses()[hre.network.name];
@@ -17,6 +20,7 @@ const main = async () => {
     // deploy new sale and await the block after
     await(await salesFactory.deploySale()).wait();
     console.log(boldOut('Sale deployed successfully.'));
+    delay(delayLength);
 
     // retrieve the sale deployed and save the address
     const lastDeployedSale = await salesFactory.getLastDeployedSale();
@@ -44,11 +48,11 @@ const main = async () => {
     const totalTokens = ethers.utils.parseEther("1000000").toString();
     const tokenPriceInUSD = 100000; // Six decimals USD value (100000 => 0.1$)
     // fundamental timestamps
-    const registrationStart = await getCurrentBlockTimestamp() + 150;
+    const registrationStart = await getCurrentBlockTimestamp() + 300;
     const registrationEnd = registrationStart + 1200;
-    const validatorRound = registrationEnd + 600;
-    const stakingRound = validatorRound + 1200;
-    const saleEndTime = stakingRound + 1200;
+    const validatorRound = registrationEnd + 60;
+    const stakingRound = validatorRound + 300;
+    const saleEndTime = stakingRound + 3600 * 10;
     const tokensUnlockTime = saleEndTime + 600;
     // vesting
     const unlockingTimes = [tokensUnlockTime, tokensUnlockTime + 200, tokensUnlockTime + 400];
@@ -76,6 +80,7 @@ const main = async () => {
         tokenPriceInUSD
     )).wait();
     console.log(' - Sale params set successfully.');
+    delay(delayLength);
 
     // set sale registration time
     await sale.setRegistrationTime(
@@ -83,6 +88,7 @@ const main = async () => {
         registrationEnd
     );
     console.log(' - Registration time set.');
+    delay(delayLength);
 
     // set sale rounds
     await sale.setRounds(
@@ -90,19 +96,23 @@ const main = async () => {
         [ethers.utils.parseEther('70000000'), ethers.utils.parseEther('70000000')]
     );
     console.log(' - Rounds set.');
+    delay(delayLength);
 
     // set vesting parameters
     await sale.setVestingParams(unlockingTimes, percents, maxVestingTimeShift);
     console.log(' - Vesting parameters set successfully.');
+    delay(delayLength);
 
     // deposit tokens to sale contract
     await(await saleToken.approve(sale.address, totalTokens)).wait();
     await sale.depositTokens();
     console.log(' - Tokens deposited.');
+    delay(delayLength);
 
     // add dexalot portfolio support
     await sale.setAndSupportDexalotPortfolio(dexalotPortfolio, dexalotUnlockingTime);
     console.log(' - Dexalot Support Added.');
+    delay(delayLength);
 
     console.log("Config:");
     console.log({
