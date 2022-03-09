@@ -18,9 +18,9 @@ async function main() {
     console.log(`Collateral implementation address: ${collateral.address}`);
     saveContractAddress(hre.network.name, "AvalaunchCollateral", collateral.address);
 
-    const methodId = (ethers.utils.keccak256(ethers.utils.toUtf8Bytes("initialize(address,address)"))).substring(0,10); // '0x' + 4 bytes
-    const types = ['address','address']; // Types to encode
-    const values = [config['moderator'], contracts['Admin']]; // Values to encode
+    const methodId = (ethers.utils.keccak256(ethers.utils.toUtf8Bytes("initialize(address,address,uint256)"))).substring(0,10); // '0x' + 4 bytes
+    const types = ['address','address','uint256']; // Types to encode
+    const values = [config['moderator'], contracts['Admin'], hre.network.name === 'mainnet' ? 43114 : 43113]; // Values to encode
 
     const abi = new ethers.utils.AbiCoder(); // Get abi coder instance
     let data = methodId + abi.encode(types, values).substring(2); // Generate calldata
