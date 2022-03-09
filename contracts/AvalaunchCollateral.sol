@@ -164,7 +164,7 @@ contract AvalaunchCollateral is Initializable {
         // Participate
         IAvalaunchSale(saleAddress).autoParticipate{
             value: amountAVAX
-        }(amount, amountXavaToBurn, roundId, user);
+        }(user, amount, amountXavaToBurn, roundId);
     }
 
     /**
