@@ -63,6 +63,7 @@ contract AvalaunchSale {
         uint256 roundId;
         bool[] isPortionWithdrawn;
         bool[] isPortionWithdrawnToDexalot;
+        bool isParticipationBoosted;
     }
 
     // Round structure
@@ -103,6 +104,8 @@ contract AvalaunchSale {
     uint256 public portionVestingPrecision;
     // Added configurable round ID for staking round
     uint256 public stakingRoundId;
+    // Added configurable round ID for staking round
+    uint256 public boosterRoundId;
     // Max vesting time shift
     uint256 public maxVestingTimeShift;
     // Registration deposit AVAX, which will be paid during the registration, and returned back during the participation.
@@ -265,6 +268,9 @@ contract AvalaunchSale {
         portionVestingPrecision = _portionVestingPrecision;
         // Set staking round id
         stakingRoundId = _stakingRoundId;
+        // Set booster round id
+        boosterRoundId = _stakingRoundId.add(1);
+
         // Emit event
         emit SaleCreated(
             sale.saleOwner,
@@ -539,7 +545,6 @@ contract AvalaunchSale {
         _participate(msg.sender, msg.value, amount, amountXavaToBurn, roundId);
     }
 
-
     // Function to participate in the sales
     function _participate(
         address user,
@@ -607,7 +612,8 @@ contract AvalaunchSale {
             timeParticipated: block.timestamp,
             roundId: roundId,
             isPortionWithdrawn: _empty,
-            isPortionWithdrawnToDexalot: _empty
+            isPortionWithdrawnToDexalot: _empty,
+            isParticipationBoosted: false
         });
 
         // Staking round only.
@@ -632,6 +638,53 @@ contract AvalaunchSale {
         safeTransferAVAX(user, registrationDepositAVAX);
 
         emit RegistrationAVAXRefunded(user, registrationDepositAVAX);
+        emit TokensSold(user, amountOfTokensBuying);
+    }
+
+    function boostParticipation(
+        address user,
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId
+    ) external payable {
+        require(msg.sender == address(collateral), "Only collateral contract may call this function.");
+        require(admin.isAdmin(tx.origin), "Call must originate from an admin.");
+        require(roundId == boosterRoundId && roundId == getCurrentRound(), "Invalid round.");
+
+        // Check user has participated before
+        require(isParticipated[user], "User needs to participate first.");
+
+        Participation memory p = userToParticipation[user];
+        require(!p.isParticipationBoosted, "User's participation already boosted.");
+
+        p.isParticipationBoosted = true;
+        userToParticipation[user] = p;
+
+        // Compute the amount of tokens user is buying
+        uint256 amountOfTokensBuying = (msg.value).mul(one).div(
+            sale.tokenPriceInAVAX
+        );
+
+        require(amountOfTokensBuying < amount, "Trying to buy more than allowed.");
+
+        require(
+            amountOfTokensBuying <= roundIdToRound[stakingRoundId].maxParticipation,
+            "Overflowing maximal participation for this round."
+        );
+
+        // Increase amount of sold tokens
+        sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
+
+        // Increase amount of AVAX raised
+        sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
+
+        // Burn XAVA from this user.
+        allocationStakingContract.redistributeXava(
+            0,
+            user,
+            amountXavaToBurn
+        );
+
         emit TokensSold(user, amountOfTokensBuying);
     }
 

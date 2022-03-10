@@ -167,6 +167,34 @@ contract AvalaunchCollateral is Initializable {
         }(user, amount, amountXavaToBurn, roundId);
     }
 
+    function boostParticipation(
+        address saleAddress,
+        uint256 amountAVAX,
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId,
+        address user,
+        uint256 boostFeeAVAX
+    )
+    external
+    onlyAdmin
+    {
+        // Require that sale contract is approved by moderator
+        require(isSaleApprovedByModerator[saleAddress], "Sale contract not approved by moderator.");
+        // Require that user deposited enough collateral
+        require(amountAVAX.add(boostFeeAVAX) <= userBalance[user], "Not enough collateral.");
+
+        // Transfer AVAX fee immediately to beneficiary
+        safeTransferAVAX(moderator, boostFeeAVAX);
+        // Trigger event
+        emit FeeTaken(saleAddress, amountAVAX, boostFeeAVAX);
+
+        // Participate
+        IAvalaunchSale(saleAddress).boostParticipation{
+            value: amountAVAX
+        }(user, amount, amountXavaToBurn, roundId);
+    }
+
     /**
      * @notice  Function to set new moderator. Can be only called by current moderator
      * @param   _moderator is the address of new moderator to be set.
