@@ -4,7 +4,7 @@
     "totalTokens": "150000000",
     "tokenPriceUSD": "0.01",
     "tokenPriceInAvax": "0.00136425648",
-    "saleOwner": "",
+    "saleOwner": "0xBb633388A2A7fB0bE54d5F046AF5aFc582e8a378",
     "registrationStartAt": 1646924400,
     "registrationLength": 140400,
     "delayBetweenRegistrationAndSale": 172800,
