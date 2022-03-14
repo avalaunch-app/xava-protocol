@@ -36,7 +36,7 @@ contract AvalaunchCollateral is Initializable {
 
     event DepositedCollateral(address wallet, uint256 amountDeposited, uint256 timestamp);
     event WithdrawnCollateral(address wallet, uint256 amountWithdrawn, uint256 timestamp);
-    event FeeTaken(address sale, uint256 participationAmount, uint256 feeAmount);
+    event FeeTaken(address sale, uint256 participationAmount, uint256 feeAmount, string action);
     event ApprovedSale(address sale);
 
     modifier onlyAdmin {
@@ -160,7 +160,7 @@ contract AvalaunchCollateral is Initializable {
         // Transfer AVAX fee immediately to beneficiary
         safeTransferAVAX(moderator, participationFeeAVAX);
         // Trigger event
-        emit FeeTaken(saleAddress, amountAVAX, participationFeeAVAX);
+        emit FeeTaken(saleAddress, amountAVAX, participationFeeAVAX, "autoParticipate");
         // Participate
         IAvalaunchSale(saleAddress).autoParticipate{
             value: amountAVAX
@@ -187,7 +187,7 @@ contract AvalaunchCollateral is Initializable {
         // Transfer AVAX fee immediately to beneficiary
         safeTransferAVAX(moderator, boostFeeAVAX);
         // Trigger event
-        emit FeeTaken(saleAddress, amountAVAX, boostFeeAVAX);
+        emit FeeTaken(saleAddress, amountAVAX, boostFeeAVAX, "boostParticipation");
 
         // Participate
         IAvalaunchSale(saleAddress).boostParticipation{

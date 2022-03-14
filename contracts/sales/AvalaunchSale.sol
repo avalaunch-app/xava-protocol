@@ -64,6 +64,7 @@ contract AvalaunchSale {
         bool[] isPortionWithdrawn;
         bool[] isPortionWithdrawnToDexalot;
         bool isParticipationBoosted;
+        uint256 boostedAmount;
     }
 
     // Round structure
@@ -157,6 +158,7 @@ contract AvalaunchSale {
     );
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
     event TokensWithdrawnToDexalot(address user, uint256 amount);
+    event ParticipationBoosted(address user, uint256 amount);
 
     // Constructor, always initialized through SalesFactory
     constructor(address _admin, address _allocationStaking, address _collateral) public {
@@ -613,7 +615,8 @@ contract AvalaunchSale {
             roundId: roundId,
             isPortionWithdrawn: _empty,
             isPortionWithdrawnToDexalot: _empty,
-            isParticipationBoosted: false
+            isParticipationBoosted: false,
+            boostedAmount: 0
         });
 
         // Staking round only.
@@ -654,16 +657,19 @@ contract AvalaunchSale {
         // Check user has participated before
         require(isParticipated[user], "User needs to participate first.");
 
-        Participation memory p = userToParticipation[user];
+        Participation storage p = userToParticipation[user];
         require(!p.isParticipationBoosted, "User's participation already boosted.");
 
+        // Mark participation as boosted
         p.isParticipationBoosted = true;
-        userToParticipation[user] = p;
 
         // Compute the amount of tokens user is buying
         uint256 amountOfTokensBuying = (msg.value).mul(one).div(
             sale.tokenPriceInAVAX
         );
+
+        // Add amountOfTokensBuying as boostedAmount
+        p.boostedAmount = amountOfTokensBuying;
 
         require(amountOfTokensBuying < amount, "Trying to buy more than allowed.");
 
@@ -685,7 +691,7 @@ contract AvalaunchSale {
             amountXavaToBurn
         );
 
-        emit TokensSold(user, amountOfTokensBuying);
+        emit ParticipationBoosted(user, amountOfTokensBuying);
     }
 
     /// Users can claim their participation
@@ -1029,7 +1035,9 @@ contract AvalaunchSale {
             uint256,
             uint256,
             bool[] memory,
-            bool[] memory
+            bool[] memory,
+            bool,
+            uint256
         )
     {
         Participation memory p = userToParticipation[_user];
@@ -1039,7 +1047,9 @@ contract AvalaunchSale {
             p.timeParticipated,
             p.roundId,
             p.isPortionWithdrawn,
-            p.isPortionWithdrawnToDexalot
+            p.isPortionWithdrawnToDexalot,
+            p.isParticipationBoosted,
+            p.boostedAmount
         );
     }
 
