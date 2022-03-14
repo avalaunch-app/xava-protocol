@@ -1,7 +1,10 @@
 //SPDX-License-Identifier: UNLICENSED
+import "@openzeppelin/contracts/cryptography/ECDSA.sol";
+
 pragma solidity 0.6.12;
 
 contract Admin {
+    using ECDSA for bytes32;
 
     // Listing all admins
     address [] public admins;
@@ -75,4 +78,14 @@ contract Admin {
         return admins;
     }
 
+    function verifySignature(
+        bytes32 _hash,
+        bytes calldata _signature
+    )
+    external
+    view
+    returns (bool) {
+        bytes32 messageHash = _hash.toEthSignedMessageHash();
+        return isAdmin[messageHash.recover(_signature)];
+    }
 }

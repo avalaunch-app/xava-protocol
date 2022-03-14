@@ -6,6 +6,7 @@ const {BigNumber} = require("ethers");
 describe("AvalaunchSale", function() {
 
   let Admin;
+  let Collateral;
   let AvalaunchSale;
   let XavaToken;
   let SalesFactory;
@@ -205,8 +206,13 @@ describe("AvalaunchSale", function() {
     const AdminFactory = await ethers.getContractFactory("Admin");
     Admin = await AdminFactory.deploy([deployer.address, alice.address, bob.address]);
 
+    const CollateralFactory = await ethers.getContractFactory("AvalaunchCollateral");
+    Collateral = await CollateralFactory.deploy();
+    await Collateral.deployed();
+    await Collateral.initialize(deployer.address, Admin.address, 43114);
+
     const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);
+    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address);
 
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
@@ -218,14 +224,42 @@ describe("AvalaunchSale", function() {
 
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
 
-    const saleContract = await ethers.getContractFactory("AvalaunchSale");
+    // NOTE: deploy libraries to link with AvalaunchSale contract
+    const ParticipationLibFactory = await ethers.getContractFactory("ParticipationLib");
+    const ParticipationLib = await ParticipationLibFactory.deploy();
+    const DexalotLibFactory = await ethers.getContractFactory("DexalotLib");
+    const DexalotLib = await DexalotLibFactory.deploy();
+    const SaleLibFactory = await ethers.getContractFactory("SaleLib");
+    const SaleLib = await SaleLibFactory.deploy();
+    const RegistrationLibFactory = await ethers.getContractFactory("RegistrationLib");
+    const RegistrationLib = await RegistrationLibFactory.deploy();
+    const VestingLibFactory = await ethers.getContractFactory("VestingLib");
+    const VestingLib = await VestingLibFactory.deploy();
+
+    const saleContract = await ethers.getContractFactory("AvalaunchSale", {
+      libraries: {
+        ParticipationLib: ParticipationLib.address,
+        DexalotLib: DexalotLib.address,
+        SaleLib: SaleLib.address,
+        RegistrationLib: RegistrationLib.address,
+        VestingLib: VestingLib.address,
+      }
+    });
     const saleImplementation = await saleContract.deploy();
     await saleImplementation.deployed();
 
     await SalesFactory.setImplementation(saleImplementation.address);
 
     await SalesFactory.deploySale();
-    const AvalaunchSaleFactory = await ethers.getContractFactory("AvalaunchSale");
+    const AvalaunchSaleFactory = await ethers.getContractFactory("AvalaunchSale", {
+      libraries: {
+        ParticipationLib: ParticipationLib.address,
+        DexalotLib: DexalotLib.address,
+        SaleLib: SaleLib.address,
+        RegistrationLib: RegistrationLib.address,
+        VestingLib: VestingLib.address,
+      }
+    });
     AvalaunchSale = AvalaunchSaleFactory.attach(await SalesFactory.allSales(0));
   });
 
@@ -647,9 +681,8 @@ describe("AvalaunchSale", function() {
       it("Should add Dexalot Support", async function () {
         const unlockTime = await getCurrentBlockTimestamp() + 100000;
         await AvalaunchSale.setAndSupportDexalotPortfolio(ONE_ADDRESS, unlockTime);
-
-        expect(await AvalaunchSale.dexalotPortfolio()).to.equal(ONE_ADDRESS);
-        expect(await AvalaunchSale.dexalotUnlockTime()).to.equal(unlockTime);
+        expect((await AvalaunchSale.dexalotConfig()).dexalotPortfolio).to.equal(ONE_ADDRESS);
+        expect((await AvalaunchSale.dexalotConfig()).dexalotUnlockTime).to.equal(unlockTime);
       });
     });
   });
@@ -935,7 +968,7 @@ describe("AvalaunchSale", function() {
       });
     });
   });
-
+  // return;
   context("Registration", async function() {
     describe("Register for sale", async function() {
       it("Should register for sale", async function() {
@@ -1089,7 +1122,7 @@ describe("AvalaunchSale", function() {
 
         await AvalaunchSale.withdrawRegistrationFees();
 
-        expect(await AvalaunchSale.registrationFees()).to.equal(0);
+        expect((await AvalaunchSale.registration()).registrationFees).to.equal(0);
       });
 
       it("Should withdraw unused funds after registration", async function() {
@@ -1643,8 +1676,6 @@ describe("AvalaunchSale", function() {
         await ethers.provider.send("evm_increaseTime", [TOKENS_UNLOCK_TIME_DELTA - ROUNDS_START_DELTAS[0]]);
         await ethers.provider.send("evm_mine");
 
-        // console.log(await AvalaunchSale.getParticipation(deployer.address));
-
         await XavaToken.transfer(AvalaunchSale.address, "10000000000000000000");
         const previousBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
 
@@ -1682,8 +1713,6 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [TOKENS_UNLOCK_TIME_DELTA - ROUNDS_START_DELTAS[0]]);
         await ethers.provider.send("evm_mine");
-
-        // console.log(await AvalaunchSale.getParticipation(deployer.address));
 
         await XavaToken.transfer(AvalaunchSale.address, "10000000000000000000");
         const previousBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));
@@ -1747,7 +1776,7 @@ describe("AvalaunchSale", function() {
         await AvalaunchSale.withdrawTokens(0);
 
         // Then
-        await expect(AvalaunchSale.withdrawTokens(0)).to.be.revertedWith("Tokens already withdrawn or portion not unlocked yet.");
+        await expect(AvalaunchSale.withdrawTokens(0)).to.be.revertedWith("Portion already withdrawn.");
       });
 
       xit("Should not withdraw before tokens unlock time", async function() {
@@ -2230,7 +2259,7 @@ describe("AvalaunchSale", function() {
       });
     });
 
-    only("Vault Participation", async function() {
+    describe("Vault Participation", async function() {
       it("Should migrate user's participation vault", async function() {
         // Given
         await runFullSetup();
@@ -2271,7 +2300,6 @@ describe("AvalaunchSale", function() {
         expect(totalSupply).to.equal(1);
         expect(isVaultParticipated).to.be.true;
         expect(isParticipated).to.be.false;
-        
       });
 
       it("Should not be able to migrate to vault if all portions are withdrawn", async function() {
@@ -2366,8 +2394,6 @@ describe("AvalaunchSale", function() {
 
         await ethers.provider.send("evm_increaseTime", [TOKENS_UNLOCK_TIME_DELTA - ROUNDS_START_DELTAS[0]]);
         await ethers.provider.send("evm_mine");
-
-        // console.log(await AvalaunchSale.getParticipation(deployer.address));
 
         await XavaToken.transfer(AvalaunchSale.address, "10000000000000000000");
         const previousBalance = ethers.BigNumber.from(await XavaToken.balanceOf(deployer.address));

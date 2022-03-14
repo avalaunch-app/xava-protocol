@@ -6,6 +6,7 @@ const hre = require("hardhat");
 describe("AllocationStaking", function() {
 
   let Admin;
+  let Collateral;
   let XavaToken, XavaLP1, XavaLP2;
   let AllocationStaking;
   let AllocationStakingRewardsFactory;
@@ -132,8 +133,13 @@ describe("AllocationStaking", function() {
     XavaLP1 = await XavaTokenFactory.deploy("XavaLP1", "XAVALP1", ethers.utils.parseUnits("100000000"), 18);
     XavaLP2 = await XavaTokenFactory.deploy("XavaLP2", "XAVALP2", ethers.utils.parseUnits("100000000"), 18);
 
+    const CollateralFactory = await ethers.getContractFactory("AvalaunchCollateral");
+    Collateral = await CollateralFactory.deploy();
+    await Collateral.deployed();
+    await Collateral.initialize(deployer.address, Admin.address, 43114);
+
     const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);
+    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address);
 
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
@@ -205,7 +211,7 @@ describe("AllocationStaking", function() {
     it("Should set salesFactory", async function() {
       // Given
       const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-      const SalesFactory2 = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);
+      const SalesFactory2 = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address);
 
       // When
       await AllocationStaking.setSalesFactory(SalesFactory2.address);
