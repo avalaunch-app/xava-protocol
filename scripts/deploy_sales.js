@@ -73,7 +73,7 @@ async function main() {
     console.log('Setting rounds.');
     await sale.setRounds(
         [validatorRound, stakingRound],
-        [ethers.utils.parseEther('70000000'), ethers.utils.parseEther('70000000')]
+        [ethers.utils.parseEther('7000000000'), ethers.utils.parseEther('7000000000')]
     );
 
     const unlockingTimes = c['unlockingTimes'];

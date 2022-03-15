@@ -64,7 +64,8 @@ contract AvalaunchSale {
         bool[] isPortionWithdrawn;
         bool[] isPortionWithdrawnToDexalot;
         bool isParticipationBoosted;
-        uint256 boostedAmount;
+        uint256 boostedAmountAVAXPaid;
+        uint256 boostedAmountBought;
     }
 
     // Round structure
@@ -158,7 +159,7 @@ contract AvalaunchSale {
     );
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
     event TokensWithdrawnToDexalot(address user, uint256 amount);
-    event ParticipationBoosted(address user, uint256 amount);
+    event ParticipationBoosted(address user, uint256 amountAVAX, uint256 amountTokens);
 
     // Constructor, always initialized through SalesFactory
     constructor(address _admin, address _allocationStaking, address _collateral) public {
@@ -616,7 +617,8 @@ contract AvalaunchSale {
             isPortionWithdrawn: _empty,
             isPortionWithdrawnToDexalot: _empty,
             isParticipationBoosted: false,
-            boostedAmount: 0
+            boostedAmountAVAXPaid: 0,
+            boostedAmountBought: 0
         });
 
         // Staking round only.
@@ -659,7 +661,6 @@ contract AvalaunchSale {
 
         Participation storage p = userToParticipation[user];
         require(!p.isParticipationBoosted, "User's participation already boosted.");
-
         // Mark participation as boosted
         p.isParticipationBoosted = true;
 
@@ -668,9 +669,6 @@ contract AvalaunchSale {
             sale.tokenPriceInAVAX
         );
 
-        // Add amountOfTokensBuying as boostedAmount
-        p.boostedAmount = amountOfTokensBuying;
-
         require(amountOfTokensBuying < amount, "Trying to buy more than allowed.");
 
         require(
@@ -678,20 +676,27 @@ contract AvalaunchSale {
             "Overflowing maximal participation for this round."
         );
 
+        // Add msg.value to boosted avax paid
+        p.boostedAmountAVAXPaid = msg.value;
+        // Add amountOfTokensBuying as boostedAmount
+        p.boostedAmountBought = amountOfTokensBuying;
+
+
         // Increase amount of sold tokens
         sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
 
         // Increase amount of AVAX raised
         sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
 
-        // Burn XAVA from this user.
+        // Burn / Redistribute XAVA from this user.
         allocationStakingContract.redistributeXava(
             0,
             user,
             amountXavaToBurn
         );
 
-        emit ParticipationBoosted(user, amountOfTokensBuying);
+        // Emit participation boosted event
+        emit ParticipationBoosted(user, p.boostedAmountAVAXPaid, p.boostedAmountBought);
     }
 
     /// Users can claim their participation
@@ -1037,6 +1042,7 @@ contract AvalaunchSale {
             bool[] memory,
             bool[] memory,
             bool,
+            uint256,
             uint256
         )
     {
@@ -1049,7 +1055,8 @@ contract AvalaunchSale {
             p.isPortionWithdrawn,
             p.isPortionWithdrawnToDexalot,
             p.isParticipationBoosted,
-            p.boostedAmount
+            p.boostedAmountBought,
+            p.boostedAmountAVAXPaid
         );
     }
 
