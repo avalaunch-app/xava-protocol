@@ -738,9 +738,9 @@ contract AvalaunchSale is Initializable {
         p.isParticipationBoosted = true;
 
         // Compute the amount of tokens user is buying
-        uint256 amountOfTokensBuying = (msg.value).mul(one).div(
-            sale.tokenPriceInAVAX
-        );
+        uint256 amountOfTokensBuying =
+            (msg.value).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
+
 
         require(amountOfTokensBuying < amount, "Trying to buy more than allowed.");
 
