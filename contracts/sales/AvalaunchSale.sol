@@ -62,6 +62,8 @@ contract AvalaunchSale is Initializable {
         uint256 roundId;
         bool[] isPortionWithdrawn;
         bool[] isPortionWithdrawnToDexalot;
+        bool isParticipationBoosted;
+        uint256 boostedAmount;
     }
 
     // Round structure
@@ -100,6 +102,8 @@ contract AvalaunchSale is Initializable {
     uint256 public portionVestingPrecision;
     // Added configurable round ID for staking round
     uint256 public stakingRoundId;
+    // Added configurable round ID for staking round
+    uint256 public boosterRoundId;
     // Max vesting time shift
     uint256 public maxVestingTimeShift;
     // Registration deposit AVAX, which will be paid during the registration, and returned back during the participation.
@@ -165,6 +169,7 @@ contract AvalaunchSale is Initializable {
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
     event TokensWithdrawnToDexalot(address user, uint256 amount);
     event GateClosed(uint256 time);
+    event ParticipationBoosted(address user, uint256 amount);
 
     // Constructor replacement for upgradable contracts
     function initialize(
@@ -284,6 +289,9 @@ contract AvalaunchSale is Initializable {
         portionVestingPrecision = _portionVestingPrecision;
         // Set staking round id
         stakingRoundId = _stakingRoundId;
+        // Set booster round id
+        boosterRoundId = _stakingRoundId.add(1);
+
         // Emit event
         emit SaleCreated(
             sale.saleOwner,
@@ -674,12 +682,14 @@ contract AvalaunchSale is Initializable {
 
         // Create participation object
         Participation memory p = Participation({
-        amountBought: amountOfTokensBuying,
-        amountAVAXPaid: amountAVAX,
-        timeParticipated: block.timestamp,
-        roundId: roundId,
-        isPortionWithdrawn: _empty,
-        isPortionWithdrawnToDexalot: _empty
+            amountBought: amountOfTokensBuying,
+            amountAVAXPaid: amountAVAX,
+            timeParticipated: block.timestamp,
+            roundId: roundId,
+            isPortionWithdrawn: _empty,
+            isPortionWithdrawnToDexalot: _empty,
+            isParticipationBoosted: false,
+            boostedAmount: 0
         });
 
         // Staking round only.
@@ -705,6 +715,56 @@ contract AvalaunchSale is Initializable {
 
         emit RegistrationAVAXRefunded(user, registrationDepositAVAX);
         emit TokensSold(user, amountOfTokensBuying);
+    }
+
+    function boostParticipation(
+        address user,
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId
+    ) external payable {
+        require(msg.sender == address(collateral), "Only collateral contract may call this function.");
+        require(admin.isAdmin(tx.origin), "Call must originate from an admin.");
+        require(roundId == boosterRoundId && roundId == getCurrentRound(), "Invalid round.");
+
+        // Check user has participated before
+        require(isParticipated[user], "User needs to participate first.");
+
+        Participation storage p = userToParticipation[user];
+        require(!p.isParticipationBoosted, "User's participation already boosted.");
+
+        // Mark participation as boosted
+        p.isParticipationBoosted = true;
+
+        // Compute the amount of tokens user is buying
+        uint256 amountOfTokensBuying = (msg.value).mul(one).div(
+            sale.tokenPriceInAVAX
+        );
+
+        // Add amountOfTokensBuying as boostedAmount
+        p.boostedAmount = amountOfTokensBuying;
+
+        require(amountOfTokensBuying < amount, "Trying to buy more than allowed.");
+
+        require(
+            amountOfTokensBuying <= roundIdToRound[stakingRoundId].maxParticipation,
+            "Overflowing maximal participation for this round."
+        );
+
+        // Increase amount of sold tokens
+        sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
+
+        // Increase amount of AVAX raised
+        sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
+
+        // Burn XAVA from this user.
+        allocationStakingContract.redistributeXava(
+            0,
+            user,
+            amountXavaToBurn
+        );
+
+        emit ParticipationBoosted(user, amountOfTokensBuying);
     }
 
     /// Users can claim their participation
@@ -1032,7 +1092,9 @@ contract AvalaunchSale is Initializable {
             uint256,
             uint256,
             bool[] memory,
-            bool[] memory
+            bool[] memory,
+            bool,
+            uint256
         )
     {
         Participation memory p = userToParticipation[_user];
@@ -1042,7 +1104,9 @@ contract AvalaunchSale is Initializable {
             p.timeParticipated,
             p.roundId,
             p.isPortionWithdrawn,
-            p.isPortionWithdrawnToDexalot
+            p.isPortionWithdrawnToDexalot,
+            p.isParticipationBoosted,
+            p.boostedAmount
         );
     }
 

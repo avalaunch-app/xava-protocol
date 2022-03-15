@@ -36,7 +36,7 @@ contract AvalaunchCollateral is Initializable {
 
     event DepositedCollateral(address wallet, uint256 amountDeposited, uint256 timestamp);
     event WithdrawnCollateral(address wallet, uint256 amountWithdrawn, uint256 timestamp);
-    event FeeTaken(address sale, uint256 participationAmount, uint256 feeAmount);
+    event FeeTaken(address sale, uint256 participationAmount, uint256 feeAmount, string action);
     event ApprovedSale(address sale);
 
     modifier onlyAdmin {
@@ -160,9 +160,37 @@ contract AvalaunchCollateral is Initializable {
         // Transfer AVAX fee immediately to beneficiary
         safeTransferAVAX(moderator, participationFeeAVAX);
         // Trigger event
-        emit FeeTaken(saleAddress, amountAVAX, participationFeeAVAX);
+        emit FeeTaken(saleAddress, amountAVAX, participationFeeAVAX, "autoParticipate");
         // Participate
         IAvalaunchSale(saleAddress).autoParticipate{
+            value: amountAVAX
+        }(user, amount, amountXavaToBurn, roundId);
+    }
+
+    function boostParticipation(
+        address saleAddress,
+        uint256 amountAVAX,
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId,
+        address user,
+        uint256 boostFeeAVAX
+    )
+    external
+    onlyAdmin
+    {
+        // Require that sale contract is approved by moderator
+        require(isSaleApprovedByModerator[saleAddress], "Sale contract not approved by moderator.");
+        // Require that user deposited enough collateral
+        require(amountAVAX.add(boostFeeAVAX) <= userBalance[user], "Not enough collateral.");
+
+        // Transfer AVAX fee immediately to beneficiary
+        safeTransferAVAX(moderator, boostFeeAVAX);
+        // Trigger event
+        emit FeeTaken(saleAddress, amountAVAX, boostFeeAVAX, "boostParticipation");
+
+        // Participate
+        IAvalaunchSale(saleAddress).boostParticipation{
             value: amountAVAX
         }(user, amount, amountXavaToBurn, roundId);
     }
