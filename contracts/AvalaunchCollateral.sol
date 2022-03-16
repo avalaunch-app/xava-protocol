@@ -120,7 +120,7 @@ contract AvalaunchCollateral is Initializable {
     /**
      * @notice  Function for auto participation, where admin can participate on user behalf and buy him allocation
      *          by taking funds from his collateral.
-     *          Function is restricted only to admins.
+     * @dev     Function is restricted only to admins.
      * @param   saleAddress is the address of the sale contract in which admin participates
      * @param   amountAVAX is the amount of AVAX which will be taken from user to get him an allocation.
      * @param   amount is the amount of tokens user is allowed to buy (maximal)
@@ -174,6 +174,20 @@ contract AvalaunchCollateral is Initializable {
         }(user, amount, amountXavaToBurn, roundId);
     }
 
+    /**
+     * @notice  Function for participation boosting, where admin can boost participation on user behalf and
+     *          buy him allocation by taking funds from his collateral.
+     * @dev     Function is restricted only to admins.
+     * @param   saleAddress is the address of the sale contract in which admin boosts allocation for
+     * @param   amountAVAX is the amount of AVAX which will be taken from user to get him an allocation.
+     * @param   amount is the amount of tokens user is allowed to buy (maximal)
+     * @param   amountXavaToBurn is the amount of XAVA which will be taken from user and redistributed across
+     *          other Avalaunch stakers
+     * @param   roundId is the ID of the round for which participation is being taken.
+     * @param   user is the address of user on whose behalf this action is being done.
+     * @param   boostFeeAVAX is the FEE amount which is taken by Avalaunch for this service.
+     * @param   permitSignature is the approval from user side to take his funds for specific sale address
+     */
     function boostParticipation(
         address saleAddress,
         uint256 amountAVAX,
