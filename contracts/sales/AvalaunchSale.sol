@@ -65,7 +65,8 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
     mapping(uint256 => bool) public isVaultParticipated;
     // Added configurable round ID for staking round
     uint256 public stakingRoundId;
-
+    // Added configurable round ID for staking round
+    uint256 public boosterRoundId;
     // Token price in AVAX latest update timestamp
     uint256 updateTokenPriceInAVAXLastCallTimestamp;
 
@@ -157,6 +158,9 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
         vestingConfig.setPrecision(_portionVestingPrecision);
         // Set staking round id
         stakingRoundId = _stakingRoundId;
+        // Set booster round id
+        boosterRoundId = _stakingRoundId.add(1);
+
         // Emit event
         emit SaleCreated(
             sale.saleOwner,
@@ -264,9 +268,7 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
         // Require that 'N' time has passed since last call
         if (sale.tokenPriceInAVAX != 0) {
             require(
-                updateTokenPriceInAVAXLastCallTimestamp.add(
-                    sale.updateTokenPriceInAVAXTimeLimit
-                ) < block.timestamp,
+                updateTokenPriceInAVAXLastCallTimestamp.add(sale.updateTokenPriceInAVAXTimeLimit) < block.timestamp,
                 "Not enough time passed since last call."
             );
         }
@@ -397,7 +399,10 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
             timeParticipated: block.timestamp,
             roundId: roundId,
             isPortionWithdrawn: _empty,
-            isPortionWithdrawnToDexalot: _empty
+            isPortionWithdrawnToDexalot: _empty,
+            isParticipationBoosted: false,
+            boostedAmountAVAXPaid: 0,
+            boostedAmountBought: 0
         });
 
         // Staking round only.
@@ -416,6 +421,36 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
 
         emit RegistrationAVAXRefunded(user, registration.registrationDepositAVAX);
         emit TokensSold(user, amountOfTokensBuying);
+    }
+
+    function boostParticipation(
+        address user,
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId
+    ) external payable override {
+        require(msg.sender == address(collateral), "Only collateral contract may call this function.");
+        require(admin.isAdmin(tx.origin), "Call must originate from an admin.");
+        require(roundId == boosterRoundId && roundId == getCurrentRound(), "Invalid round.");
+
+        // Check user has participated before
+        require(isParticipated[user], "User needs to participate first.");
+
+        // Compute the amount of tokens user is buying
+        uint256 amountOfTokensBuying = sale.purchase(msg.value, amount);
+        require(
+            amountOfTokensBuying <= roundIdToRound[stakingRoundId].maxParticipation,
+            "Overflowing maximal participation for this round."
+        );
+
+        ParticipationLib.Participation storage p = userToParticipation[user];
+        p.boost(msg.value, amountOfTokensBuying);
+
+        // Burn / Redistribute XAVA from this user.
+        allocationStakingContract.redistributeXava(0, user, amountXavaToBurn);
+
+        // Emit participation boosted event
+        emit ParticipationBoosted(user, p.boostedAmountAVAXPaid, p.boostedAmountBought);
     }
 
     // Migrate participation details from user to vault NFT
@@ -679,8 +714,11 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
             uint256,
             uint256,
             uint256,
-            bool[] memory,
-            bool[] memory
+            // bool[] memory,
+            // bool[] memory,
+            bool,
+            uint256,
+            uint256
         )
     {
         return userToParticipation[_user].normalize();
@@ -696,8 +734,11 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
             uint256,
             uint256,
             uint256,
-            bool[] memory,
-            bool[] memory
+            // bool[] memory,
+            // bool[] memory,
+            bool,
+            uint256,
+            uint256
         )
     {
         return vaultToParticipation[vaultId].normalize();

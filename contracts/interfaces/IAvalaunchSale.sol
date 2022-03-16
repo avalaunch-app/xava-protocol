@@ -32,6 +32,7 @@ interface IAvalaunchSale {
     event GateClosed(uint256 time);
     event ParticipationMigrated(address user, uint256 vaultId);
     event VaultBurned(address user, uint256 vaultId);
+    event ParticipationBoosted(address user, uint256 amountAVAX, uint256 amountTokens);
 
     function autoParticipate(
         address user,
@@ -39,4 +40,12 @@ interface IAvalaunchSale {
         uint256 amountXavaToBurn,
         uint256 roundId
     ) external payable;
+
+    function boostParticipation(
+        address user,
+        uint256 amount,
+        uint256 amountXavaToBurn,
+        uint256 roundId
+    )
+    external payable;
 }

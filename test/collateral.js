@@ -71,7 +71,7 @@ describe("Collateral", function() {
     });
 
     context("Signature Testing", async function() {
-        it("Should verify user's signature", async function() {
+        it("Should verify user's autoBuy signature", async function() {
             let messageJSON = {
                 confirmationMessage: "Turn AutoBUY ON.",
                 saleAddress: ONE_ADDRESS
@@ -89,14 +89,14 @@ describe("Collateral", function() {
                 primaryType: 'AutoBuy'
             };
 
-            expect(await collateral.verifyUserPermitSignature(
+            expect(await collateral.verifyAutoBuySignature(
                 deployer.address,
                 ONE_ADDRESS,
                 await generateSignature(message, type, primaryType)
             )).to.equal(true);
         });
 
-        it("Should fail verifying user's signature - bad user", async function() {
+        it("Should fail verifying user's autoBuy signature - bad user", async function() {
             let messageJSON = {
                 confirmationMessage: "Turn AutoBUY ON.",
                 saleAddress: ONE_ADDRESS
@@ -114,7 +114,57 @@ describe("Collateral", function() {
                 primaryType: 'AutoBuy'
             };
 
-            expect(await collateral.verifyUserPermitSignature(
+            expect(await collateral.verifyAutoBuySignature(
+                alice.address,
+                ONE_ADDRESS,
+                await generateSignature(message, type, primaryType)
+            )).to.equal(false);
+        });
+
+        it("Should verify user's boost signature", async function() {
+            let messageJSON = {
+                confirmationMessage: "Boost participation.",
+                saleAddress: ONE_ADDRESS
+            };
+            let message = eval(messageJSON);
+
+            let type = {
+                Boost: [
+                    { name: 'confirmationMessage', type: 'string' },
+                    { name: 'saleAddress', type: 'address' }
+                ],
+            };
+
+            let primaryType = {
+                primaryType: 'Boost'
+            };
+
+            expect(await collateral.verifyBoostSignature(
+                deployer.address,
+                ONE_ADDRESS,
+                await generateSignature(message, type, primaryType)
+            )).to.equal(true);
+        });
+
+        it("Should fail verifying user's boost signature - bad user", async function() {
+            let messageJSON = {
+                confirmationMessage: "Boost participation.",
+                saleAddress: ONE_ADDRESS
+            };
+            let message = eval(messageJSON);
+
+            let type = {
+                Boost: [
+                    { name: 'confirmationMessage', type: 'string' },
+                    { name: 'saleAddress', type: 'address' }
+                ],
+            };
+
+            let primaryType = {
+                primaryType: 'Boost'
+            };
+
+            expect(await collateral.verifyBoostSignature(
                 alice.address,
                 ONE_ADDRESS,
                 await generateSignature(message, type, primaryType)
