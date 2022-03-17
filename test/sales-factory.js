@@ -5,6 +5,7 @@ const ethUtil = require("ethereumjs-util")
 describe("SalesFactory", function() {
 
   let Admin;
+  let Collateral;
   let AvalaunchSale;
   let XavaToken, XavaToken2;
   let SalesFactory;
@@ -40,8 +41,13 @@ describe("SalesFactory", function() {
     const AdminFactory = await ethers.getContractFactory("Admin");
     Admin = await AdminFactory.deploy([deployer.address, alice.address, bob.address]);
 
+    const CollateralFactory = await ethers.getContractFactory("AvalaunchCollateral");
+    Collateral = await CollateralFactory.deploy();
+    await Collateral.deployed();
+    await Collateral.initialize(deployer.address, Admin.address, 43114);
+
     const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);
+    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address);
 
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
@@ -52,7 +58,26 @@ describe("SalesFactory", function() {
     await AllocationStaking.add(1, XavaToken.address, false);
     await SalesFactory.setAllocationStaking(AllocationStaking.address);
 
-    AvalaunchSaleFactory = await ethers.getContractFactory("AvalaunchSale");
+    const ParticipationLibFactory = await ethers.getContractFactory("ParticipationLib");
+    const ParticipationLib = await ParticipationLibFactory.deploy();
+    const DexalotLibFactory = await ethers.getContractFactory("DexalotLib");
+    const DexalotLib = await DexalotLibFactory.deploy();
+    const SaleLibFactory = await ethers.getContractFactory("SaleLib");
+    const SaleLib = await SaleLibFactory.deploy();
+    const RegistrationLibFactory = await ethers.getContractFactory("RegistrationLib");
+    const RegistrationLib = await RegistrationLibFactory.deploy();
+    const VestingLibFactory = await ethers.getContractFactory("VestingLib");
+    const VestingLib = await VestingLibFactory.deploy();
+    
+    AvalaunchSaleFactory = await ethers.getContractFactory("AvalaunchSale", {
+      libraries: {
+        ParticipationLib: ParticipationLib.address,
+        DexalotLib: DexalotLib.address,
+        SaleLib: SaleLib.address,
+        RegistrationLib: RegistrationLib.address,
+        VestingLib: VestingLib.address,
+      }
+    });
   });
 
   context("Setup", async function() {

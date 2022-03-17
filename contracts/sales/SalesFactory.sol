@@ -2,6 +2,7 @@
 pragma solidity 0.6.12;
 
 import "../interfaces/IAdmin.sol";
+import "./SaleVault.sol";
 
 contract SalesFactory {
 
@@ -64,8 +65,10 @@ contract SalesFactory {
         // Require that sale was created
         require(sale != address(0), "Sale creation failed");
 
+        SaleVault vault = new SaleVault("Sale Vault","SV","ipfs://", msg.sender, sale);
+
         // Initialize sale
-        (bool success, ) = sale.call(abi.encodeWithSignature("initialize(address,address,address)", address(admin), allocationStaking, collateral));
+        (bool success, ) = sale.call(abi.encodeWithSignature("initialize(address,address,address,address)", address(admin), allocationStaking, address(vault), collateral));
         require(success, "Initialization failed.");
 
         // Mark sale as created through official factory
