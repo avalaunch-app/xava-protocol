@@ -19,7 +19,9 @@ jobs:
         with:
           node-version: '${{ matrix.node-version }}'
       - name: Install dependencies
-        run: yarn install
+        run: |
+          git config --global url.https://github.com/.insteadOf git://github.com/
+          yarn install
       - name: Setup node
         run: npx hardhat node &
       - name: Run tests
