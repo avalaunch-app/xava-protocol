@@ -26,19 +26,18 @@ library RegistrationLib {
         // Accounting total AVAX collected, after sale admin can withdraw this
         uint256 registrationFees;
         // Number of users participated in the sale.
-        uint numberOfParticipants;
+        uint256 numberOfParticipants;
     }
 
     function setTimes(
         Registration storage reg,
         uint256 _registrationTimeStarts,
         uint256 _registrationTimeEnds,
-        uint256 firstRoundStartTime
+        uint256 firstRoundStartTime,
+        uint256 _saleEnd
     ) external {
-        require(
-            _registrationTimeStarts >= block.timestamp &&
-                _registrationTimeEnds > _registrationTimeStarts
-        );
+        require(_registrationTimeEnds < _saleEnd);
+        require(_registrationTimeStarts >= block.timestamp && _registrationTimeEnds > _registrationTimeStarts);
         require(_registrationTimeEnds < firstRoundStartTime);
 
         reg.registrationTimeStarts = _registrationTimeStarts;
@@ -46,13 +45,9 @@ library RegistrationLib {
     }
 
     function register(Registration storage reg) external {
+        require(msg.value == reg.registrationDepositAVAX, "Registration deposit does not match.");
         require(
-            msg.value == reg.registrationDepositAVAX,
-            "Registration deposit does not match."
-        );
-        require(
-            block.timestamp >= reg.registrationTimeStarts &&
-                block.timestamp <= reg.registrationTimeEnds,
+            block.timestamp >= reg.registrationTimeStarts && block.timestamp <= reg.registrationTimeEnds,
             "Registration gate is closed."
         );
         // Increment number of registered users
@@ -68,10 +63,7 @@ library RegistrationLib {
     ) external {
         // Require that timeToShift does not extend sale over it's end
         uint256 postPonedTime = round.startTime.add(timeToShift);
-        require(
-            postPonedTime < saleEndTime,
-            "Start time can not be greater than end time."
-        );
+        require(postPonedTime < saleEndTime, "Start time can not be greater than end time.");
         // Postpone sale
         round.startTime = postPonedTime;
     }
@@ -82,26 +74,29 @@ library RegistrationLib {
         uint256 firstRoundStartTime
     ) external {
         uint256 extendedTime = reg.registrationTimeEnds.add(timeToAdd);
-        require(
-            extendedTime < firstRoundStartTime,
-            "Registration period overflows sale start."
-        );
+        require(extendedTime < firstRoundStartTime, "Registration period overflows sale start.");
         reg.registrationTimeEnds = extendedTime;
     }
 
-    function withdrawRegistrationFee(
-        Registration storage reg
-    ) external {
+    function withdrawFee(Registration storage reg, uint256 saleEndTime) external {
+        require(block.timestamp >= saleEndTime, "Require that sale has ended.");
         require(reg.registrationFees > 0, "No earnings from registration fees.");
         reg.registrationFees = 0;
     }
 
-    function newParticipation(
-        Registration storage reg
-    ) external {
+    function newParticipation(Registration storage reg) external {
         // Increment number of participants in the Sale.
         reg.numberOfParticipants++;
         // Decrease of available registration fees
         reg.registrationFees = reg.registrationFees.sub(reg.registrationDepositAVAX);
+    }
+
+    function performChecksToCloseGate(Registration storage reg) external view {
+        // Require that registration times are set
+        require(
+            reg.registrationTimeStarts != 0 && reg.registrationTimeEnds != 0,
+            "closeGate: Registration params not set."
+        );
+        // add more checks here
     }
 }

@@ -88,6 +88,12 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
         _;
     }
 
+    // Restricting calls only to sale admin
+    modifier onlyAdminOrigin() {
+        require(admin.isAdmin(tx.origin), "Call must originate from an admin.");
+        _;
+    }
+
     // Restricting setter calls after gate closing
     modifier onlyIfGateOpen() {
         require(!gateClosed, "Setter gate is closed.");
@@ -196,10 +202,8 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
     {
         // Require that the sale is created
         require(sale.isCreated);
-        require(_registrationTimeEnds < sale.saleEnd);
-
         // Set registration start and end time
-        registration.setTimes(_registrationTimeStarts, _registrationTimeEnds, getFirstRoundStartTime());
+        registration.setTimes(_registrationTimeStarts, _registrationTimeEnds, getFirstRoundStartTime(), sale.saleEnd);
 
         emit RegistrationTimeSet(registration.registrationTimeStarts, registration.registrationTimeEnds);
     }
@@ -265,14 +269,7 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
     /// @dev        This will be updated with an oracle during the sale every N minutes, so the users will always
     ///             pay initialy set $ value of the token. This is to reduce reliance on the AVAX volatility.
     function updateTokenPriceInAVAX(uint256 price) external onlyAdmin {
-        // Require that 'N' time has passed since last call
-        if (sale.tokenPriceInAVAX != 0) {
-            require(
-                updateTokenPriceInAVAXLastCallTimestamp.add(sale.updateTokenPriceInAVAXTimeLimit) < block.timestamp,
-                "Not enough time passed since last call."
-            );
-        }
-        sale.updateTokenPrice(price);
+        sale.updateTokenPrice(price, updateTokenPriceInAVAXLastCallTimestamp);
         // Set latest call time to current timestamp
         updateTokenPriceInAVAXLastCallTimestamp = block.timestamp;
 
@@ -324,9 +321,8 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
         uint256 amount,
         uint256 amountXavaToBurn,
         uint256 roundId
-    ) external payable override {
+    ) external payable override onlyAdminOrigin {
         require(msg.sender == address(collateral), "Only collateral contract may call this function.");
-        require(admin.isAdmin(tx.origin), "Call must originate from an admin.");
         _participate(user, msg.value, amount, amountXavaToBurn, roundId);
     }
 
@@ -428,9 +424,8 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
         uint256 amount,
         uint256 amountXavaToBurn,
         uint256 roundId
-    ) external payable override {
+    ) external payable override onlyAdminOrigin {
         require(msg.sender == address(collateral), "Only collateral contract may call this function.");
-        require(admin.isAdmin(tx.origin), "Call must originate from an admin.");
         require(roundId == boosterRoundId && roundId == getCurrentRound(), "Invalid round.");
 
         // Check user has participated before
@@ -511,17 +506,7 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
         bool allowDexalot,
         bool allowTokenTransfer
     ) internal returns (uint256) {
-        require(portionId < vestingConfig.vestingPercentPerPortion.length, "Portion id out of range.");
-        require(!p.isPortionWithdrawn[portionId], "Portion already withdrawn.");
-        if (portionId > 0) {
-            require(vestingConfig.vestingPortionsUnlockTime[portionId] <= block.timestamp, "Portion not unlocked yet.");
-        }
-
-        p.isPortionWithdrawn[portionId] = true;
-        uint256 amountWithdrawing = p.amountBought.mul(vestingConfig.vestingPercentPerPortion[portionId]).div(
-            vestingConfig.portionVestingPrecision
-        );
-
+        uint256 amountWithdrawing = p.setPortionWithdrawn(vestingConfig, portionId);
         if (allowTokenTransfer) _withdrawToken(beneficiary, amountWithdrawing, allowDexalot);
         return amountWithdrawing;
     }
@@ -578,7 +563,6 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
 
     /// Expose function where user can withdraw multiple unlocked portions to Dexalot Portfolio at once
     /// @dev first portion can be deposited before it's unlocking time, while others can only after
-    // 0.838 KB
 
     function withdrawMultiplePortionsToDexalot(uint256[] calldata portionIds) external {
         // Security check
@@ -610,16 +594,7 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
 
     // Function to withdraw earnings
     function withdrawEarningsInternal() internal {
-        // Make sure sale ended
-        require(block.timestamp >= sale.saleEnd);
-
-        // Make sure owner can't withdraw twice
-        require(!sale.earningsWithdrawn);
-        sale.earningsWithdrawn = true;
-        // Earnings amount of the owner in AVAX
-        uint256 totalProfit = sale.totalAVAXRaised;
-
-        safeTransferAVAX(msg.sender, totalProfit);
+        safeTransferAVAX(msg.sender, sale.setEarningsWithdrawn());
     }
 
     // Function to withdraw leftover
@@ -629,8 +604,7 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
 
     // Function after sale for admin to withdraw registration fees if there are any left.
     function withdrawRegistrationFees() external onlyAdmin {
-        require(block.timestamp >= sale.saleEnd, "Require that sale has ended.");
-        registration.withdrawRegistrationFee();
+        registration.withdrawFee(sale.saleEnd);
         // Transfer AVAX to the admin wallet.
         safeTransferAVAX(msg.sender, registration.registrationFees);
     }
@@ -704,44 +678,15 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
             );
     }
 
-    /// @notice     Function to get participation for passed user address
-    // 0.576 KB
-    function getParticipation(address _user)
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            // bool[] memory,
-            // bool[] memory,
-            bool,
-            uint256,
-            uint256
-        )
-    {
-        return userToParticipation[_user].normalize();
+    function getParticipationWithdrawal(address _user) external view returns (bool[] memory, bool[] memory) {
+        return (userToParticipation[_user].isPortionWithdrawn, userToParticipation[_user].isPortionWithdrawnToDexalot);
     }
 
-    /// @notice     Function to get participation for passed user address
-    // Size: 0.361 KB
-    function getVaultParticipation(uint256 vaultId)
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            // bool[] memory,
-            // bool[] memory,
-            bool,
-            uint256,
-            uint256
-        )
-    {
-        return vaultToParticipation[vaultId].normalize();
+    function getVaultParticipationWithdrawal(uint256 vaultId) external view returns (bool[] memory, bool[] memory) {
+        return (
+            vaultToParticipation[vaultId].isPortionWithdrawn,
+            vaultToParticipation[vaultId].isPortionWithdrawnToDexalot
+        );
     }
 
     /// @notice     Function to get number of registered users for sale
@@ -756,10 +701,7 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
 
     /// @notice     Function to remove stuck tokens from sale contract
     function removeStuckTokens(address token, address beneficiary) external onlyAdmin {
-        // Require that token address does not match with sale token
-        require(token != address(sale.token), "Cannot withdraw official sale token.");
-        // Safe transfer token from sale contract to beneficiary
-        IERC20(token).safeTransfer(beneficiary, IERC20(token).balanceOf(address(this)));
+        sale.removeStuckTokens(token, beneficiary);
     }
 
     /// @notice     Function to set params for updatePriceInAVAX function
@@ -778,11 +720,7 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
 
     /// @notice     Function close setter gate after all params are set
     function closeGate() external onlyAdmin onlyIfGateOpen {
-        // Require that registration times are set
-        require(
-            registration.registrationTimeStarts != 0 && registration.registrationTimeEnds != 0,
-            "closeGate: Registration params not set."
-        );
+        registration.performChecksToCloseGate();
         sale.performChecksToCloseGate();
         // Close the gate
         gateClosed = true;

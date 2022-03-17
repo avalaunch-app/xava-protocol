@@ -968,7 +968,7 @@ describe("AvalaunchSale", function() {
       });
     });
   });
-  // return;
+
   context("Registration", async function() {
     describe("Register for sale", async function() {
       it("Should register for sale", async function() {
@@ -1413,14 +1413,12 @@ describe("AvalaunchSale", function() {
         // Then
         const sale = await AvalaunchSale.sale();
         const isParticipated = await AvalaunchSale.isParticipated(deployer.address);
-        const participation = await AvalaunchSale.getParticipation(deployer.address);
-
+        const participation = await AvalaunchSale.userToParticipation(deployer.address);
         expect(sale.totalTokensSold).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
         expect(sale.totalAVAXRaised).to.equal(PARTICIPATION_VALUE);
         expect(isParticipated).to.be.true;
-        expect(participation[0]).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
-        expect(participation[3]).to.equal(PARTICIPATION_ROUND);
-        // expect(participation.isWithdrawn).to.be.false;
+        expect(participation.amountBought).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
+        expect(participation.roundId).to.equal(PARTICIPATION_ROUND);
 
         expect(await AvalaunchSale.getNumberOfRegisteredUsers()).to.equal(1);
       });
@@ -2286,17 +2284,26 @@ describe("AvalaunchSale", function() {
         const vaultContract = await ethers.getContractAt("SaleVault", saleVault);
 
         const totalSupply = await vaultContract.totalSupply();
-        const participation = await AvalaunchSale.getParticipation(deployer.address);
-        const vaultParticipation = await AvalaunchSale.getVaultParticipation(totalSupply-1);
+        const participation = await AvalaunchSale.userToParticipation(deployer.address);
+        const vaultParticipation = await AvalaunchSale.vaultToParticipation(totalSupply-1);
+        const participationWithdrawal = await AvalaunchSale.getParticipationWithdrawal(deployer.address);
+        const vaultParticipationWithdrawal = await AvalaunchSale.getVaultParticipationWithdrawal(totalSupply-1);
         const isParticipated = await AvalaunchSale.isParticipated(deployer.address)
         const isVaultParticipated = await AvalaunchSale.isVaultParticipated(totalSupply-1)
 
-        expect(vaultParticipation[0]).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
-        expect(vaultParticipation[3]).to.equal(PARTICIPATION_ROUND);
-        expect(vaultParticipation[4].length).to.equal(vestingPercentPerPortion.length);
-        expect(participation[0]).to.equal(0); // amountBougt
-        expect(participation[3]).to.equal(0); // roundId
-        expect(participation[4].length).to.equal(0); // isPortionWithdrawn array
+        console.log({
+          participationWithdrawal,
+          vaultParticipationWithdrawal,
+          participation,
+          vaultParticipation
+        })
+
+        expect(vaultParticipation.amountBought).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
+        expect(vaultParticipation.roundId).to.equal(PARTICIPATION_ROUND);
+        expect(vaultParticipationWithdrawal[0].length).to.equal(vestingPercentPerPortion.length);
+        expect(participation.amountBought).to.equal(0);
+        expect(participation.roundId).to.equal(0);
+        expect(participationWithdrawal[0].length).to.equal(0);
         expect(totalSupply).to.equal(1);
         expect(isVaultParticipated).to.be.true;
         expect(isParticipated).to.be.false;
@@ -2364,10 +2371,9 @@ describe("AvalaunchSale", function() {
         await AvalaunchSale.burnVault(0);
 
         // Then
-        const vaultParticipation = await AvalaunchSale.getVaultParticipation(0);
-        expect(vaultParticipation[4]).to.eql(Array(vestingPercentPerPortion.length).fill(true));
+        const vaultParticipationWithdrawal = await AvalaunchSale.getVaultParticipationWithdrawal(0);
+        expect(vaultParticipationWithdrawal[0]).to.eql(Array(vestingPercentPerPortion.length).fill(true));
         await expect(vaultContract.ownerOf(0)).to.be.revertedWith("ERC721: owner query for nonexistent token")
-        
       });
 
       it("Should withdraw vault's participation", async function() {
@@ -2408,9 +2414,9 @@ describe("AvalaunchSale", function() {
         // console.log(withdrawAmount)
         expect(currentBalance).to.equal(previousBalance.add(Math.floor(withdrawAmount)));
 
-        const vaultParticipation = await AvalaunchSale.getVaultParticipation(0);
-        expect(vaultParticipation[4].length).to.equal(vestingPercentPerPortion.length);
-        expect(vaultParticipation[4][0]).to.be.true;
+        const vaultParticipationWithdrawal = await AvalaunchSale.getVaultParticipationWithdrawal(0);
+        expect(vaultParticipationWithdrawal[0].length).to.equal(vestingPercentPerPortion.length);
+        expect(vaultParticipationWithdrawal[0][0]).to.be.true;
       });
 
       it("Only new vault owner should withdraw participation", async function() {

@@ -94,14 +94,7 @@ library SaleLib {
         Sale storage sale,
         uint256 amountAVAX,
         uint256 amount
-    )
-        external
-        returns (
-            // uint256 amountXavaToBurn,
-            // uint256 roundId
-            uint256
-        )
-    {
+    ) external returns (uint256) {
         // Compute the amount of tokens user is buying
         uint256 amountOfTokensBuying = (amountAVAX)
             .mul(uint256(10)**IERC20Metadata(address(sale.token)).decimals())
@@ -127,7 +120,11 @@ library SaleLib {
         return amountOfTokensBuying;
     }
 
-    function updateTokenPrice(Sale storage sale, uint256 price) external returns (uint256) {
+    function updateTokenPrice(
+        Sale storage sale,
+        uint256 price,
+        uint256 updateTokenPriceInAVAXLastCallTimestamp
+    ) external returns (uint256) {
         if (sale.tokenPriceInAVAX != 0) {
             // Require that function params are properly set
             require(
@@ -140,6 +137,12 @@ library SaleLib {
             require(
                 price < sale.tokenPriceInAVAX.add(maxPriceChange) && price > sale.tokenPriceInAVAX.sub(maxPriceChange),
                 "Price differs too much from the previous."
+            );
+
+            // Require that 'N' time has passed since last call
+            require(
+                updateTokenPriceInAVAXLastCallTimestamp.add(sale.updateTokenPriceInAVAXTimeLimit) < block.timestamp,
+                "Not enough time passed since last call."
             );
         }
 
@@ -192,5 +195,31 @@ library SaleLib {
             sale.updateTokenPriceInAVAXPercentageThreshold != 0 && sale.updateTokenPriceInAVAXTimeLimit != 0,
             "closeGate: Params for updateTokenPriceInAvax not set."
         );
+    }
+
+    function setEarningsWithdrawn(Sale storage sale) external returns (uint256) {
+        // Make sure sale ended
+        require(block.timestamp >= sale.saleEnd);
+        // Make sure owner can't withdraw twice
+        require(!sale.earningsWithdrawn);
+        sale.earningsWithdrawn = true;
+        // Earnings amount of the owner in AVAX
+        return sale.totalAVAXRaised;
+    }
+
+    function removeStuckTokens(
+        Sale storage sale,
+        address token,
+        address beneficiary
+    ) external {
+        // Require that token address does not match with sale token
+        require(token != address(sale.token), "Cannot withdraw official sale token.");
+        // Safe transfer token from sale contract to beneficiary
+        IERC20(token).safeTransfer(beneficiary, IERC20(token).balanceOf(address(this)));
+    }
+
+    function transferAVAX(address to, uint256 value) external {
+        (bool success, ) = to.call{ value: value }(new bytes(0));
+        require(success);
     }
 }
