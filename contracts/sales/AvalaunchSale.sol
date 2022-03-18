@@ -718,6 +718,7 @@ contract AvalaunchSale is Initializable {
         emit TokensSold(user, amountOfTokensBuying);
     }
 
+    // Function to boost user's sale participation
     function boostParticipation(
         address user,
         uint256 amount,
@@ -751,7 +752,6 @@ contract AvalaunchSale is Initializable {
         p.boostedAmountAVAXPaid = msg.value;
         // Add amountOfTokensBuying as boostedAmount
         p.boostedAmountBought = amountOfTokensBuying;
-
 
         // Increase amount of sold tokens
         sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
@@ -1132,7 +1132,5 @@ contract AvalaunchSale is Initializable {
     }
 
     // Function to act as a fallback and handle receiving AVAX.
-    receive() external payable {
-
-    }
+    receive() external payable {}
 }
