@@ -49,6 +49,12 @@ module.exports = {
       chainId: 43113,
       accounts: [process.env.PK || testPK]
     },
+    staging: {
+      url: 'https://speedy-nodes-nyc.moralis.io/'+process.env.Moralis+'/avalanche/testnet',
+      gasPrice: 225000000000,
+      chainId: 43113,
+      accounts: [process.env.PK || testPK]
+    },
     mainnet: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
       gasPrice: 50000000000,
@@ -73,6 +79,15 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
+            runs: 200
+          },
+        },
+      },
+      "contracts/sales/SalesFactory.sol": {
+        version: "0.6.12",
+        settings: {
+          optimizer: {
+            enabled: true,
             runs: 185
           },
         },
@@ -89,11 +104,6 @@ module.exports = {
     alphaSort: true,
     runOnCompile: true,
     disambiguatePaths: false,
-  },
-  gasReporter: {
-    currency: 'USD',
-    gasPrice: 250,
-    enabled: (process.env.REPORT_GAS) ? true : false
   }
 };
 
