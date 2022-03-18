@@ -6,6 +6,7 @@ const {BigNumber} = require("ethers");
 describe("AvalaunchSale", function() {
 
   let Admin;
+  let Collateral;
   let AvalaunchSale;
   let XavaToken;
   let SalesFactory;
@@ -199,8 +200,13 @@ describe("AvalaunchSale", function() {
     const AdminFactory = await ethers.getContractFactory("Admin");
     Admin = await AdminFactory.deploy([deployer.address, alice.address, bob.address]);
 
+    const CollateralFactory = await ethers.getContractFactory("AvalaunchCollateral");
+    Collateral = await CollateralFactory.deploy();
+    await Collateral.deployed();
+    await Collateral.initialize(deployer.address, Admin.address, 43114);
+
     const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);
+    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address);
 
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
@@ -1374,13 +1380,13 @@ describe("AvalaunchSale", function() {
         // Then
         const sale = await AvalaunchSale.sale();
         const isParticipated = await AvalaunchSale.isParticipated(deployer.address);
-        const participation = await AvalaunchSale.getParticipation(deployer.address);
+        const participation = await AvalaunchSale.userToParticipation(deployer.address);
 
         expect(sale.totalTokensSold).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
         expect(sale.totalAVAXRaised).to.equal(PARTICIPATION_VALUE);
         expect(isParticipated).to.be.true;
-        expect(participation[0]).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
-        expect(participation[3]).to.equal(PARTICIPATION_ROUND);
+        expect(participation.amountBought).to.equal(Math.floor(PARTICIPATION_VALUE / TOKEN_PRICE_IN_AVAX * MULTIPLIER));
+        expect(participation.roundId).to.equal(PARTICIPATION_ROUND);
         // expect(participation.isWithdrawn).to.be.false;
 
         expect(await AvalaunchSale.getNumberOfRegisteredUsers()).to.equal(1);
@@ -1741,7 +1747,7 @@ describe("AvalaunchSale", function() {
         await AvalaunchSale.withdrawTokens(0);
 
         // Then
-        await expect(AvalaunchSale.withdrawTokens(0)).to.be.revertedWith("Tokens already withdrawn or portion not unlocked yet.");
+        await expect(AvalaunchSale.withdrawTokens(0)).to.be.revertedWith("Portion already withdrawn.");
       });
 
       xit("Should not withdraw before tokens unlock time", async function() {
