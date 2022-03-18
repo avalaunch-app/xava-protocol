@@ -20,7 +20,7 @@ library DexalotLib {
         DexalotConfig storage dexa,
         address _dexalotPortfolio,
         uint256 _dexalotUnlockTime
-    ) external {
+    ) public {
         require(
             address(dexa.dexalotPortfolio) == address(0x0),
             "Dexalot Portfolio already set."
@@ -35,7 +35,7 @@ library DexalotLib {
     }
 
     function performChecks(DexalotConfig storage dexa)
-        external
+        public
         view
         returns (bool)
     {
@@ -50,7 +50,7 @@ library DexalotLib {
     }
 
     function getTokenSymbolBytes32(IERC20 _token)
-        external
+        public
         view
         returns (bytes32 _symbol)
     {

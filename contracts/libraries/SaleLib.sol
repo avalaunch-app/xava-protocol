@@ -44,7 +44,7 @@ library SaleLib {
         // uint256 updateTokenPriceInAVAXLastCallTimestamp;
     }
 
-    function deposit(Sale storage sale) external {
+    function deposit(Sale storage sale) public {
         // Require that setSaleParams was called
         require(sale.amountOfTokensToSell > 0, "Sale parameters not set.");
 
@@ -67,7 +67,7 @@ library SaleLib {
         uint256 _saleEnd,
         uint256 _stakingRoundId,
         uint256 _tokenPriceInUSD
-    ) external {
+    ) public {
         require(!sale.isCreated, "setSaleParams: Sale is already created.");
         require(_saleOwner != address(0), "setSaleParams: Sale owner address can not be 0.");
         require(
@@ -86,7 +86,7 @@ library SaleLib {
         sale.tokenPriceInUSD = _tokenPriceInUSD;
     }
 
-    function setToken(Sale storage sale, address saleToken) external {
+    function setToken(Sale storage sale, address saleToken) public {
         sale.token = IERC20(saleToken);
     }
 
@@ -94,7 +94,7 @@ library SaleLib {
         Sale storage sale,
         uint256 amountAVAX,
         uint256 amount
-    ) external returns (uint256) {
+    ) public returns (uint256) {
         // Compute the amount of tokens user is buying
         uint256 amountOfTokensBuying = (amountAVAX)
             .mul(uint256(10)**IERC20Metadata(address(sale.token)).decimals())
@@ -124,7 +124,7 @@ library SaleLib {
         Sale storage sale,
         uint256 price,
         uint256 updateTokenPriceInAVAXLastCallTimestamp
-    ) external returns (uint256) {
+    ) public returns (uint256) {
         if (sale.tokenPriceInAVAX != 0) {
             // Require that function params are properly set
             require(
@@ -154,7 +154,7 @@ library SaleLib {
         Sale storage sale,
         uint8 _updateTokenPriceInAVAXPercentageThreshold,
         uint256 _updateTokenPriceInAVAXTimeLimit
-    ) external returns (uint256) {
+    ) public returns (uint256) {
         // Require that arguments don't equal zero
         require(
             _updateTokenPriceInAVAXTimeLimit != 0 && _updateTokenPriceInAVAXPercentageThreshold != 0,
@@ -167,7 +167,7 @@ library SaleLib {
         sale.updateTokenPriceInAVAXTimeLimit = _updateTokenPriceInAVAXTimeLimit;
     }
 
-    function withdrawLeftover(Sale storage sale) external {
+    function withdrawLeftover(Sale storage sale) public {
         // Make sure sale ended
         require(block.timestamp >= sale.saleEnd);
 
@@ -183,7 +183,7 @@ library SaleLib {
         }
     }
 
-    function performChecksToCloseGate(Sale storage sale) external view {
+    function performChecksToCloseGate(Sale storage sale) public view {
         // Require that sale is created
         require(sale.isCreated, "closeGate: Sale not created.");
         // Require that sale token is set
@@ -197,7 +197,7 @@ library SaleLib {
         );
     }
 
-    function setEarningsWithdrawn(Sale storage sale) external returns (uint256) {
+    function setEarningsWithdrawn(Sale storage sale) public returns (uint256) {
         // Make sure sale ended
         require(block.timestamp >= sale.saleEnd);
         // Make sure owner can't withdraw twice
@@ -211,14 +211,14 @@ library SaleLib {
         Sale storage sale,
         address token,
         address beneficiary
-    ) external {
+    ) public {
         // Require that token address does not match with sale token
         require(token != address(sale.token), "Cannot withdraw official sale token.");
         // Safe transfer token from sale contract to beneficiary
         IERC20(token).safeTransfer(beneficiary, IERC20(token).balanceOf(address(this)));
     }
 
-    function transferAVAX(address to, uint256 value) external {
+    function transferAVAX(address to, uint256 value) public {
         (bool success, ) = to.call{ value: value }(new bytes(0));
         require(success);
     }

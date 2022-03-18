@@ -24,7 +24,7 @@ library VestingLib {
         uint256[] memory _percents,
         uint256 _maxVestingTimeShift,
         uint256 saleEndTime
-    ) external {
+    ) public {
         require(
             vestingConfig.vestingPercentPerPortion.length == 0 && vestingConfig.vestingPortionsUnlockTime.length == 0
         );
@@ -53,7 +53,7 @@ library VestingLib {
         require(sum == vestingConfig.portionVestingPrecision, "Percent distribution issue.");
     }
 
-    function shiftUnlockingTimes(VestingConfig storage vestingConfig, uint256 timeToShift) external {
+    function shiftUnlockingTimes(VestingConfig storage vestingConfig, uint256 timeToShift) public {
         require(
             timeToShift > 0 && timeToShift < vestingConfig.maxVestingTimeShift,
             "Shift must be nonzero and smaller than maxVestingTimeShift."
@@ -66,7 +66,7 @@ library VestingLib {
         }
     }
 
-    function setPrecision(VestingConfig storage vestingConfig, uint256 _portionVestingPrecision) external {
+    function setPrecision(VestingConfig storage vestingConfig, uint256 _portionVestingPrecision) public {
         require(_portionVestingPrecision >= 100, "Should be at least 100");
         vestingConfig.portionVestingPrecision = _portionVestingPrecision;
     }

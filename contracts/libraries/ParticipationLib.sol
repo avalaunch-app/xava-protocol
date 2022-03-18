@@ -2,13 +2,11 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "../sales/SaleVault.sol";
 import "../libraries/VestingLib.sol";
 
 library ParticipationLib {
     using SafeMath for uint256;
-    using ECDSA for bytes32;
     // Participation structure
     struct Participation {
         uint256 amountBought;
@@ -23,7 +21,7 @@ library ParticipationLib {
     }
 
     // Migrate participation details from user to vault NFT
-    function migrate(Participation storage p, SaleVault saleVault) external returns (uint256) {
+    function migrate(Participation storage p, SaleVault saleVault) public returns (uint256) {
         // Check if there are portions left to withdraw
         uint256 portionsLeft;
 
@@ -42,7 +40,7 @@ library ParticipationLib {
         Participation storage p,
         SaleVault saleVault,
         uint256 vaultId
-    ) external returns (uint256) {
+    ) public returns (uint256) {
         // Check if there are portions left to withdraw
         uint256 portionsLeft;
 
@@ -60,7 +58,7 @@ library ParticipationLib {
         Participation storage p,
         VestingLib.VestingConfig storage vestingConfig,
         uint256 portionId
-    ) external returns (uint256) {
+    ) public returns (uint256) {
         require(portionId < vestingConfig.vestingPercentPerPortion.length, "Portion id out of range.");
         require(!p.isPortionWithdrawn[portionId], "Portion already withdrawn.");
         if (portionId > 0) {
@@ -77,7 +75,7 @@ library ParticipationLib {
         Participation storage p,
         uint256 boostedAmountAVAXPaid,
         uint256 amountOfTokensBuying
-    ) external {
+    ) public {
         require(!p.isParticipationBoosted, "User's participation already boosted.");
         // Mark participation as boosted
         p.isParticipationBoosted = true;

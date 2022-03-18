@@ -35,7 +35,7 @@ library RegistrationLib {
         uint256 _registrationTimeEnds,
         uint256 firstRoundStartTime,
         uint256 _saleEnd
-    ) external {
+    ) public {
         require(_registrationTimeEnds < _saleEnd);
         require(_registrationTimeStarts >= block.timestamp && _registrationTimeEnds > _registrationTimeStarts);
         require(_registrationTimeEnds < firstRoundStartTime);
@@ -44,7 +44,7 @@ library RegistrationLib {
         reg.registrationTimeEnds = _registrationTimeEnds;
     }
 
-    function register(Registration storage reg) external {
+    function register(Registration storage reg) public {
         require(msg.value == reg.registrationDepositAVAX, "Registration deposit does not match.");
         require(
             block.timestamp >= reg.registrationTimeStarts && block.timestamp <= reg.registrationTimeEnds,
@@ -60,7 +60,7 @@ library RegistrationLib {
         Round storage round,
         uint256 timeToShift,
         uint256 saleEndTime
-    ) external {
+    ) public {
         // Require that timeToShift does not extend sale over it's end
         uint256 postPonedTime = round.startTime.add(timeToShift);
         require(postPonedTime < saleEndTime, "Start time can not be greater than end time.");
@@ -72,26 +72,26 @@ library RegistrationLib {
         Registration storage reg,
         uint256 timeToAdd,
         uint256 firstRoundStartTime
-    ) external {
+    ) public {
         uint256 extendedTime = reg.registrationTimeEnds.add(timeToAdd);
         require(extendedTime < firstRoundStartTime, "Registration period overflows sale start.");
         reg.registrationTimeEnds = extendedTime;
     }
 
-    function withdrawFee(Registration storage reg, uint256 saleEndTime) external {
+    function withdrawFee(Registration storage reg, uint256 saleEndTime) public {
         require(block.timestamp >= saleEndTime, "Require that sale has ended.");
         require(reg.registrationFees > 0, "No earnings from registration fees.");
         reg.registrationFees = 0;
     }
 
-    function newParticipation(Registration storage reg) external {
+    function newParticipation(Registration storage reg) public {
         // Increment number of participants in the Sale.
         reg.numberOfParticipants++;
         // Decrease of available registration fees
         reg.registrationFees = reg.registrationFees.sub(reg.registrationDepositAVAX);
     }
 
-    function performChecksToCloseGate(Registration storage reg) external view {
+    function performChecksToCloseGate(Registration storage reg) public view {
         // Require that registration times are set
         require(
             reg.registrationTimeStarts != 0 && reg.registrationTimeEnds != 0,
