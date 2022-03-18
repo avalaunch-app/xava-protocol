@@ -1,7 +1,7 @@
 const hre = require("hardhat");
-const { getSavedContractAddresses, saveContractAddress } = require('./utils');
+const { getSavedContractAddresses, saveContractAddress } = require('../utils');
 const { ethers } = hre;
-const { greenOut, boldOut } = require('./styling');
+const { greenOut, boldOut } = require('../styling');
 
 const getCurrentBlockTimestamp = async () => {
     return (await ethers.provider.getBlock('latest')).timestamp;
@@ -48,11 +48,11 @@ const main = async () => {
     const totalTokens = ethers.utils.parseEther("1000000").toString();
     const tokenPriceInUSD = 100000; // Six decimals USD value (100000 => 0.1$)
     // fundamental timestamps
-    const registrationStart = await getCurrentBlockTimestamp() + 300;
-    const registrationEnd = registrationStart + 3600;
-    const validatorRound = registrationEnd + 300;
-    const stakingRound = validatorRound + 600;
-    const saleEndTime = stakingRound + 3600 * 2;
+    const registrationStart = await getCurrentBlockTimestamp() + 60;
+    const registrationEnd = registrationStart + 900;
+    const validatorRound = registrationEnd + 60;
+    const stakingRound = validatorRound + 60;
+    const saleEndTime = stakingRound + 3600 * 5;
     const tokensUnlockTime = saleEndTime + 600;
     // vesting
     const unlockingTimes = [tokensUnlockTime, tokensUnlockTime + 200, tokensUnlockTime + 400];
