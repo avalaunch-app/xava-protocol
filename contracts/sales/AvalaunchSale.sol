@@ -247,7 +247,7 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
     /// @notice     Registration for sale.
     /// @param      signature is the message signed by the backend
     /// @param      roundId is the round for which user expressed interest to participate
-    function registerForSale(bytes memory signature, uint256 roundId) external payable {
+    function registerForSale(bytes calldata signature, uint256 roundId) external payable {
         require(roundId != 0, "Round ID can not be 0.");
         require(roundId <= roundIds.length, "Invalid round id");
         require(addressToRoundRegisteredFor[msg.sender] == 0, "User can not register twice.");
@@ -642,11 +642,11 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
     /// @param      user is the address of user which is registering for sale
     /// @param      roundId is the round for which user is submitting registration
     function checkRegistrationSignature(
-        bytes memory signature,
+        bytes calldata signature,
         address user,
         uint256 roundId
     ) public view returns (bool) {
-        return admin.verifySignature(keccak256(abi.encodePacked(user, roundId, address(this))), signature);
+        return RegistrationLib.verifyAdminSignature(admin, keccak256(abi.encodePacked(user, roundId, address(this))), signature);
     }
 
     /// @notice     Check who signed the message
@@ -655,7 +655,7 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
     /// @param      amount is the maximal amount of tokens user can buy
     /// @param      roundId is the Id of the round user is participating.
     function checkParticipationSignature(
-        bytes memory signature,
+        bytes calldata signature,
         address user,
         uint256 amount,
         uint256 amountXavaToBurn,
@@ -663,7 +663,8 @@ contract AvalaunchSale is IAvalaunchSale, Initializable {
         uint256 signatureExpirationTimestamp
     ) public view returns (bool) {
         return
-            admin.verifySignature(
+            RegistrationLib.verifyAdminSignature(
+                admin,
                 keccak256(
                     abi.encodePacked(
                         user,

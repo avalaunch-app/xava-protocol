@@ -5,11 +5,13 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "../interfaces/IAdmin.sol";
 import "../interfaces/IERC20Metadata.sol";
 
 library RegistrationLib {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using ECDSA for bytes32;
 
     // Round structure
     struct Round {
@@ -98,5 +100,13 @@ library RegistrationLib {
             "closeGate: Registration params not set."
         );
         // add more checks here
+    }
+
+    function verifyAdminSignature(
+        IAdmin admin,
+        bytes32 hash,
+        bytes calldata signature
+    ) public view returns (bool) {
+        return admin.isAdmin(hash.toEthSignedMessageHash().recover(signature));
     }
 }

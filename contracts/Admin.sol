@@ -1,37 +1,28 @@
 //SPDX-License-Identifier: UNLICENSED
-import "@openzeppelin/contracts/cryptography/ECDSA.sol";
-
 pragma solidity 0.6.12;
 
 contract Admin {
-    using ECDSA for bytes32;
-
     // Listing all admins
-    address [] public admins;
+    address[] public admins;
 
     // Modifier for easier checking if user is admin
     mapping(address => bool) public isAdmin;
 
     // Modifier restricting access to only admin
-    modifier onlyAdmin {
+    modifier onlyAdmin() {
         require(isAdmin[msg.sender], "Only admin can call.");
         _;
     }
 
     // Constructor to set initial admins during deployment
-    constructor (address [] memory _admins) public {
-        for(uint i = 0; i < _admins.length; i++) {
+    constructor(address[] memory _admins) public {
+        for (uint256 i = 0; i < _admins.length; i++) {
             admins.push(_admins[i]);
             isAdmin[_admins[i]] = true;
         }
     }
 
-    function addAdmin(
-        address _adminAddress
-    )
-    external
-    onlyAdmin
-    {
+    function addAdmin(address _adminAddress) external onlyAdmin {
         // Can't add 0x address as an admin
         require(_adminAddress != address(0x0), "[RBAC] : Admin must be != than 0x0 address");
         // Can't add existing admin
@@ -42,26 +33,21 @@ contract Admin {
         isAdmin[_adminAddress] = true;
     }
 
-    function removeAdmin(
-        address _adminAddress
-    )
-    external
-    onlyAdmin
-    {
+    function removeAdmin(address _adminAddress) external onlyAdmin {
         // Admin has to exist
         require(isAdmin[_adminAddress]);
         require(admins.length > 1, "Can not remove all admins since contract becomes unusable.");
-        uint i = 0;
+        uint256 i = 0;
 
-        while(admins[i] != _adminAddress) {
-            if(i == admins.length) {
+        while (admins[i] != _adminAddress) {
+            if (i == admins.length) {
                 revert("Passed admin address does not exist");
             }
             i++;
         }
 
         // Copy the last admin position to the current index
-        admins[i] = admins[admins.length-1];
+        admins[i] = admins[admins.length - 1];
 
         isAdmin[_adminAddress] = false;
 
@@ -70,22 +56,7 @@ contract Admin {
     }
 
     // Fetch all admins
-    function getAllAdmins()
-    external
-    view
-    returns (address [] memory)
-    {
+    function getAllAdmins() external view returns (address[] memory) {
         return admins;
-    }
-
-    function verifySignature(
-        bytes32 _hash,
-        bytes calldata _signature
-    )
-    external
-    view
-    returns (bool) {
-        bytes32 messageHash = _hash.toEthSignedMessageHash();
-        return isAdmin[messageHash.recover(_signature)];
     }
 }
