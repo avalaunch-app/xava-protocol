@@ -4,6 +4,7 @@ require('@nomiclabs/hardhat-ethers')
 require("@nomiclabs/hardhat-web3")
 require('@openzeppelin/hardhat-upgrades')
 require('solidity-coverage');
+require('hardhat-contract-sizer');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -71,7 +72,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 180
+            runs: 200
           },
         },
       },
@@ -80,7 +81,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 180
+            runs: 200
           },
         },
       },
@@ -92,5 +93,10 @@ module.exports = {
       },
     },
   },
+  contractSizer: {
+    alphaSort: true,
+    runOnCompile: true,
+    disambiguatePaths: false,
+  }
 };
 
