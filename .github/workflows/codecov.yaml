@@ -19,7 +19,9 @@ jobs:
         with:
           node-version: '${{ matrix.node-version }}'
       - name: Install dependencies
-        run: yarn install
+        run: |
+          git config --global url.https://github.com/.insteadOf git://github.com/
+          yarn install
       - name: Run tests
         run: npx hardhat coverage --network hardhat --testfiles test
       - name: Codecov

@@ -47,7 +47,7 @@
         "AvalaunchSale-Talecraft": "0xAC77e873919759B962cA07B15f09f938f24E260B",
         "AvalaunchSale-Crabada": "0x52f351A405AD70A931e03FeF20e97230F720F20B",
         "AvalaunchSale-Kalao": "0x8498a16B04E754f873198434063c8684d506A967",
-        "AvalaunchSale-HurricaneSwap": "0x8C18dbd68a2Fd18F10b56d902Cd6aD02c41828E0"
+        "AvalaunchSale-HurricaneSwap": "0x8C18dbd68a2Fd18F10b56d902Cd6aD02c41828E0",
         "AirdropAVAXIslander": "0xA3DDDcf122f259d297f10ee68dbd8AE428B1e7a1",
         "AirdropXAVA-ISA": "0x79c17438d833bA43Aea2EF4E8c9AFD22f8deA870",
         "AirdropISA-Portion-1": "0x20f795bC4f916891e9c6c02edb59055aA782ea08",
@@ -92,7 +92,7 @@
         "SalesFactory": "0x866a5c9b33bfF47CF7f24651a63AB006D66bd6Cd",
         "AllocationStakingProxy": "0x8BeBB9907c72708442BD4195Bd354A9bAdC2a816",
         "ProxyAdmin": "0x4Ed5B9C2C3E0689d516F312e88b12D96D2548A66",
-        "LatestSale": "0x314D0B9787A1c6FD5439c1D7Beed23Ec0234C9fF",
+        "LatestSale": "0xc1aD80f45DCe95463d487245888023C911093827",
         "AvalaunchCollateral": "0x71aC791699b742058cCaB0406b318D32C3217767",
         "AvalaunchCollateralProxy": "0x3F6715c77B978fb7824a64BBBB502bbB09EcA00b"
     }
