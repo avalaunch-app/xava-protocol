@@ -1,4 +1,4 @@
-const hre  = require("hardhat");
+const hre = require("hardhat");
 const { expect } = require("chai");
 
 let Admin, collateral;
@@ -68,6 +68,42 @@ describe("Collateral", function() {
         collateral = await collateralFactory.deploy();
         await collateral.deployed();
         await collateral.initialize(deployer.address, Admin.address, 43114);
+    });
+
+    context("Deposit & Withdraw", async function () {
+        it("Should deposit collateral", async function () {
+            const value = hre.ethers.utils.parseEther("1");
+            await collateral.depositCollateral({value: value});
+            expect(await hre.ethers.provider.getBalance(collateral.address)).to.equal(value);
+        });
+
+        it("Should withdraw collateral", async function () {
+            const value = hre.ethers.utils.parseEther("1");
+            await collateral.depositCollateral({value: value});
+            expect(await hre.ethers.provider.getBalance(collateral.address)).to.equal(value);
+            await expect(collateral.withdrawCollateral(value))
+                .to.emit(collateral, "WithdrawnCollateral");
+        });
+    });
+
+    context("Moderator Only Functions", async function () {
+        it("Should set new moderator", async function () {
+           expect(await collateral.moderator()).to.equal(deployer.address);
+           await collateral.setModerator(alice.address);
+           expect(await collateral.moderator()).to.equal(alice.address);
+        });
+
+        it("Should approve sale", async function () {
+            expect(await collateral.isSaleApprovedByModerator(ONE_ADDRESS)).to.equal(false);
+            await collateral.approveSale(ONE_ADDRESS);
+            expect(await collateral.isSaleApprovedByModerator(ONE_ADDRESS)).to.equal(true);
+        });
+    });
+
+    context("Miscellaneous", async function () {
+       it("get TVL", async function () {
+          expect(await collateral.getTVL()).to.equal(await hre.ethers.provider.getBalance(collateral.address));
+       });
     });
 
     context("Signature Testing", async function() {
