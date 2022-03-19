@@ -3,7 +3,6 @@ const { expect } = require("chai");
 
 let Admin, collateral;
 let deployer, alice, bob, cedric;
-let ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 let ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
 
 const sendAsync = (payload) =>
@@ -83,6 +82,14 @@ describe("Collateral", function() {
             expect(await hre.ethers.provider.getBalance(collateral.address)).to.equal(value);
             await expect(collateral.withdrawCollateral(value))
                 .to.emit(collateral, "WithdrawnCollateral");
+        });
+
+        it("Should not withdraw more than deposited", async function () {
+            const value = hre.ethers.utils.parseEther("1");
+            await collateral.depositCollateral({value: value});
+            expect(await hre.ethers.provider.getBalance(collateral.address)).to.equal(value);
+            await expect(collateral.withdrawCollateral(value + 1))
+                .to.be.revertedWith("Not enough funds.");
         });
     });
 
