@@ -19,18 +19,16 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	mapping (uint256 => uint8) private badgeIdToMultiplier;
 	// Mapping badge id to minted supply
 	mapping (uint256 => uint256) private badgeIdToMintedSupply;
+	// Mapping for verified marketplace contracts
+	mapping (address => bool) private verifiedMarketplaces;
 
 	// Events
-	event BadgeCreated(
-		uint256 badgeId,
-		uint8 multiplier,
-		bool tradeability
-	);
-
-	event BadgeMint(
-		uint256 badgeId,
-		address receiver
-	);
+	event BadgeCreated(uint256 badgeId, uint8 multiplier, bool tradeability);
+	event BadgeMinted(uint256 badgeId, address receiver);
+	event NewURISet(string newUri);
+	event NewContractURISet(string newContractUri);
+	event VMarketplaceAdded(address marketplace);
+	event VMarketplaceRemoved(address marketplace);
 
 	// Restricting calls only to sale admin
 	modifier onlyAdmin() {
@@ -75,12 +73,13 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 
 	/// @notice 	Uri setter
 	function setNewUri(
-		string calldata _newUri
+		string calldata _uri
 	)
 	external
 	onlyAdmin
 	{
-		_setURI(_newUri);
+		_setURI(_uri);
+		emit NewURISet(_uri);
 	}
 
 	/// @notice 	Contract level uri setter
@@ -91,6 +90,29 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	onlyAdmin
 	{
 		contractURI = _contractURI;
+		emit NewURISet(_contractURI);
+	}
+
+	/// @notice 	Verify marketplace contract
+	function addVerifiedMarketplace(
+		address _contract
+	)
+	external
+	onlyAdmin
+	{
+		verifiedMarketplaces[_contract] = true;
+		emit VMarketplaceAdded(_contract);
+	}
+
+	/// @notice 	Remove marketplace contract verification
+	function removeVerifiedMarketplace(
+		address _contract
+	)
+	external
+	onlyAdmin
+	{
+		verifiedMarketplaces[_contract] = false;
+		emit VMarketplaceRemoved(_contract);
 	}
 
 	/// @notice 	Function to create badges
@@ -154,7 +176,7 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 
 			// Mint badge NFT to user
 			_mint(receivers[i], badgeIds[i], 1, "0x0");
-			emit BadgeMint(badgeIds[i], receivers[i]);
+			emit BadgeMinted(badgeIds[i], receivers[i]);
 		}
 	}
 
@@ -199,6 +221,16 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 		return lastCreatedBadgeId;
 	}
 
+	function isMarketplaceVerified(
+		address marketplace
+	)
+	external
+	view
+	returns (bool)
+	{
+		return verifiedMarketplaces[marketplace];
+	}
+
 	function _beforeTokenTransfer(
 		address operator,
 		address from,
@@ -212,7 +244,13 @@ contract AvalaunchBadgeFactory is ERC1155PausableUpgradeable {
 	{
 		super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
+		// If operation != mint
 		if(from != address(0)) {
+			// Require that verified marketplace is transfer operator
+			require(
+				verifiedMarketplaces[operator],
+				"Badges can be traded only through verified marketplaces."
+			);
 			for(uint i = 0; i < ids.length; i++) {
 				// Require that badges are tradeable prior to transfer
 				require(badgeIdToTradeability[ids[i]], "Badge not tradeable.");

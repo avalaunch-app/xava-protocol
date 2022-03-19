@@ -60,6 +60,18 @@ describe("Badge Factory", () => {
                 await badgeFactory.setNewContractUri(NEW_URI);
                 expect(await badgeFactory.getContractURI()).to.equal(NEW_URI);
             });
+
+            it("Should add verified marketplace", async () => {
+                await badgeFactory.addVerifiedMarketplace(bob.address);
+                expect(await badgeFactory.isMarketplaceVerified(bob.address)).to.equal(true);
+            })
+
+            it("Should remove verified marketplace", async () => {
+                await badgeFactory.addVerifiedMarketplace(bob.address);
+                expect(await badgeFactory.isMarketplaceVerified(bob.address)).to.equal(true);
+                await badgeFactory.removeVerifiedMarketplace(bob.address);
+                expect(await badgeFactory.isMarketplaceVerified(bob.address)).to.equal(false);
+            })
         });
 
         describe("Badge Actions", () => {
@@ -115,6 +127,9 @@ describe("Badge Factory", () => {
                        BADGE_IDS,
                        [alice.address, bob.address, charlie.address]
                    );
+
+                   await badgeFactory.addVerifiedMarketplace(bob.address);
+                   await badgeFactory.addVerifiedMarketplace(alice.address);
                });
 
                it("Should transfer a tradeable badge", async () => {

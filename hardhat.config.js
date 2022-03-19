@@ -4,6 +4,8 @@ require('@nomiclabs/hardhat-ethers')
 require("@nomiclabs/hardhat-web3")
 require('@openzeppelin/hardhat-upgrades')
 require('solidity-coverage');
+require('hardhat-gas-reporter');
+require('hardhat-contract-sizer');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -46,9 +48,15 @@ module.exports = {
       chainId: 43113,
       accounts: [process.env.PK || testPK]
     },
+    staging: {
+      url: 'https://speedy-nodes-nyc.moralis.io/'+process.env.Moralis+'/avalanche/testnet',
+      gasPrice: 225000000000,
+      chainId: 43113,
+      accounts: [process.env.PK || testPK]
+    },
     mainnet: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
-      gasPrice: 50000000000,
+      gasPrice: 100000000000,
       chainId: 43114,
       timeout: 900000000,
       accounts: [process.env.PK || testPK]
@@ -56,6 +64,11 @@ module.exports = {
     local: {
       url: 'http://localhost:8545',
     },
+  },
+  gasReporter: {
+    currency: 'USD',
+    gasPrice: 100,
+    enabled: true
   },
   solidity: {
     version: "0.6.12",
@@ -66,5 +79,10 @@ module.exports = {
       },
     },
   },
+  contractSizer: {
+    alphaSort: true,
+    runOnCompile: true,
+    disambiguatePaths: false,
+  }
 };
 

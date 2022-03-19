@@ -6,6 +6,7 @@ const hre = require("hardhat");
 describe("AllocationStaking", function() {
 
   let Admin;
+  let Collateral;
   let XavaToken, XavaLP1, XavaLP2;
   let AllocationStaking;
   let AllocationStakingRewardsFactory;
@@ -90,9 +91,9 @@ describe("AllocationStaking", function() {
     await XavaLP2.connect(bob).approve(AllocationStaking.address, DEFAULT_LP_APPROVAL);
 
     await AllocationStaking.setPostSaleWithdrawPenaltyPercentAndLength(
-      POST_SALE_WITHDRAW_PENALTY_PERCENT,
-      POST_SALE_WITHDRAW_PENALTY_LENGTH,
-      POST_SALE_WITHDRAW_PENALTY_PRECISION
+        POST_SALE_WITHDRAW_PENALTY_PERCENT,
+        POST_SALE_WITHDRAW_PENALTY_LENGTH,
+        POST_SALE_WITHDRAW_PENALTY_PRECISION
     );
 
     await AllocationStaking.deposit(0, DEFAULT_DEPOSIT);
@@ -132,8 +133,13 @@ describe("AllocationStaking", function() {
     XavaLP1 = await XavaTokenFactory.deploy("XavaLP1", "XAVALP1", ethers.utils.parseUnits("100000000"), 18);
     XavaLP2 = await XavaTokenFactory.deploy("XavaLP2", "XAVALP2", ethers.utils.parseUnits("100000000"), 18);
 
+    const CollateralFactory = await ethers.getContractFactory("AvalaunchCollateral");
+    Collateral = await CollateralFactory.deploy();
+    await Collateral.deployed();
+    await Collateral.initialize(deployer.address, Admin.address, 43114);
+
     const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);
+    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address);
 
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
@@ -205,7 +211,7 @@ describe("AllocationStaking", function() {
     it("Should set salesFactory", async function() {
       // Given
       const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-      const SalesFactory2 = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS);
+      const SalesFactory2 = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address);
 
       // When
       await AllocationStaking.setSalesFactory(SalesFactory2.address);
@@ -235,12 +241,12 @@ describe("AllocationStaking", function() {
       it("Should not allow non-owner to set deposit fee ", async function() {
         // Then
         await expect(AllocationStaking.connect(alice).setDepositFee(10, 10e7))
-          .to.be.reverted;
+            .to.be.reverted;
       });
 
       it("Should emit DepositFeeSet event", async function() {
         await expect(AllocationStaking.setDepositFee(DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION))
-          .to.emit(AllocationStaking, "DepositFeeSet").withArgs(DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
+            .to.emit(AllocationStaking, "DepositFeeSet").withArgs(DEPOSIT_FEE_PERCENT, DEPOSIT_FEE_PRECISION);
       });
     });
   });
@@ -349,7 +355,7 @@ describe("AllocationStaking", function() {
       it("Should not allow non-owner to add pool", async function() {
         // Then
         await expect(AllocationStaking.connect(alice).add(ALLOC_POINT, XavaLP1.address, false))
-          .to.be.reverted;
+            .to.be.reverted;
       });
     });
 
@@ -403,7 +409,7 @@ describe("AllocationStaking", function() {
 
         // Then
         await expect(AllocationStaking.connect(alice).set(0, newAllocPoint, false))
-          .to.be.reverted;
+            .to.be.reverted;
       });
     });
 
@@ -440,7 +446,7 @@ describe("AllocationStaking", function() {
 
         // Then
         await expect(AllocationStaking.connect(alice).updatePool(0))
-          .to.not.be.reverted;
+            .to.not.be.reverted;
 
         const blockTimestamp = await getCurrentBlockTimestamp();
         const pool = await AllocationStaking.poolInfo(0);
@@ -1089,7 +1095,7 @@ describe("AllocationStaking", function() {
 
         // Then
         await expect(AllocationStaking.deposit(0, DEFAULT_DEPOSIT))
-          .to.emit(AllocationStaking, "Deposit").withArgs(deployer.address, 0, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+            .to.emit(AllocationStaking, "Deposit").withArgs(deployer.address, 0, takeFeeFromDeposit(DEFAULT_DEPOSIT));
       });
     });
 
@@ -1416,7 +1422,7 @@ describe("AllocationStaking", function() {
 
         // Then
         await expect(AllocationStaking.emergencyWithdraw(0))
-          .to.emit(AllocationStaking, "EmergencyWithdraw").withArgs(deployer.address, 0, takeFeeFromDeposit(DEFAULT_DEPOSIT));
+            .to.emit(AllocationStaking, "EmergencyWithdraw").withArgs(deployer.address, 0, takeFeeFromDeposit(DEFAULT_DEPOSIT));
       });
 
       it("Should reset user's amount and debt to 0", async function() {
@@ -1565,9 +1571,9 @@ describe("AllocationStaking", function() {
       let poolInfoAfter = await AllocationStaking.poolInfo("0");
 
       expect(poolInfoAfter.accERC20PerShare).to.equal(poolInfo.accERC20PerShare.add(
-        AMOUNT_TO_BURN.add(rewardPerSecond.mul(poolInfoAfter.lastRewardTimestamp.sub(poolInfo.lastRewardTimestamp)))
-        .mul(ethers.utils.parseUnits("1")).mul(ethers.utils.parseUnits("1"))
-        .div(poolInfoAfter.totalDeposits))
+          AMOUNT_TO_BURN.add(rewardPerSecond.mul(poolInfoAfter.lastRewardTimestamp.sub(poolInfo.lastRewardTimestamp)))
+              .mul(ethers.utils.parseUnits("1")).mul(ethers.utils.parseUnits("1"))
+              .div(poolInfoAfter.totalDeposits))
       );
       expect(poolInfoAfter.totalDeposits).to.equal(poolInfo.totalDeposits.sub(AMOUNT_TO_BURN));
 

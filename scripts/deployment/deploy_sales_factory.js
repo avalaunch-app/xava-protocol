@@ -1,14 +1,12 @@
 const hre = require("hardhat");
-const { getSavedContractAddresses, saveContractAddress} = require('../utils')
-const { ethers, web3 } = hre
-
-
+const { getSavedContractAddresses, saveContractAddress} = require('../utils');
+const { ethers } = hre;
 
 async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
 
     const SalesFactory = await ethers.getContractFactory("SalesFactory");
-    const salesFactory = await SalesFactory.deploy(contracts['Admin'], contracts['AllocationStakingProxy']);
+    const salesFactory = await SalesFactory.deploy(contracts['Admin'], contracts['AllocationStakingProxy'], contracts['AvalaunchCollateralProxy']);
     await salesFactory.deployed();
 
     saveContractAddress(hre.network.name, "SalesFactory", salesFactory.address);
