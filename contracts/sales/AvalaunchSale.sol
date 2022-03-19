@@ -318,9 +318,8 @@ contract AvalaunchSale is Initializable {
         supportsDexalotWithdraw = true;
     }
 
-    // @notice     Function to retroactively set sale token address, can be called only once,
-    //             after initial contract creation has passed. Added as an options for teams which
-    //             are not having token at the moment of sale launch.
+    // @notice     Function to retroactively set sale token address after initial contract creation has passed.
+    //             Added as an option for teams which are not having token at the moment of sale launch.
     function setSaleToken(
         address saleToken
     )

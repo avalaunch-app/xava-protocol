@@ -427,7 +427,8 @@ contract AllocationStaking is OwnableUpgradeable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        require(user.amount >= 0, "User does not have anything staked.");
+        // Require that user is staking
+        require(user.amount > 0, "User does not have anything staked.");
 
         // Update pool
         updatePool(_pid);
