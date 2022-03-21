@@ -1459,7 +1459,7 @@ describe("AvalaunchSale", function() {
 
         // Then
         await expect(participate({participationAmount: ROUNDS_MAX_PARTICIPATIONS[0]+1}))
-          .to.be.revertedWith("Overflowing maximal participation.");
+          .to.be.revertedWith("Crossing max participation.");
       });
 
       it("Should not participate with invalid signature", async function() {
@@ -1549,7 +1549,7 @@ describe("AvalaunchSale", function() {
 
         // Then
         await expect(participate({participationValue: (ROUNDS_MAX_PARTICIPATIONS[0]+5), value: ethers.utils.parseEther("10")}))
-          .to.be.revertedWith("Trying to buy more than allowed.");
+          .to.be.revertedWith("Exceeding allowance.");
       });
 
       it("Should emit TokensSold event", async function() {
