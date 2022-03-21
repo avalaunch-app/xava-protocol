@@ -81,6 +81,7 @@ contract AllocationStaking is OwnableUpgradeable {
     event CompoundedEarnings(address indexed user, uint256 indexed pid, uint256 amountAdded, uint256 totalDeposited);
     event FeeTaken(address indexed user, uint256 indexed pid, uint256 amount);
     event PostSaleWithdrawFeeCharged(address user, uint256 amountStake, uint256 amountRewards);
+    event StakeOwnershipTransferred(address indexed from, address indexed to, uint256 pid);
 
     // Restricting calls to only verified sales
     modifier onlyVerifiedSales {
@@ -556,6 +557,13 @@ contract AllocationStaking is OwnableUpgradeable {
         postSaleWithdrawPenaltyLength = _postSaleWithdrawPenaltyLength;
         postSaleWithdrawPenaltyPercent = _postSaleWithdrawPenaltyPercent;
         postSaleWithdrawPenaltyPrecision = _postSaleWithdrawPenaltyPrecision;
+    }
+
+    // Function to transfer stake ownership from one wallet to another
+    function transferStakeOwnership(uint256 _pid, address newOwner) external {
+        userInfo[_pid][newOwner] = userInfo[_pid][msg.sender];
+        delete userInfo[_pid][msg.sender];
+        emit StakeOwnershipTransferred(msg.sender, newOwner, _pid);
     }
 
 	// Function to set admin contract by owner
