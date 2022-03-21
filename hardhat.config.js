@@ -71,11 +71,22 @@ module.exports = {
     enabled: true
   },
   solidity: {
-    version: "0.6.12",
+    compilers: [ {version: '0.6.12'} ],
+    overrides: {
+      "contracts/sales/AvalaunchSale.sol": {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 185
+          },
+        },
+      },
+    },
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 200
       },
     },
   },

@@ -9,7 +9,7 @@ import "./Admin.sol";
 
 contract AvalaunchCollateral is Initializable {
 
-    using SafeMath for *;
+    using SafeMath for uint256;
 
     Admin public admin;
     // Accounting total fees collected by the contract
@@ -40,10 +40,10 @@ contract AvalaunchCollateral is Initializable {
     bytes32 public constant EIP712_DOMAIN_TYPEHASH = keccak256(abi.encodePacked(EIP712_DOMAIN));
     bytes32 public DOMAIN_SEPARATOR;
 
-    event DepositedCollateral(address wallet, uint256 amountDeposited, uint256 timestamp);
-    event WithdrawnCollateral(address wallet, uint256 amountWithdrawn, uint256 timestamp);
-    event FeeTaken(address sale, uint256 participationAmount, uint256 feeAmount, string action);
-    event ApprovedSale(address sale);
+    event DepositedCollateral(address indexed wallet, uint256 amountDeposited, uint256 timestamp);
+    event WithdrawnCollateral(address indexed wallet, uint256 amountWithdrawn, uint256 timestamp);
+    event FeeTaken(address indexed sale, uint256 participationAmount, uint256 feeAmount, string action);
+    event ApprovedSale(address indexed sale);
 
     modifier onlyAdmin {
         require(admin.isAdmin(msg.sender), "Only admin.");
@@ -206,13 +206,14 @@ contract AvalaunchCollateral is Initializable {
         require(isSaleApprovedByModerator[saleAddress], "Sale contract not approved by moderator.");
         // Require that user deposited enough collateral
         require(amountAVAX.add(boostFeeAVAX) <= userBalance[user], "Not enough collateral.");
+        // Reduce user's balance
+        userBalance[user] = userBalance[user].sub(amountAVAX.add(boostFeeAVAX));
         // Require that signature is not used already
         require(!isSignatureUsed[permitSignature], "Signature already used.");
         // Mark signature as used
         isSignatureUsed[permitSignature] = true;
         // Require that boost signature is valid
         require(verifyBoostSignature(user, saleAddress, permitSignature), "Boost signature invalid.");
-
         // Transfer AVAX fee immediately to beneficiary
         safeTransferAVAX(moderator, boostFeeAVAX);
         // Trigger event
