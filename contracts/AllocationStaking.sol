@@ -72,6 +72,8 @@ contract AllocationStaking is OwnableUpgradeable {
     mapping (bytes => bool) public isSignatureUsed;
     // Admin contract
     IAdmin public admin;
+    // Stake ownership transfer approvals per pool
+    mapping (uint256 => mapping (address => address)) stakeOwnershipTransferApprovals;
 
     // Events
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -560,10 +562,17 @@ contract AllocationStaking is OwnableUpgradeable {
     }
 
     // Function to transfer stake ownership from one wallet to another
-    function transferStakeOwnership(uint256 _pid, address newOwner) external {
-        userInfo[_pid][newOwner] = userInfo[_pid][msg.sender];
-        delete userInfo[_pid][msg.sender];
-        emit StakeOwnershipTransferred(msg.sender, newOwner, _pid);
+    function approveStakeOwnershipTransfer(address newOwner, uint256 pid) external {
+        stakeOwnershipTransferApprovals[pid][msg.sender] = newOwner;
+    }
+
+    // Function to claim approved stake
+    function claimApprovedStakeOwnership(address wallet, uint256 pid) external {
+        require(stakeOwnershipTransferApprovals[pid][wallet] == msg.sender, "Stake transfer not approved.");
+        require(userInfo[pid][msg.sender].amount == 0, "Wallet already staking.");
+        userInfo[pid][msg.sender] = userInfo[pid][wallet];
+        delete userInfo[pid][wallet];
+        emit StakeOwnershipTransferred(wallet, msg.sender, pid);
     }
 
 	// Function to set admin contract by owner
