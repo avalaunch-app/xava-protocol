@@ -84,11 +84,12 @@
         "XavaToken": "0x64E7AB33C8764a9285cbd48A3b5977c51D2eE645",
         "DevTokenAlloStaking": "0x027D2E627209f1cebA52ADc8A5aFE9318459b44B",
         "Admin": "0xEE79Ba6D078aF95e5b1CFd0b3807e2Ae1D66C843",
-        "SalesFactory": "0x866a5c9b33bfF47CF7f24651a63AB006D66bd6Cd",
+        "SalesFactory": "0xeB0125E07B7B775cc3bC753d4308cD3Ba44169ff",
         "AllocationStakingProxy": "0x8BeBB9907c72708442BD4195Bd354A9bAdC2a816",
         "ProxyAdmin": "0x4Ed5B9C2C3E0689d516F312e88b12D96D2548A66",
-        "LatestSale": "0xc1aD80f45DCe95463d487245888023C911093827",
+        "LatestSale": "0x5c5E1cafA379Ed0d9575CEf2B80C6fcE3df32f05",
         "AvalaunchCollateral": "0x71aC791699b742058cCaB0406b318D32C3217767",
-        "AvalaunchCollateralProxy": "0x3F6715c77B978fb7824a64BBBB502bbB09EcA00b"
+        "AvalaunchCollateralProxy": "0x3F6715c77B978fb7824a64BBBB502bbB09EcA00b",
+        "Sale-Implementation": "0xE88771F0b631F02D83624D19f73dd9ad0375c53c"
     }
 }

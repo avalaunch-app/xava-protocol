@@ -73,7 +73,6 @@ const main = async () => {
         tokenPriceInAvax,
         totalTokens,
         saleEndTime,
-        tokensUnlockTime,
         portionVestingPrecision,
         stakingRoundId,
         registrationDepositAVAX,
