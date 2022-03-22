@@ -1,6 +1,6 @@
 {
   "mainnet": {
-    "tokenAddress": "0x449674B82F05d498E126Dd6615a1057A9c088f2C ",
+    "tokenAddress": "0x449674B82F05d498E126Dd6615a1057A9c088f2C",
     "totalTokens": "2000000",
     "tokenPriceUSD": "0.55",
     "tokenPriceInAvax": "0.00617630544",

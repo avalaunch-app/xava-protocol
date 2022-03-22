@@ -54,7 +54,7 @@ module.exports = {
     },
     mainnet: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
-      gasPrice: 100000000000,
+      gasPrice: 120000000000,
       chainId: 43114,
       timeout: 900000000,
       accounts: [process.env.PK || testPK]
