@@ -749,7 +749,7 @@ contract AvalaunchSale is Initializable {
         );
 
         require(
-            amountOfTokensBuying <= roundIdToRound[stakingRoundId].maxParticipation,
+            amountOfTokensBuying <= roundIdToRound[boosterRoundId].maxParticipation,
             "Crossing max participation."
         );
 
