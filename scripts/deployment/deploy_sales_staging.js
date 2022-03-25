@@ -8,7 +8,7 @@ const getCurrentBlockTimestamp = async () => {
 }
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
-const delayLength = 3000;
+const delayLength = 5000;
 
 const main = async () => {
 
@@ -49,10 +49,10 @@ const main = async () => {
     const tokenPriceInUSD = 100000; // Six decimals USD value (100000 => 0.1$)
     // fundamental timestamps
     const registrationStart = await getCurrentBlockTimestamp() + 60;
-    const registrationEnd = registrationStart + 900;
-    const validatorRound = registrationEnd + 60;
-    const stakingRound = validatorRound + 60;
-    const saleEndTime = stakingRound + 3600 * 5;
+    const registrationEnd = registrationStart + 3600;
+    const validatorRound = registrationEnd + 600;
+    const stakingRound = validatorRound + 3600;
+    const saleEndTime = stakingRound + 3600 * 2;
     const tokensUnlockTime = saleEndTime + 600;
     // vesting
     const unlockingTimes = [tokensUnlockTime, tokensUnlockTime + 200, tokensUnlockTime + 400];
@@ -102,17 +102,6 @@ const main = async () => {
     console.log(' - Vesting parameters set successfully.');
     delay(delayLength);
 
-    // deposit tokens to sale contract
-    await(await saleToken.approve(sale.address, totalTokens)).wait();
-    await sale.depositTokens();
-    console.log(' - Tokens deposited.');
-    delay(delayLength);
-
-    // add dexalot portfolio support
-    await sale.setAndSupportDexalotPortfolio(dexalotPortfolio, dexalotUnlockingTime);
-    console.log(' - Dexalot Support Added.');
-    delay(delayLength);
-
     console.log("Config:");
     console.log({
         saleAddress: lastDeployedSale,
@@ -132,6 +121,21 @@ const main = async () => {
         percents,
         dexalotUnlockingTime
     });
+
+    // deposit tokens to sale contract
+    await(await saleToken.approve(sale.address, totalTokens)).wait();
+    await sale.depositTokens();
+    console.log(' - Tokens deposited.');
+    delay(delayLength);
+
+    // add dexalot portfolio support
+    await sale.setAndSupportDexalotPortfolio(dexalotPortfolio, dexalotUnlockingTime);
+    console.log(' - Dexalot Support Added.');
+    delay(delayLength);
+
+    const collateral = await hre.ethers.getContractAt("AvalaunchCollateral", contracts["AvalaunchCollateralProxy"]);
+    await collateral.approveSale(lastDeployedSale);
+    console.log(' - Sale approved on collateral.');
 
     console.log(boldOut('Done!'));
 }
