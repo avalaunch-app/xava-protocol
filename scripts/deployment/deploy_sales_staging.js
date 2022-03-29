@@ -116,6 +116,9 @@ const main = async () => {
     console.log(' - Dexalot Support Added.');
     delay(delayLength);
 
+    await sale.setUpdateTokenPriceInAVAXParams(30, 600);
+    console.log(' - Token price updating parameters set')
+
     console.log("Config:");
     console.log({
         saleAddress: lastDeployedSale,
