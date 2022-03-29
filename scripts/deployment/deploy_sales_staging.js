@@ -49,10 +49,11 @@ const main = async () => {
     const tokenPriceInUSD = 100000; // Six decimals USD value (100000 => 0.1$)
     // fundamental timestamps
     const registrationStart = await getCurrentBlockTimestamp() + 60;
-    const registrationEnd = registrationStart + 900;
+    const registrationEnd = registrationStart + 1800;
     const validatorRound = registrationEnd + 60;
     const stakingRound = validatorRound + 60;
-    const saleEndTime = stakingRound + 3600 * 5;
+    const boosterRound = stakingRound + 600;
+    const saleEndTime = boosterRound + 3600 * 10;
     const tokensUnlockTime = saleEndTime + 600;
     // vesting
     const unlockingTimes = [tokensUnlockTime, tokensUnlockTime + 200, tokensUnlockTime + 400];
@@ -91,8 +92,10 @@ const main = async () => {
 
     // set sale rounds
     await sale.setRounds(
-        [validatorRound, stakingRound],
-        [ethers.utils.parseEther('70000000'), ethers.utils.parseEther('70000000')]
+        [validatorRound, stakingRound, boosterRound],
+        [ethers.utils.parseEther('70000000'),
+         ethers.utils.parseEther('70000000'),
+         ethers.utils.parseEther('70000000')]
     );
     console.log(' - Rounds set.');
     delay(delayLength);
