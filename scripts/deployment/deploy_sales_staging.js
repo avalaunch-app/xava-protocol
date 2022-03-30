@@ -20,7 +20,7 @@ const main = async () => {
     // deploy new sale and await the block after
     await(await salesFactory.deploySale()).wait();
     console.log(boldOut('Sale deployed successfully.'));
-    delay(delayLength);
+    await delay(delayLength);
 
     // retrieve the sale deployed and save the address
     const lastDeployedSale = await salesFactory.getLastDeployedSale();
@@ -52,7 +52,7 @@ const main = async () => {
     const registrationEnd = registrationStart + 1800;
     const validatorRound = registrationEnd + 60;
     const stakingRound = validatorRound + 60;
-    const boosterRound = stakingRound + 600;
+    const boosterRound = stakingRound + 1800;
     const saleEndTime = boosterRound + 3600 * 10;
     const tokensUnlockTime = saleEndTime + 600;
     // vesting
@@ -80,7 +80,7 @@ const main = async () => {
         tokenPriceInUSD
     )).wait();
     console.log(' - Sale params set successfully.');
-    delay(delayLength);
+    await delay(delayLength);
 
     // set sale registration time
     await sale.setRegistrationTime(
@@ -88,7 +88,7 @@ const main = async () => {
         registrationEnd
     );
     console.log(' - Registration time set.');
-    delay(delayLength);
+    await delay(delayLength);
 
     // set sale rounds
     await sale.setRounds(
@@ -98,23 +98,24 @@ const main = async () => {
          ethers.utils.parseEther('70000000')]
     );
     console.log(' - Rounds set.');
-    delay(delayLength);
+    await delay(delayLength);
 
     // set vesting parameters
     await sale.setVestingParams(unlockingTimes, percents, maxVestingTimeShift);
     console.log(' - Vesting parameters set successfully.');
-    delay(delayLength);
+    await delay(delayLength);
 
     // deposit tokens to sale contract
-    await(await saleToken.approve(sale.address, totalTokens)).wait();
+    await saleToken.approve(sale.address, totalTokens);
+    await delay(delayLength);
     await sale.depositTokens();
     console.log(' - Tokens deposited.');
-    delay(delayLength);
+    await delay(delayLength);
 
     // add dexalot portfolio support
     await sale.setAndSupportDexalotPortfolio(dexalotPortfolio, dexalotUnlockingTime);
     console.log(' - Dexalot Support Added.');
-    delay(delayLength);
+    await delay(delayLength);
 
     await sale.setUpdateTokenPriceInAVAXParams(30, 600);
     console.log(' - Token price updating parameters set')
@@ -138,6 +139,10 @@ const main = async () => {
         percents,
         dexalotUnlockingTime
     });
+
+    const collateral = await hre.ethers.getContractAt("AvalaunchCollateral", contracts['AvalaunchCollateralProxy']);
+    await collateral.approveSale(sale.address);
+    console.log(' - Sale approved on collateral')
 
     console.log(boldOut('Done!'));
 }
