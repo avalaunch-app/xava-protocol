@@ -50,7 +50,7 @@
       5359
     ]
   },
-  "local": {
+  "staging": {
     "tokenAddress": "0xD95d874e6bc638A25ec7FbA5224b21f5e18B308f",
     "dexalotPortfolio": "0xD95d874e6bc638A25ec7FbA5224b21f5e18B308f",
     "dexalotUnlockingTime": "2037949300",
@@ -68,6 +68,8 @@
     "stakingRoundId": 2,
     "registrationDepositAVAX": "1",
     "maxVestingTimeShift": 2592000,
+    "updateTokenPriceInAVAXPercentageThreshold": 30,
+    "updateTokenPriceInAVAXTimeLimit": 600,
     "unlockingTimes": [
       1637612173,
       1637612233,

@@ -94,6 +94,9 @@ async function main() {
     await sale.setVestingParams(unlockingTimes, percents, c['maxVestingTimeShift']);
     console.log('Vesting parameters set successfully.');
 
+    await sale.setUpdateTokenPriceInAVAXParams(c['updateTokenPriceInAVAXPercentageThreshold'], c['updateTokenPriceInAVAXTimeLimit']);
+    console.log('Token price updating parameters set.');
+
     // add dexalot portfolio support
     await sale.setAndSupportDexalotPortfolio(c['dexalotPortfolio'], c['dexalotUnlockingTime'])
         .then(() => console.log(greenOut('Dexalot supported.')))
@@ -115,6 +118,10 @@ async function main() {
         dexalotPortfolio: c['dexalotPortfolio'] || "Not present in config",
         dexalotUnlockingTime: c['dexalotUnlockingTime'] || "Not present in config"
     });
+
+    const collateral = await hre.ethers.getContractAt("AvalaunchCollateral", contracts['AvalaunchCollateralProxy']);
+    await collateral.approveSale(sale.address);
+    console.log('Sale approved on collateral.');
 }
 
 

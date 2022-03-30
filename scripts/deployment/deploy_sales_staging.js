@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const { getSavedContractAddresses, saveContractAddress } = require('../utils');
 const { ethers } = hre;
 const { greenOut, boldOut } = require('../styling');
+const config = require("../configs/saleConfig.json");
 
 const getCurrentBlockTimestamp = async () => {
     return (await ethers.provider.getBlock('latest')).timestamp;
@@ -13,6 +14,7 @@ const delayLength = 3000;
 const main = async () => {
 
     const contracts = getSavedContractAddresses()[hre.network.name];
+    const c = config[hre.network.name];
 
     // instantiate salesFactory
     const salesFactory = await hre.ethers.getContractAt('SalesFactory', contracts['SalesFactory']);
@@ -49,11 +51,11 @@ const main = async () => {
     const tokenPriceInUSD = 100000; // Six decimals USD value (100000 => 0.1$)
     // fundamental timestamps
     const registrationStart = await getCurrentBlockTimestamp() + 60;
-    const registrationEnd = registrationStart + 1800;
+    const registrationEnd = registrationStart + 3600;
     const validatorRound = registrationEnd + 60;
     const stakingRound = validatorRound + 60;
-    const boosterRound = stakingRound + 1800;
-    const saleEndTime = boosterRound + 3600 * 10;
+    const boosterRound = stakingRound + 3600;
+    const saleEndTime = boosterRound + 3600;
     const tokensUnlockTime = saleEndTime + 600;
     // vesting
     const unlockingTimes = [tokensUnlockTime, tokensUnlockTime + 200, tokensUnlockTime + 400];
@@ -117,8 +119,8 @@ const main = async () => {
     console.log(' - Dexalot Support Added.');
     await delay(delayLength);
 
-    await sale.setUpdateTokenPriceInAVAXParams(30, 600);
-    console.log(' - Token price updating parameters set')
+    await sale.setUpdateTokenPriceInAVAXParams(c['updateTokenPriceInAVAXPercentageThreshold'], c['updateTokenPriceInAVAXTimeLimit']);
+    console.log(' - Token price updating parameters set.');
 
     console.log("Config:");
     console.log({
@@ -142,7 +144,7 @@ const main = async () => {
 
     const collateral = await hre.ethers.getContractAt("AvalaunchCollateral", contracts['AvalaunchCollateralProxy']);
     await collateral.approveSale(sale.address);
-    console.log(' - Sale approved on collateral')
+    console.log(' - Sale approved on collateral');
 
     console.log(boldOut('Done!'));
 }
