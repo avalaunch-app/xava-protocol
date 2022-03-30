@@ -411,7 +411,11 @@ contract AvalaunchSale is Initializable {
     /// @notice     Registration for sale.
     /// @param      signature is the message signed by the backend
     /// @param      roundId is the round for which user expressed interest to participate
-    function registerForSale(bytes memory signature, uint256 roundId)
+    function registerForSale(
+        bytes memory signature,
+        uint256 signatureExpirationTimestamp,
+        uint256 roundId
+    )
         external
         payable
     {
@@ -427,9 +431,10 @@ contract AvalaunchSale is Initializable {
             "Registration gate is closed."
         );
         require(
-            checkRegistrationSignature(signature, msg.sender, roundId),
+            checkRegistrationSignature(signature, signatureExpirationTimestamp, msg.sender, roundId),
             "Invalid signature."
         );
+        require(block.timestamp < signatureExpirationTimestamp, "Signature expired.");
         require(
             addressToRoundRegisteredFor[msg.sender] == 0,
             "User already registered."
@@ -589,8 +594,7 @@ contract AvalaunchSale is Initializable {
         uint256 amount,
         uint256 amountXavaToBurn,
         uint256 roundId,
-        bytes calldata signature,
-        uint256 signatureExpirationTimestamp
+        bytes calldata signature
     ) external payable {
         require(msg.sender == tx.origin, "Only direct calls.");
         // Require that user doesn't have autoBuy activated
@@ -602,14 +606,10 @@ contract AvalaunchSale is Initializable {
                 msg.sender,
                 amount,
                 amountXavaToBurn,
-                roundId,
-                signatureExpirationTimestamp
+                roundId
             ),
             "Invalid signature."
         );
-
-        // Check if signature has expired
-        require(block.timestamp < signatureExpirationTimestamp, "Signature expired.");
 
         _participate(msg.sender, msg.value, amount, amountXavaToBurn, roundId);
     }
@@ -965,11 +965,12 @@ contract AvalaunchSale is Initializable {
     /// @param      roundId is the round for which user is submitting registration
     function checkRegistrationSignature(
         bytes memory signature,
+        uint256 signatureExpirationTimestamp,
         address user,
         uint256 roundId
     ) public view returns (bool) {
         bytes32 hash = keccak256(
-            abi.encodePacked(user, roundId, address(this))
+            abi.encodePacked(signatureExpirationTimestamp, user, roundId, address(this))
         );
         bytes32 messageHash = hash.toEthSignedMessageHash();
         return admin.isAdmin(messageHash.recover(signature));
@@ -985,8 +986,7 @@ contract AvalaunchSale is Initializable {
         address user,
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId,
-        uint256 signatureExpirationTimestamp
+        uint256 roundId
     ) public view returns (bool) {
         bytes32 hash = keccak256(
             abi.encodePacked(
@@ -994,7 +994,6 @@ contract AvalaunchSale is Initializable {
                 amount,
                 amountXavaToBurn,
                 roundId,
-                signatureExpirationTimestamp,
                 address(this)
             )
         );
