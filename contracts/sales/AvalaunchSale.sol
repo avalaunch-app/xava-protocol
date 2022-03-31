@@ -180,6 +180,7 @@ contract AvalaunchSale is Initializable {
     ) public initializer {
         require(_admin != address(0));
         require(_allocationStaking != address(0));
+        require(_collateral != address(0));
         admin = IAdmin(_admin);
         factory = ISalesFactory(msg.sender);
         allocationStakingContract = IAllocationStaking(_allocationStaking);
@@ -627,7 +628,7 @@ contract AvalaunchSale is Initializable {
 
         require(
             amount <= roundIdToRound[roundId].maxParticipation,
-            "Overflowing maximal participation."
+            "Crossing max participation."
         );
 
         // User must have registered for the round in advance
@@ -658,13 +659,13 @@ contract AvalaunchSale is Initializable {
         // Check in terms of user allo
         require(
             amountOfTokensBuying <= amount,
-            "Trying to buy more than allowed."
+            "Exceeding allowance."
         );
 
         // Require that amountOfTokensBuying is less than sale token leftover cap
         require(
             amountOfTokensBuying <= sale.amountOfTokensToSell.sub(sale.totalTokensSold),
-            "Trying to buy more than amount left."
+            "Not enough tokens to sell."
         );
 
         // Increase amount of sold tokens
@@ -731,7 +732,7 @@ contract AvalaunchSale is Initializable {
         require(isParticipated[user], "User needs to participate first.");
 
         Participation storage p = userToParticipation[user];
-        require(!p.isParticipationBoosted, "User's participation already boosted.");
+        require(!p.isParticipationBoosted, "Participation already boosted.");
         // Mark participation as boosted
         p.isParticipationBoosted = true;
 
@@ -739,18 +740,28 @@ contract AvalaunchSale is Initializable {
         uint256 amountOfTokensBuying =
             (msg.value).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
 
+        require(amountOfTokensBuying <= amount, "Exceeding allowance.");
 
-        require(amountOfTokensBuying < amount, "Trying to buy more than allowed.");
+        // Require that amountOfTokensBuying is less than sale token leftover cap
+        require(
+            amountOfTokensBuying <= sale.amountOfTokensToSell.sub(sale.totalTokensSold),
+            "Not enough tokens to sell."
+        );
 
         require(
-            amountOfTokensBuying <= roundIdToRound[stakingRoundId].maxParticipation,
-            "Overflowing maximal participation."
+            amountOfTokensBuying <= roundIdToRound[boosterRoundId].maxParticipation,
+            "Crossing max participation."
         );
 
         // Add msg.value to boosted avax paid
         p.boostedAmountAVAXPaid = msg.value;
         // Add amountOfTokensBuying as boostedAmount
         p.boostedAmountBought = amountOfTokensBuying;
+
+        // Increase total amount avax paid
+        p.amountAVAXPaid = p.amountAVAXPaid.add(msg.value);
+        // Increase total amount of tokens bought
+        p.amountBought = p.amountBought.add(amountOfTokensBuying);
 
         // Increase amount of sold tokens
         sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
