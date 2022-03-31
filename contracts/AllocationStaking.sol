@@ -72,6 +72,8 @@ contract AllocationStaking is OwnableUpgradeable {
     mapping (bytes => bool) public isSignatureUsed;
     // Admin contract
     IAdmin public admin;
+    // Stake ownership transfer approvals per pool
+    mapping (uint256 => mapping (address => address)) stakeOwnershipTransferApprovals;
 
     // Events
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -81,6 +83,7 @@ contract AllocationStaking is OwnableUpgradeable {
     event CompoundedEarnings(address indexed user, uint256 indexed pid, uint256 amountAdded, uint256 totalDeposited);
     event FeeTaken(address indexed user, uint256 indexed pid, uint256 amount);
     event PostSaleWithdrawFeeCharged(address user, uint256 amountStake, uint256 amountRewards);
+    event StakeOwnershipTransferred(address indexed from, address indexed to, uint256 pid);
 
     // Restricting calls to only verified sales
     modifier onlyVerifiedSales {
@@ -556,6 +559,20 @@ contract AllocationStaking is OwnableUpgradeable {
         postSaleWithdrawPenaltyLength = _postSaleWithdrawPenaltyLength;
         postSaleWithdrawPenaltyPercent = _postSaleWithdrawPenaltyPercent;
         postSaleWithdrawPenaltyPrecision = _postSaleWithdrawPenaltyPrecision;
+    }
+
+    // Function to transfer stake ownership from one wallet to another
+    function approveStakeOwnershipTransfer(address newOwner, uint256 pid) external {
+        stakeOwnershipTransferApprovals[pid][msg.sender] = newOwner;
+    }
+
+    // Function to claim approved stake
+    function claimApprovedStakeOwnership(address wallet, uint256 pid) external {
+        require(stakeOwnershipTransferApprovals[pid][wallet] == msg.sender, "Stake transfer not approved.");
+        require(userInfo[pid][msg.sender].amount == 0, "Wallet already staking.");
+        userInfo[pid][msg.sender] = userInfo[pid][wallet];
+        delete userInfo[pid][wallet];
+        emit StakeOwnershipTransferred(wallet, msg.sender, pid);
     }
 
 	// Function to set admin contract by owner
