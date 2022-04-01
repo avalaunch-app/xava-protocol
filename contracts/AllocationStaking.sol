@@ -356,17 +356,28 @@ contract AllocationStaking is OwnableUpgradeable {
     }
 
     // Withdraw LP tokens from Farm.
-    function withdraw(uint256 _pid, uint256 _amount, uint256 nonce, bytes memory signature) public {
+    function withdraw(
+        uint256 _pid,
+        uint256 _amount,
+        uint256 nonce,
+        uint256 signatureExpirationTimestamp,
+        bytes calldata signature
+    ) external {
 
         // generate hash
         bytes32 hash = keccak256(
-            abi.encodePacked(msg.sender, _pid, _amount, nonce)
+            abi.encodePacked(msg.sender, _pid, _amount, nonce, signatureExpirationTimestamp)
         ).toEthSignedMessageHash();
 
         // validate signature
         require(
             verifySignature("withdraw", nonce, hash, signature),
             "Invalid signature."
+        );
+
+        // check signature for expiration
+        require(
+            block.timestamp < signatureExpirationTimestamp, "Signature expired."
         );
 
         PoolInfo storage pool = poolInfo[_pid];
