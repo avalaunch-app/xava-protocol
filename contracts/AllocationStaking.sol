@@ -364,21 +364,21 @@ contract AllocationStaking is OwnableUpgradeable {
         bytes calldata signature
     ) external {
 
-        // generate hash
-        bytes32 hash = keccak256(
-            abi.encodePacked(msg.sender, _pid, _amount, nonce, signatureExpirationTimestamp)
-        ).toEthSignedMessageHash();
-
-        // validate signature
-        require(
-            verifySignature("withdraw", nonce, hash, signature),
-            "Invalid signature."
-        );
-
-        // check signature for expiration
-        require(
-            block.timestamp < signatureExpirationTimestamp, "Signature expired."
-        );
+        if(_amount > 0) {
+            // generate hash
+            bytes32 hash = keccak256(
+                abi.encodePacked(msg.sender, _pid, _amount, nonce, signatureExpirationTimestamp)
+            ).toEthSignedMessageHash();
+            // validate signature
+            require(
+                verifySignature("withdraw", nonce, hash, signature),
+                "Invalid signature."
+            );
+            // check signature for expiration
+            require(
+                block.timestamp < signatureExpirationTimestamp, "Signature expired."
+            );
+        }
 
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
