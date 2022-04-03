@@ -51,11 +51,11 @@ const main = async () => {
     const tokenPriceInUSD = 100000; // Six decimals USD value (100000 => 0.1$)
     // fundamental timestamps
     const registrationStart = await getCurrentBlockTimestamp() + 60;
-    const registrationEnd = registrationStart + 3600;
+    const registrationEnd = registrationStart + 60 * 20;
     const validatorRound = registrationEnd + 60;
     const stakingRound = validatorRound + 60;
-    const boosterRound = stakingRound + 3600;
-    const saleEndTime = boosterRound + 3600;
+    const boosterRound = stakingRound + 60 * 20;
+    const saleEndTime = boosterRound + 3600 * 5;
     const tokensUnlockTime = saleEndTime + 600;
     // vesting
     const unlockingTimes = [tokensUnlockTime, tokensUnlockTime + 200, tokensUnlockTime + 400];
@@ -121,6 +121,7 @@ const main = async () => {
 
     await sale.setUpdateTokenPriceInAVAXParams(c['updateTokenPriceInAVAXPercentageThreshold'], c['updateTokenPriceInAVAXTimeLimit']);
     console.log(' - Token price updating parameters set.');
+    await delay(delayLength);
 
     console.log("Config:");
     console.log({
