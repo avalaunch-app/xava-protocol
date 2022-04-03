@@ -22,7 +22,5 @@ jobs:
         run: |
           git config --global url.https://github.com/.insteadOf git://github.com/
           yarn install
-      - name: Setup node
-        run: npx hardhat node &
       - name: Run tests
-        run: npx hardhat test --network local
+        run: npx hardhat test --network hardhat
