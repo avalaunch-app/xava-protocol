@@ -82,6 +82,33 @@ module.exports = {
           },
         },
       },
+      "contracts/sales/SalesFactory.sol": {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 999999
+          },
+        },
+      },
+      "contracts/AllocationStaking.sol": {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          },
+        },
+      },
+      "contracts/AvalaunchCollateral.sol": {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 999999
+          },
+        },
+      },
     },
     settings: {
       optimizer: {
