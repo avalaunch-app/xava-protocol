@@ -41,6 +41,7 @@
       "0x9c9d627193B87d14614066ecD08b1ACEAe43d9cf",
       "0xD0CaE2309f322E24fBBc7E9D5F4995B02eF901e4"
     ],
+    "moderator": "0xD0CaE2309f322E24fBBc7E9D5F4995B02eF901e4",
     "allocationStakingRPS": "0.01",
     "delayBeforeStart": 1000,
     "depositFeePercent": "2",
