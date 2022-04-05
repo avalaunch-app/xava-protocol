@@ -12,6 +12,7 @@ describe("AllocationStaking", function() {
   let AllocationStakingRewardsFactory;
   let SalesFactory;
   let deployer, alice, bob;
+  let sigExp =  3000000000;
   let startTimestamp;
 
   let ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -50,12 +51,12 @@ describe("AllocationStaking", function() {
     return signature;
   }
 
-  function signWithdrawal(user, pid, amount, nonce) {
+  function signWithdrawal(user, pid, amount, nonce, signatureExpirationTimestamp) {
     // compute keccak256(abi.encodePacked(user, roundId, address(this)))
     const digest = ethers.utils.keccak256(
         ethers.utils.solidityPack(
-            [ 'address', 'uint256', 'uint256', 'uint256'],
-            [user, pid, amount, nonce]
+            [ 'address', 'uint256', 'uint256', 'uint256', 'uint256'],
+            [user, pid, amount, nonce, signatureExpirationTimestamp]
         )
     );
 
@@ -1216,7 +1217,8 @@ describe("AllocationStaking", function() {
             0,
             amount,
             1,
-            signWithdrawal(deployer.address, 0, amount, 1)
+            sigExp,
+            signWithdrawal(deployer.address, 0, amount, 1, sigExp)
         );
 
         // Then
@@ -1240,7 +1242,8 @@ describe("AllocationStaking", function() {
             0,
             amount,
             1,
-            signWithdrawal(deployer.address, 0, amount, 1)
+            sigExp,
+            signWithdrawal(deployer.address, 0, amount, 1, sigExp)
         );
 
         // When
@@ -1248,7 +1251,8 @@ describe("AllocationStaking", function() {
             0,
             amount,
             1,
-            signWithdrawal(deployer.address, 0, amount, 1)
+            sigExp,
+            signWithdrawal(deployer.address, 0, amount, 1, sigExp)
         )).to.be.revertedWith("Nonce already used.");
       });
 
@@ -1265,7 +1269,8 @@ describe("AllocationStaking", function() {
             0,
             amount,
             1,
-            signWithdrawal(deployer.address, 0, amount, 1)
+            sigExp,
+            signWithdrawal(deployer.address, 0, amount, 1, sigExp)
         );
 
         // When
@@ -1273,7 +1278,8 @@ describe("AllocationStaking", function() {
             0,
             amount,
             2,
-            signWithdrawal(deployer.address, 0, amount, 1)
+            sigExp,
+            signWithdrawal(deployer.address, 0, amount, 1, sigExp)
         )).to.be.revertedWith('Signature already used.');
       });
 
@@ -1289,7 +1295,8 @@ describe("AllocationStaking", function() {
             0,
             amount,
             1,
-            signWithdrawal(deployer.address, 0, amount, 1)
+            sigExp,
+            signWithdrawal(deployer.address, 0, amount, 1, sigExp)
         );
 
         // Then
@@ -1308,7 +1315,8 @@ describe("AllocationStaking", function() {
             0,
             amount,
             1,
-            signWithdrawal(deployer.address, 0, amount, 1)
+            sigExp,
+            signWithdrawal(deployer.address, 0, amount, 1, sigExp)
         )).to.be.revertedWith("withdraw: can't withdraw more than deposit");
       });
 
@@ -1332,7 +1340,8 @@ describe("AllocationStaking", function() {
             0,
             amount,
             1,
-            signWithdrawal(deployer.address, 0, amount, 1)
+            sigExp,
+            signWithdrawal(deployer.address, 0, amount, 1, sigExp)
         );
 
         // Then
@@ -1355,7 +1364,8 @@ describe("AllocationStaking", function() {
             0,
             amount,
             1,
-            signWithdrawal(deployer.address, 0, amount, 1)
+            sigExp,
+            signWithdrawal(deployer.address, 0, amount, 1, sigExp)
         )).to.emit(AllocationStaking, "Withdraw").withArgs(deployer.address, 0, takeFeeFromDeposit(DEFAULT_DEPOSIT));
       });
 

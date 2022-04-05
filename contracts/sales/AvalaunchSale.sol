@@ -180,6 +180,7 @@ contract AvalaunchSale is Initializable {
     ) public initializer {
         require(_admin != address(0));
         require(_allocationStaking != address(0));
+        require(_collateral != address(0));
         admin = IAdmin(_admin);
         factory = ISalesFactory(msg.sender);
         allocationStakingContract = IAllocationStaking(_allocationStaking);
@@ -411,7 +412,11 @@ contract AvalaunchSale is Initializable {
     /// @notice     Registration for sale.
     /// @param      signature is the message signed by the backend
     /// @param      roundId is the round for which user expressed interest to participate
-    function registerForSale(bytes memory signature, uint256 roundId)
+    function registerForSale(
+        bytes memory signature,
+        uint256 signatureExpirationTimestamp,
+        uint256 roundId
+    )
         external
         payable
     {
@@ -427,9 +432,10 @@ contract AvalaunchSale is Initializable {
             "Registration gate is closed."
         );
         require(
-            checkRegistrationSignature(signature, msg.sender, roundId),
+            checkRegistrationSignature(signature, signatureExpirationTimestamp, msg.sender, roundId),
             "Invalid signature."
         );
+        require(block.timestamp < signatureExpirationTimestamp, "Signature expired.");
         require(
             addressToRoundRegisteredFor[msg.sender] == 0,
             "User already registered."
@@ -589,8 +595,7 @@ contract AvalaunchSale is Initializable {
         uint256 amount,
         uint256 amountXavaToBurn,
         uint256 roundId,
-        bytes calldata signature,
-        uint256 signatureExpirationTimestamp
+        bytes calldata signature
     ) external payable {
         require(msg.sender == tx.origin, "Only direct calls.");
         // Require that user doesn't have autoBuy activated
@@ -602,14 +607,10 @@ contract AvalaunchSale is Initializable {
                 msg.sender,
                 amount,
                 amountXavaToBurn,
-                roundId,
-                signatureExpirationTimestamp
+                roundId
             ),
             "Invalid signature."
         );
-
-        // Check if signature has expired
-        require(block.timestamp < signatureExpirationTimestamp, "Signature expired.");
 
         _participate(msg.sender, msg.value, amount, amountXavaToBurn, roundId);
     }
@@ -627,7 +628,7 @@ contract AvalaunchSale is Initializable {
 
         require(
             amount <= roundIdToRound[roundId].maxParticipation,
-            "Overflowing maximal participation."
+            "Crossing max participation."
         );
 
         // User must have registered for the round in advance
@@ -658,13 +659,13 @@ contract AvalaunchSale is Initializable {
         // Check in terms of user allo
         require(
             amountOfTokensBuying <= amount,
-            "Trying to buy more than allowed."
+            "Exceeding allowance."
         );
 
         // Require that amountOfTokensBuying is less than sale token leftover cap
         require(
             amountOfTokensBuying <= sale.amountOfTokensToSell.sub(sale.totalTokensSold),
-            "Trying to buy more than amount left."
+            "Not enough tokens to sell."
         );
 
         // Increase amount of sold tokens
@@ -731,7 +732,7 @@ contract AvalaunchSale is Initializable {
         require(isParticipated[user], "User needs to participate first.");
 
         Participation storage p = userToParticipation[user];
-        require(!p.isParticipationBoosted, "User's participation already boosted.");
+        require(!p.isParticipationBoosted, "Participation already boosted.");
         // Mark participation as boosted
         p.isParticipationBoosted = true;
 
@@ -739,18 +740,28 @@ contract AvalaunchSale is Initializable {
         uint256 amountOfTokensBuying =
             (msg.value).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
 
+        require(amountOfTokensBuying <= amount, "Exceeding allowance.");
 
-        require(amountOfTokensBuying < amount, "Trying to buy more than allowed.");
+        // Require that amountOfTokensBuying is less than sale token leftover cap
+        require(
+            amountOfTokensBuying <= sale.amountOfTokensToSell.sub(sale.totalTokensSold),
+            "Not enough tokens to sell."
+        );
 
         require(
-            amountOfTokensBuying <= roundIdToRound[stakingRoundId].maxParticipation,
-            "Overflowing maximal participation."
+            amountOfTokensBuying <= roundIdToRound[boosterRoundId].maxParticipation,
+            "Crossing max participation."
         );
 
         // Add msg.value to boosted avax paid
         p.boostedAmountAVAXPaid = msg.value;
         // Add amountOfTokensBuying as boostedAmount
         p.boostedAmountBought = amountOfTokensBuying;
+
+        // Increase total amount avax paid
+        p.amountAVAXPaid = p.amountAVAXPaid.add(msg.value);
+        // Increase total amount of tokens bought
+        p.amountBought = p.amountBought.add(amountOfTokensBuying);
 
         // Increase amount of sold tokens
         sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
@@ -965,11 +976,12 @@ contract AvalaunchSale is Initializable {
     /// @param      roundId is the round for which user is submitting registration
     function checkRegistrationSignature(
         bytes memory signature,
+        uint256 signatureExpirationTimestamp,
         address user,
         uint256 roundId
     ) public view returns (bool) {
         bytes32 hash = keccak256(
-            abi.encodePacked(user, roundId, address(this))
+            abi.encodePacked(signatureExpirationTimestamp, user, roundId, address(this))
         );
         bytes32 messageHash = hash.toEthSignedMessageHash();
         return admin.isAdmin(messageHash.recover(signature));
@@ -985,8 +997,7 @@ contract AvalaunchSale is Initializable {
         address user,
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId,
-        uint256 signatureExpirationTimestamp
+        uint256 roundId
     ) public view returns (bool) {
         bytes32 hash = keccak256(
             abi.encodePacked(
@@ -994,7 +1005,6 @@ contract AvalaunchSale is Initializable {
                 amount,
                 amountXavaToBurn,
                 roundId,
-                signatureExpirationTimestamp,
                 address(this)
             )
         );
