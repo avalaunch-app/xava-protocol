@@ -69,7 +69,8 @@
         "AirdropDFIAT": "0x7f9ec1DE861f16fB9218E6fe86b83359b8b9c294",
         "AirdropDEG": "0xFA5D23292f1D6bCc3C4C0A698417a6479B5303BF",
         "AvalaunchCollateral": "0xa95dA4598D509f621f45d8b97283928BD0815CA4",
-        "AvalaunchCollateralProxy": "0x7E5f6AB97EEf4f28900Dc0F713EB99d3c077BBda"
+        "AvalaunchCollateralProxy": "0x7E5f6AB97EEf4f28900Dc0F713EB99d3c077BBda",
+        "Sale-Implementation": "0x0a1a9eB0d984f1C194c85BACe2070724101272E3"
     },
     "local": {
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
