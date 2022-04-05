@@ -51,11 +51,11 @@ const main = async () => {
     const tokenPriceInUSD = 100000; // Six decimals USD value (100000 => 0.1$)
     // fundamental timestamps
     const registrationStart = await getCurrentBlockTimestamp() + 60;
-    const registrationEnd = registrationStart + 60 * 20;
+    const registrationEnd = registrationStart + 3600;
     const validatorRound = registrationEnd + 60;
-    const stakingRound = validatorRound + 60;
-    const boosterRound = stakingRound + 60 * 20;
-    const saleEndTime = boosterRound + 3600 * 5;
+    const stakingRound = validatorRound + 180;
+    const boosterRound = stakingRound + 600;
+    const saleEndTime = boosterRound + 600;
     const tokensUnlockTime = saleEndTime + 600;
     // vesting
     const unlockingTimes = [tokensUnlockTime, tokensUnlockTime + 200, tokensUnlockTime + 400];
