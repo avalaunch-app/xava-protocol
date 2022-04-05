@@ -1,0 +1,26 @@
+name: Unit Tests
+'on':
+  - push
+  - pull_request
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version:
+          - 12.x
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - name: 'Set up Node.js ${{ matrix.node-version }}'
+        uses: actions/setup-node@v1
+        with:
+          node-version: '${{ matrix.node-version }}'
+      - name: Install dependencies
+        run: |
+          git config --global url.https://github.com/.insteadOf git://github.com/
+          yarn install
+      - name: Run tests
+        run: npx hardhat test --network hardhat

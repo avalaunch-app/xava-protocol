@@ -5,13 +5,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "./interfaces/ISalesFactory.sol";
-
+import "./interfaces/IAdmin.sol";
 
 contract AllocationStaking is OwnableUpgradeable {
 
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using ECDSA for bytes32;
 
     // Info of each user.
     struct UserInfo {
@@ -64,6 +66,15 @@ contract AllocationStaking is OwnableUpgradeable {
     uint256 public postSaleWithdrawPenaltyPercent;
     // Post sale withdraw penalty precision
     uint256 public postSaleWithdrawPenaltyPrecision;
+    // Nonce usage mapping
+    mapping (bytes32 => bool) public isNonceUsed;
+    // Signature usage mapping
+    mapping (bytes => bool) public isSignatureUsed;
+    // Admin contract
+    IAdmin public admin;
+    // Stake ownership transfer approvals per pool
+    mapping (uint256 => mapping (address => address)) stakeOwnershipTransferApprovals;
+
     // Events
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -72,6 +83,7 @@ contract AllocationStaking is OwnableUpgradeable {
     event CompoundedEarnings(address indexed user, uint256 indexed pid, uint256 amountAdded, uint256 totalDeposited);
     event FeeTaken(address indexed user, uint256 indexed pid, uint256 amount);
     event PostSaleWithdrawFeeCharged(address user, uint256 amountStake, uint256 amountRewards);
+    event StakeOwnershipTransferred(address indexed from, address indexed to, uint256 pid);
 
     // Restricting calls to only verified sales
     modifier onlyVerifiedSales {
@@ -129,13 +141,16 @@ contract AllocationStaking is OwnableUpgradeable {
         }
         uint256 lastRewardTimestamp = block.timestamp > startTimestamp ? block.timestamp : startTimestamp;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
-        poolInfo.push(PoolInfo({
-        lpToken: _lpToken,
-        allocPoint: _allocPoint,
-        lastRewardTimestamp: lastRewardTimestamp,
-        accERC20PerShare: 0,
-        totalDeposits: 0
-        }));
+        // Push new PoolInfo
+        poolInfo.push(
+            PoolInfo({
+                lpToken: _lpToken,
+                allocPoint: _allocPoint,
+                lastRewardTimestamp: lastRewardTimestamp,
+                accERC20PerShare: 0,
+                totalDeposits: 0
+            })
+        );
     }
 
     // Set deposit fee
@@ -174,6 +189,7 @@ contract AllocationStaking is OwnableUpgradeable {
 
         uint256 lpSupply = pool.totalDeposits;
 
+        // Compute pending ERC20s
         if (block.timestamp > pool.lastRewardTimestamp && lpSupply != 0) {
             uint256 lastTimestamp = block.timestamp < endTimestamp ? block.timestamp : endTimestamp;
             uint256 nrOfSeconds = lastTimestamp.sub(pool.lastRewardTimestamp);
@@ -204,11 +220,16 @@ contract AllocationStaking is OwnableUpgradeable {
         }
     }
 
+    // Set tokens unlock time when performing sale registration
     function setTokensUnlockTime(uint256 _pid, address _user, uint256 _tokensUnlockTime) external onlyVerifiedSales {
         UserInfo storage user = userInfo[_pid][_user];
-        // Require that tokens are currently unlocked
-        require(user.tokensUnlockTime <= block.timestamp);
-        user.tokensUnlockTime = _tokensUnlockTime;
+
+        // Set user.tokensUnlockTime only if new timestamp is greater
+        // Serves for parallel sale registrations
+        if(user.tokensUnlockTime < _tokensUnlockTime) {
+            user.tokensUnlockTime = _tokensUnlockTime;
+        }
+
         // Add sale to the array of sales user registered for.
         user.salesRegistered.push(msg.sender);
     }
@@ -295,21 +316,70 @@ contract AllocationStaking is OwnableUpgradeable {
         // Update pool including fee for people staking
         updatePoolWithFee(_pid, depositFee);
 
+        // Transfer pending amount to user if already staking
         if (user.amount > 0) {
             uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
             erc20Transfer(msg.sender, pendingAmount);
         }
 
+        // Safe transfer lpToken from user
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+        // Add deposit to total deposits
         pool.totalDeposits = pool.totalDeposits.add(depositAmount);
-
+        // Add deposit to user's amount
         user.amount = user.amount.add(depositAmount);
+        // Compute reward debt
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
+        // Emit relevant event
         emit Deposit(msg.sender, _pid, depositAmount);
     }
 
+    function verifySignature(
+        string memory functionName,
+        uint256 nonce,
+        bytes32 hash,
+        bytes memory signature
+    ) internal returns (bool) {
+
+        // generate nonceHash and check if nonce has been used
+        bytes32 nonceHash = keccak256(abi.encodePacked(functionName, nonce));
+        require(!isNonceUsed[nonceHash], "Nonce already used.");
+        // specify that the nonce is used
+        isNonceUsed[nonceHash] = true;
+
+        // require that signature is not already used
+        require(!isSignatureUsed[signature], "Signature already used.");
+        // specify that signature is used
+        isSignatureUsed[signature] = true;
+
+        return admin.isAdmin(hash.recover(signature));
+    }
+
     // Withdraw LP tokens from Farm.
-    function withdraw(uint256 _pid, uint256 _amount) public {
+    function withdraw(
+        uint256 _pid,
+        uint256 _amount,
+        uint256 nonce,
+        uint256 signatureExpirationTimestamp,
+        bytes calldata signature
+    ) external {
+
+        if(_amount > 0) {
+            // generate hash
+            bytes32 hash = keccak256(
+                abi.encodePacked(msg.sender, _pid, _amount, nonce, signatureExpirationTimestamp)
+            ).toEthSignedMessageHash();
+            // validate signature
+            require(
+                verifySignature("withdraw", nonce, hash, signature),
+                "Invalid signature."
+            );
+            // check signature for expiration
+            require(
+                block.timestamp < signatureExpirationTimestamp, "Signature expired."
+            );
+        }
+
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
@@ -319,8 +389,10 @@ contract AllocationStaking is OwnableUpgradeable {
         // Update pool
         updatePool(_pid);
 
+        // Compute user's pending amount
         uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
 
+        // Withdrawal fee params
         uint256 withdrawalFeeDepositAmount;
         uint256 withdrawalFeePending;
 
@@ -333,11 +405,12 @@ contract AllocationStaking is OwnableUpgradeable {
             );
         }
 
+        // Transfer pending amount to user (with fee being withdrawalFeePending)
         erc20Transfer(msg.sender, pendingAmount.sub(withdrawalFeePending));
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
 
-
+        // Transfer withdrawal amount to user (with fee being withdrawalFeeDepositAmount)
         pool.lpToken.safeTransfer(address(msg.sender), _amount.sub(withdrawalFeeDepositAmount));
         pool.totalDeposits = pool.totalDeposits.sub(_amount);
 
@@ -368,11 +441,13 @@ contract AllocationStaking is OwnableUpgradeable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        require(user.amount >= 0, "User does not have anything staked.");
+        // Require that user is staking
+        require(user.amount > 0, "User does not have anything staked.");
 
         // Update pool
         updatePool(_pid);
 
+        // Compute compounding amount
         uint256 pendingAmount = user.amount.mul(pool.accERC20PerShare).div(1e36).sub(user.rewardDebt);
         uint256 fee = pendingAmount.mul(depositFeePercent).div(depositFeePrecision);
         uint256 amountCompounding = pendingAmount.sub(fee);
@@ -386,6 +461,7 @@ contract AllocationStaking is OwnableUpgradeable {
         user.amount = user.amount.add(amountCompounding);
         user.rewardDebt = user.amount.mul(pool.accERC20PerShare).div(1e36);
 
+        // Increase pool's total deposits
         pool.totalDeposits = pool.totalDeposits.add(amountCompounding);
         emit CompoundedEarnings(msg.sender, _pid, amountCompounding, user.amount);
     }
@@ -395,11 +471,14 @@ contract AllocationStaking is OwnableUpgradeable {
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength) <= block.timestamp,
-            "Emergency withdraw blocked during sale and cooldown period.");
-
+        require(
+            user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength) <= block.timestamp,
+            "Emergency withdraw blocked during sale and cooldown period."
+        );
+        // Perform safeTransfer
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
+        // Adapt contract states
         pool.totalDeposits = pool.totalDeposits.sub(user.amount);
         user.amount = 0;
         user.rewardDebt = 0;
@@ -463,6 +542,7 @@ contract AllocationStaking is OwnableUpgradeable {
         uint256 [] memory deposits = new uint256[](users.length);
         uint256 [] memory earnings = new uint256[](users.length);
 
+        // Get deposits and earnings for selected users
         for(uint i=0; i < users.length; i++) {
             deposits[i] = deposited(pid , users[i]);
             earnings[i] = pending(pid, users[i]);
@@ -471,6 +551,7 @@ contract AllocationStaking is OwnableUpgradeable {
         return (deposits, earnings);
     }
 
+    // Function to set the parameters for withdrawals during the cooldown period
     function setPostSaleWithdrawPenaltyPercentAndLength(
         uint256 _postSaleWithdrawPenaltyPercent,
         uint256 _postSaleWithdrawPenaltyLength,
@@ -485,10 +566,29 @@ contract AllocationStaking is OwnableUpgradeable {
             _postSaleWithdrawPenaltyPercent <= _postSaleWithdrawPenaltyPrecision
         );
 
+        // Set the params
         postSaleWithdrawPenaltyLength = _postSaleWithdrawPenaltyLength;
         postSaleWithdrawPenaltyPercent = _postSaleWithdrawPenaltyPercent;
         postSaleWithdrawPenaltyPrecision = _postSaleWithdrawPenaltyPrecision;
     }
 
+    // Function to transfer stake ownership from one wallet to another
+    function approveStakeOwnershipTransfer(address newOwner, uint256 pid) external {
+        stakeOwnershipTransferApprovals[pid][msg.sender] = newOwner;
+    }
 
+    // Function to claim approved stake
+    function claimApprovedStakeOwnership(address wallet, uint256 pid) external {
+        require(stakeOwnershipTransferApprovals[pid][wallet] == msg.sender, "Stake transfer not approved.");
+        require(userInfo[pid][msg.sender].amount == 0, "Wallet already staking.");
+        userInfo[pid][msg.sender] = userInfo[pid][wallet];
+        delete userInfo[pid][wallet];
+        emit StakeOwnershipTransferred(wallet, msg.sender, pid);
+    }
+
+	// Function to set admin contract by owner
+    function setAdmin(address _admin) external onlyOwner {
+        require(_admin != address(0), "Cannot set zero address as admin.");
+        admin = IAdmin(_admin);
+    }
 }
