@@ -4,6 +4,8 @@ require('@nomiclabs/hardhat-ethers')
 require("@nomiclabs/hardhat-web3")
 require('@openzeppelin/hardhat-upgrades')
 require('solidity-coverage');
+require('hardhat-gas-reporter');
+require('hardhat-contract-sizer');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -46,8 +48,8 @@ module.exports = {
       chainId: 43113,
       accounts: [process.env.PK || testPK]
     },
-    staging_dexalot: {
-      url: 'https://api.avax-test.network/ext/bc/C/rpc',
+    staging: {
+      url: 'https://speedy-nodes-nyc.moralis.io/'+process.env.Moralis+'/avalanche/testnet',
       gasPrice: 225000000000,
       chainId: 43113,
       accounts: [process.env.PK || testPK]
@@ -63,24 +65,20 @@ module.exports = {
       url: 'http://localhost:8545',
     },
   },
+  gasReporter: {
+    currency: 'USD',
+    gasPrice: 100,
+    enabled: true
+  },
   solidity: {
-    compilers: [ {version: "0.6.12"} ],
+    compilers: [ {version: '0.6.12'} ],
     overrides: {
       "contracts/sales/AvalaunchSale.sol": {
-        version: "0.6.12",
+        version: '0.6.12',
         settings: {
           optimizer: {
             enabled: true,
-            runs: 180
-          },
-        },
-      },
-      "contracts/sales/SalesFactory.sol": {
-        version: "0.6.12",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 180
+            runs: 185
           },
         },
       },
@@ -88,9 +86,14 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 200
       },
     },
   },
+  contractSizer: {
+    alphaSort: true,
+    runOnCompile: true,
+    disambiguatePaths: false,
+  }
 };
 
