@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const { saveContractAddress, getSavedContractAddresses } = require('./utils')
-const config = require("./saleConfig.json");
+const config = require("./configs/saleConfig.json");
 const {BigNumber} = require("ethers");
 
 // Style
@@ -14,7 +14,7 @@ const NUMBER_1E18 = "1000000000000000000";
 async function main() {
     const c = config[hre.network.name];
 
-    const saleAddress = '0x6aD36c94b91E9499C9DFbA65CBe53cEfF5D45aC5';
+    const saleAddress = '0x0450CFD41a9bbA5349f50a75043d69e8D96f2f9e';
 
     const saleContract = await hre.ethers.getContractAt('AvalaunchSale', saleAddress);
 
@@ -54,14 +54,14 @@ async function main() {
     let val1 = parseInt(sale[10]);
     let val2 = parseInt(c["registrationStartAt"]) + parseInt(c["registrationLength"]) +
         parseInt(c["delayBetweenRegistrationAndSale"]) + parseInt(c["validatorRoundLength"]) +
-        parseInt(c["stakingRoundLength"]);
+        parseInt(c["stakingRoundLength"]) + parseInt(c["boosterRoundLength"]);
 
     console.log(val1, val2, val1 === val2 ? VALID : NOT_VALID, "\n");
 
-    console.log("TokensUnlockTime")
-    val1 = parseInt(sale[11]);
-    val2 = parseInt(c["unlockingTimes"][0]);
-    console.log(val1, val2, val1 === val2 ? VALID : NOT_VALID, "\n");
+    // console.log("TokensUnlockTime")
+    // val1 = parseInt(sale[10]);
+    // val2 = parseInt(c["unlockingTimes"][0]);
+    // console.log(val1, val2, val1 === val2 ? VALID : NOT_VALID, "\n");
 
     console.log("Registration Start");
     val1 = parseInt(registration[0]);

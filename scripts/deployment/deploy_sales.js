@@ -52,7 +52,6 @@ async function main() {
     const tokensUnlockTime = c['TGE'];
 
     const tokenPriceInUSD = hre.ethers.utils.parseEther(c['tokenPriceInUSD']);
-    console.log(tokenPriceInUSD);
 
     await(await sale.setSaleParams(
         c['tokenAddress'],
