@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const { saveContractAddress, getSavedContractAddresses } = require('../utils')
-const { redOut, greenOut } = require('./styling');
+const { redOut, greenOut } = require('../styling');
 const config = require("../configs/saleConfig.json");
 const { ethers } = hre
 
@@ -46,9 +46,13 @@ async function main() {
     const registrationEnd = registrationStart + c['registrationLength'];
     const validatorRound = registrationEnd + c['delayBetweenRegistrationAndSale'];
     const stakingRound = validatorRound + c['validatorRoundLength'];
-    const saleEndTime = stakingRound + c['stakingRoundLength'];
+    const boosterRound = stakingRound + c['stakingRoundLength'];
+    const saleEndTime = boosterRound + c['boosterRoundLength'];
 
     const tokensUnlockTime = c['TGE'];
+
+    const tokenPriceInUSD = hre.ethers.utils.parseEther(c['tokenPriceInUSD']);
+    console.log(tokenPriceInUSD);
 
     await(await sale.setSaleParams(
         c['tokenAddress'],
@@ -56,10 +60,10 @@ async function main() {
         tokenPriceInAvax.toString(),
         totalTokens.toString(),
         saleEndTime,
-        tokensUnlockTime,
         c['portionVestingPrecision'],
         c['stakingRoundId'],
-        registrationDepositAVAX.toString()
+        registrationDepositAVAX.toString(),
+        tokenPriceInUSD
     )).wait();
     console.log('Sale Params set successfully.');
 
@@ -76,8 +80,12 @@ async function main() {
 
     console.log('Setting rounds.');
     await sale.setRounds(
-        [validatorRound, stakingRound],
-        [ethers.utils.parseEther('7000000000'), ethers.utils.parseEther('7000000000')]
+        [validatorRound, stakingRound, boosterRound],
+        [
+            ethers.utils.parseEther('7000000000'),
+            ethers.utils.parseEther('7000000000'),
+            ethers.utils.parseEther('7000000000')
+        ]
     );
 
     const unlockingTimes = c['unlockingTimes'];
