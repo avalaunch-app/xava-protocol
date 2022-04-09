@@ -466,25 +466,6 @@ contract AllocationStaking is OwnableUpgradeable {
         emit CompoundedEarnings(msg.sender, _pid, amountCompounding, user.amount);
     }
 
-
-    // Withdraw without caring about rewards. EMERGENCY ONLY.
-    function emergencyWithdraw(uint256 _pid) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        require(
-            user.tokensUnlockTime.add(postSaleWithdrawPenaltyLength) <= block.timestamp,
-            "Emergency withdraw blocked during sale and cooldown period."
-        );
-        // Perform safeTransfer
-        pool.lpToken.safeTransfer(address(msg.sender), user.amount);
-        emit EmergencyWithdraw(msg.sender, _pid, user.amount);
-        // Adapt contract states
-        pool.totalDeposits = pool.totalDeposits.sub(user.amount);
-        user.amount = 0;
-        user.rewardDebt = 0;
-        user.tokensUnlockTime = 0;
-    }
-
     // Transfer ERC20 and update the required ERC20 to payout all rewards
     function erc20Transfer(address _to, uint256 _amount) internal {
         erc20.transfer(_to, _amount);
