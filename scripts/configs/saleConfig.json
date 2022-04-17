@@ -10,7 +10,7 @@
     "delayBetweenRegistrationAndSale": 43200,
     "validatorRoundLength": 32400,
     "stakingRoundLength": 54000,
-    "boosterRoundLength": 59400,
+    "boosterRoundLength": 19800,
     "TGE": "1650898800",
     "portionVestingPrecision": 100000,
     "stakingRoundId": 2,
