@@ -157,8 +157,6 @@ contract AvalaunchCollateral is Initializable {
         saleAutoBuyers[saleAddress][user] = true;
         // Verify that user approved with his signature this feature
         require(verifyAutoBuySignature(user, saleAddress, permitSignature), "AutoBuy signature invalid.");
-        // Require that user deposited enough collateral
-        require(amountAVAX.add(participationFeeAVAX) <= userBalance[user], "Not enough collateral.");
         // Reduce user balance
         userBalance[user] = userBalance[user].sub(amountAVAX.add(participationFeeAVAX));
         // Increase total fees collected
@@ -181,10 +179,8 @@ contract AvalaunchCollateral is Initializable {
      * @dev     Function is restricted only to admins.
      * @param   saleAddress is the address of the sale contract in which admin boosts allocation for
      * @param   amountAVAX is the amount of AVAX which will be taken from user to get him an allocation.
-     * @param   amount is the amount of tokens user is allowed to buy (maximal)
      * @param   amountXavaToBurn is the amount of XAVA which will be taken from user and redistributed across
      *          other Avalaunch stakers
-     * @param   roundId is the ID of the round for which participation is being taken.
      * @param   user is the address of user on whose behalf this action is being done.
      * @param   boostFeeAVAX is the FEE amount which is taken by Avalaunch for this service.
      * @param   permitSignature is the approval from user side to take his funds for specific sale address
@@ -192,9 +188,7 @@ contract AvalaunchCollateral is Initializable {
     function boostParticipation(
         address saleAddress,
         uint256 amountAVAX,
-        uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId,
         address user,
         uint256 boostFeeAVAX,
         bytes calldata permitSignature
@@ -204,8 +198,6 @@ contract AvalaunchCollateral is Initializable {
     {
         // Require that sale contract is approved by moderator
         require(isSaleApprovedByModerator[saleAddress], "Sale contract not approved by moderator.");
-        // Require that user deposited enough collateral
-        require(amountAVAX.add(boostFeeAVAX) <= userBalance[user], "Not enough collateral.");
         // Reduce user's balance
         userBalance[user] = userBalance[user].sub(amountAVAX.add(boostFeeAVAX));
         // Require that signature is not used already
@@ -214,6 +206,7 @@ contract AvalaunchCollateral is Initializable {
         isSignatureUsed[permitSignature] = true;
         // Require that boost signature is valid
         require(verifyBoostSignature(user, saleAddress, permitSignature), "Boost signature invalid.");
+
         // Transfer AVAX fee immediately to beneficiary
         safeTransferAVAX(moderator, boostFeeAVAX);
         // Trigger event
@@ -222,7 +215,7 @@ contract AvalaunchCollateral is Initializable {
         // Participate
         IAvalaunchSale(saleAddress).boostParticipation{
             value: amountAVAX
-        }(user, amount, amountXavaToBurn, roundId);
+        }(user, amountXavaToBurn);
     }
 
     /**
