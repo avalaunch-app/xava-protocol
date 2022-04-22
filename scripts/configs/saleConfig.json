@@ -1,17 +1,17 @@
 {
   "mainnet": {
-    "tokenAddress": "0x5085434227ab73151fad2de546210cbc8663df96",
-    "totalTokens": "25000000",
-    "tokenPriceInUSD": "0.04",
-    "tokenPriceInAvax": "0.00051546391",
-    "saleOwner": "0xEE42cc2014ff4b1D9359Ec6E1f10A9DcA999904D",
-    "registrationStartAt": 1650207600,
+    "tokenAddress": "0x5a15Bdcf9a3A8e799fa4381E666466a516F2d9C8",
+    "totalTokens": "18000000",
+    "tokenPriceInUSD": "0.066",
+    "tokenPriceInAvax": "0.00902872777",
+    "saleOwner": "",
+    "registrationStartAt": 1650726000,
     "registrationLength": 270000,
     "delayBetweenRegistrationAndSale": 43200,
     "validatorRoundLength": 32400,
     "stakingRoundLength": 54000,
-    "boosterRoundLength": 21600,
-    "TGE": "1650898800",
+    "boosterRoundLength": 19800,
+    "TGE": "1651449600",
     "portionVestingPrecision": 100000,
     "stakingRoundId": 2,
     "registrationDepositAVAX": "1",
@@ -19,14 +19,22 @@
     "updateTokenPriceInAVAXPercentageThreshold": 30,
     "updateTokenPriceInAVAXTimeLimit": 600,
     "unlockingTimes": [
-      1650898800,
-      1658761200,
-      1666710000
+      1651449600,
+      1654128000,
+      1656720000,
+      1659398400,
+      1662076800,
+      1664668800,
+      1667347200
     ],
     "portionPercents": [
-      40000,
-      30000,
-      30000
+      25000,
+      12500,
+      12500,
+      12500,
+      12500,
+      12500,
+      12500
     ]
   },
   "staging": {
