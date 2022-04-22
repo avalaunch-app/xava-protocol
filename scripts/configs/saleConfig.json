@@ -18,14 +18,16 @@
     "maxVestingTimeShift": 2592000,
     "updateTokenPriceInAVAXPercentageThreshold": 30,
     "updateTokenPriceInAVAXTimeLimit": 600,
+    "dexalotPortfolio": "0x6F8205cf222dD4C6615991C7F604F366526B5C6E",
+    "dexalotUnlockingTime": 1651143600,
     "unlockingTimes": [
-      1651449600,
-      1654128000,
-      1656720000,
-      1659398400,
-      1662076800,
-      1664668800,
-      1667347200
+      1651500000,
+      1654178400,
+      1656770400,
+      1659448800,
+      1662127200,
+      1664719200,
+      1667397600
     ],
     "portionPercents": [
       25000,
