@@ -311,8 +311,8 @@ contract AvalaunchSale is Initializable {
     )
     external
     onlyAdmin
+    onlyIfGateOpen
     {
-        require(address(dexalotPortfolio) == address(0x0), "Dexalot Portfolio already set.");
         require(_dexalotPortfolio != address(0x0), "Invalid address.");
         dexalotPortfolio = IDexalotPortfolio(_dexalotPortfolio);
         dexalotUnlockTime = _dexalotUnlockTime;
@@ -598,8 +598,6 @@ contract AvalaunchSale is Initializable {
         bytes calldata signature
     ) external payable {
         require(msg.sender == tx.origin, "Only direct calls.");
-        // Require that user doesn't have autoBuy activated
-        require(!collateral.saleAutoBuyers(address(this), msg.sender), "Cannot participate manually, autoBuy activated.");
         // Verify the signature
         require(
             checkParticipationSignature(

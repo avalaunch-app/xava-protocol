@@ -24,6 +24,10 @@ contract AvalaunchCollateral is Initializable {
     mapping (address => mapping (address => bool)) public saleAutoBuyers;
     // User to his collateral balance
     mapping (address => uint256) public userBalance;
+    // mapping of markers for user/sale autoBuy execution
+    mapping (bytes32 => bool) public autoBuyMarkers;
+    // mapping of markers for user/sale boost execution
+    mapping (bytes32 => bool) public boostParticipationMarkers;
 
     // AUTOBUY - TYPE / TYPEHASH / MESSAGEHASH
     string public constant AUTOBUY_TYPE = "AutoBuy(string confirmationMessage,address saleAddress)";
@@ -147,21 +151,19 @@ contract AvalaunchCollateral is Initializable {
     {
         // Require that sale contract is approved by moderator
         require(isSaleApprovedByModerator[saleAddress], "Sale contract not approved by moderator.");
-        // Require that signature is not used
-        require(!isSignatureUsed[permitSignature], "Signature already used.");
-        // Mark signature as used
-        isSignatureUsed[permitSignature] = true;
-        // Require that user does not have autoBuy activated
-        require(!saleAutoBuyers[saleAddress][user], "User autoBuy already active.");
-        // Mark autoBuy as active for user
-        saleAutoBuyers[saleAddress][user] = true;
+        // Compute marker hash
+        bytes32 markerHash = keccak256(abi.encodePacked(saleAddress, user));
+        // Check if autoBuy is executed for user
+        require(!autoBuyMarkers[markerHash], "AutoBuy already executed for user.");
+        // Mark autoBuy executed for user
+        autoBuyMarkers[markerHash] = true;
         // Verify that user approved with his signature this feature
         require(verifyAutoBuySignature(user, saleAddress, permitSignature), "AutoBuy signature invalid.");
+
         // Reduce user balance
         userBalance[user] = userBalance[user].sub(amountAVAX.add(participationFeeAVAX));
         // Increase total fees collected
         totalFeesCollected = totalFeesCollected.add(participationFeeAVAX);
-
         // Transfer AVAX fee immediately to beneficiary
         safeTransferAVAX(moderator, participationFeeAVAX);
         // Trigger event
@@ -198,15 +200,17 @@ contract AvalaunchCollateral is Initializable {
     {
         // Require that sale contract is approved by moderator
         require(isSaleApprovedByModerator[saleAddress], "Sale contract not approved by moderator.");
-        // Reduce user's balance
-        userBalance[user] = userBalance[user].sub(amountAVAX.add(boostFeeAVAX));
-        // Require that signature is not used already
-        require(!isSignatureUsed[permitSignature], "Signature already used.");
-        // Mark signature as used
-        isSignatureUsed[permitSignature] = true;
+        // Compute marker hash
+        bytes32 markerHash = keccak256(abi.encodePacked(saleAddress, user));
+        // Check if participation is boosted for user
+        require(!boostParticipationMarkers[markerHash], "Participation already boosted for user.");
+        // Mark participation boost for user
+        boostParticipationMarkers[markerHash] = true;
         // Require that boost signature is valid
         require(verifyBoostSignature(user, saleAddress, permitSignature), "Boost signature invalid.");
 
+        // Reduce user's balance
+        userBalance[user] = userBalance[user].sub(amountAVAX.add(boostFeeAVAX));
         // Transfer AVAX fee immediately to beneficiary
         safeTransferAVAX(moderator, boostFeeAVAX);
         // Trigger event
