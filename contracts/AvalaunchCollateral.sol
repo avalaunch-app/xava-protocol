@@ -18,9 +18,9 @@ contract AvalaunchCollateral is Initializable {
     address public moderator;
     // Mapping if sale is approved by moderator for the autobuys
     mapping (address => bool) public isSaleApprovedByModerator;
-    // Mapping if signature is used
+    // Mapping if signature is used - deprecated
     mapping (bytes => bool) public isSignatureUsed;
-    // Mapping for autoBuy users per sale
+    // Mapping for autoBuy users per sale - deprecated
     mapping (address => mapping (address => bool)) public saleAutoBuyers;
     // User to his collateral balance
     mapping (address => uint256) public userBalance;
