@@ -311,8 +311,8 @@ contract AvalaunchSale is Initializable {
     )
     external
     onlyAdmin
+    onlyIfGateOpen
     {
-        require(address(dexalotPortfolio) == address(0x0), "Dexalot Portfolio already set.");
         require(_dexalotPortfolio != address(0x0), "Invalid address.");
         dexalotPortfolio = IDexalotPortfolio(_dexalotPortfolio);
         dexalotUnlockTime = _dexalotUnlockTime;
@@ -425,7 +425,7 @@ contract AvalaunchSale is Initializable {
             "Registration deposit doesn't match."
         );
         require(roundId != 0, "Invalid round id.");
-        require(roundId <= roundIds.length, "Invalid round id");
+        require(roundId <= stakingRoundId, "Invalid round id");
         require(
             block.timestamp >= registration.registrationTimeStarts &&
                 block.timestamp <= registration.registrationTimeEnds,
@@ -587,7 +587,7 @@ contract AvalaunchSale is Initializable {
         uint256 roundId
     ) external payable {
         require(msg.sender == address(collateral), "Only collateral.");
-        _participate(user, msg.value, amount, amountXavaToBurn, roundId);
+        _participate(user, msg.value, amount, amountXavaToBurn, roundId, true);
     }
 
     // Participate function for manual participation
@@ -598,8 +598,6 @@ contract AvalaunchSale is Initializable {
         bytes calldata signature
     ) external payable {
         require(msg.sender == tx.origin, "Only direct calls.");
-        // Require that user doesn't have autoBuy activated
-        require(!collateral.saleAutoBuyers(address(this), msg.sender), "Cannot participate manually, autoBuy activated.");
         // Verify the signature
         require(
             checkParticipationSignature(
@@ -612,7 +610,7 @@ contract AvalaunchSale is Initializable {
             "Invalid signature."
         );
 
-        _participate(msg.sender, msg.value, amount, amountXavaToBurn, roundId);
+        _participate(msg.sender, msg.value, amount, amountXavaToBurn, roundId, false);
     }
 
     // Function to participate in the sales
@@ -621,15 +619,9 @@ contract AvalaunchSale is Initializable {
         uint256 amountAVAX,
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId
+        uint256 roundId,
+        bool isCollateralCaller
     ) internal {
-
-        require(roundId != 0, "Round can not be 0.");
-
-        require(
-            amount <= roundIdToRound[roundId].maxParticipation,
-            "Crossing max participation."
-        );
 
         // User must have registered for the round in advance
         require(
@@ -640,12 +632,9 @@ contract AvalaunchSale is Initializable {
         // Check user haven't participated before
         require(!isParticipated[user], "Already participated.");
 
-        // Get current active round
-        uint256 currentRound = getCurrentRound();
-
         // Assert that
         require(
-            roundId == currentRound,
+            roundId == getCurrentRound(),
             "Invalid round."
         );
 
@@ -653,14 +642,22 @@ contract AvalaunchSale is Initializable {
         uint256 amountOfTokensBuying =
             (amountAVAX).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
 
-        // Must buy more than 0 tokens
-        require(amountOfTokensBuying > 0, "Can't buy 0 tokens");
+        if (!isCollateralCaller) {
+            // Must buy more than 0 tokens
+            require(amountOfTokensBuying > 0, "Can't buy 0 tokens");
 
-        // Check in terms of user allo
-        require(
-            amountOfTokensBuying <= amount,
-            "Exceeding allowance."
-        );
+            // Check in terms of user allo
+            require(
+                amountOfTokensBuying <= amount,
+                "Exceeding allowance."
+            );
+
+            // Check for overflowing round's max participation
+            require(
+                amount <= roundIdToRound[roundId].maxParticipation,
+                "Crossing max participation."
+            );
+        }
 
         // Require that amountOfTokensBuying is less than sale token leftover cap
         require(
@@ -721,15 +718,13 @@ contract AvalaunchSale is Initializable {
     // Function to boost user's sale participation
     function boostParticipation(
         address user,
-        uint256 amount,
-        uint256 amountXavaToBurn,
-        uint256 roundId
+        uint256 amountXavaToBurn
     ) external payable {
         require(msg.sender == address(collateral), "Only collateral.");
-        require(roundId == boosterRoundId && roundId == getCurrentRound(), "Invalid round.");
+        require(boosterRoundId == getCurrentRound(), "Invalid round.");
 
         // Check user has participated before
-        require(isParticipated[user], "User needs to participate first.");
+        require(isParticipated[user], "Only participated users.");
 
         Participation storage p = userToParticipation[user];
         require(!p.isParticipationBoosted, "Participation already boosted.");
@@ -739,8 +734,6 @@ contract AvalaunchSale is Initializable {
         // Compute the amount of tokens user is buying
         uint256 amountOfTokensBuying =
             (msg.value).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
-
-        require(amountOfTokensBuying <= amount, "Exceeding allowance.");
 
         // Require that amountOfTokensBuying is less than sale token leftover cap
         require(

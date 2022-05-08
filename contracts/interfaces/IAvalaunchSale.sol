@@ -15,9 +15,7 @@ interface IAvalaunchSale {
 
     function boostParticipation(
         address user,
-        uint256 amount,
-        uint256 amountXavaToBurn,
-        uint256 roundId
+        uint256 amountXavaToBurn
     )
     external payable;
 }
