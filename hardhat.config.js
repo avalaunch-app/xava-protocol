@@ -56,7 +56,7 @@ module.exports = {
     },
     mainnet: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
-      gasPrice: 100000000000,
+      gasPrice: 80000000000,
       chainId: 43114,
       timeout: 900000000,
       accounts: [process.env.PK || testPK]
@@ -79,6 +79,33 @@ module.exports = {
           optimizer: {
             enabled: true,
             runs: 185
+          },
+        },
+      },
+      "contracts/sales/SalesFactory.sol": {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 999999
+          },
+        },
+      },
+      "contracts/AllocationStaking.sol": {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          },
+        },
+      },
+      "contracts/AvalaunchCollateral.sol": {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 999999
           },
         },
       },
