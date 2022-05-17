@@ -49,7 +49,7 @@
         "AirdropISA-Portion-5": "0xF0843402fFBD94Be626ac26328D5dEcFbFB25990",
         "AirdropHEC": "0x9f764059a65D08D8269920e26B5FD3D8A81D9054",
         "AirdropHON": "0x82fc023B1DeCe6217d7eD1870A8Eb45Fe2C88286",
-        "LatestSale": "0xAEbb0126Bf7f12a2336424Eb8C5D3cA0890Bb1BD",
+        "LatestSale": "0x7601a2C98257eA4d2Cc04834A6aad42F880dA576",
         "Sale-Yay-Games": "0x4437c4ca026f08380812D545e26679EB8404E26b",
         "Sale-Kalao": "0x8498a16B04E754f873198434063c8684d506A967",
         "Sale-HurricaneSwap": "0x8C18dbd68a2Fd18F10b56d902Cd6aD02c41828E0",
@@ -71,7 +71,8 @@
         "AvalaunchCollateral": "0xa95dA4598D509f621f45d8b97283928BD0815CA4",
         "AvalaunchCollateralProxy": "0x7E5f6AB97EEf4f28900Dc0F713EB99d3c077BBda",
         "Sale-Implementation": "0x0a1a9eB0d984f1C194c85BACe2070724101272E3",
-        "AirdropLOST": "0xacBA2f42B7fA9124f119d7A9E7aC02b58bf9204d"
+        "AirdropLOST": "0xacBA2f42B7fA9124f119d7A9E7aC02b58bf9204d",
+        "AirdropBPT": "0xF3aa6B4A79e6Cab92b80B6866147d0E775a700A4"
     },
     "local": {
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
