@@ -424,8 +424,7 @@ contract AvalaunchSale is Initializable {
             msg.value == registrationDepositAVAX,
             "Registration deposit doesn't match."
         );
-        require(roundId != 0, "Invalid round id.");
-        require(roundId <= stakingRoundId, "Invalid round id");
+        require(roundId != 0 && roundId <= stakingRoundId, "Invalid round id.");
         require(
             block.timestamp >= registration.registrationTimeStarts &&
                 block.timestamp <= registration.registrationTimeEnds,
