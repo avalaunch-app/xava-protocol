@@ -1381,7 +1381,7 @@ describe("AllocationStaking", function() {
       });
     });
 
-    describe("emergencyWithdraw", async function() {
+    xdescribe("emergencyWithdraw", async function() {
       it("Should withdraw user's deposit only", async function() {
         // Given
         await baseSetupTwoPools();
