@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 const { getSavedContractAddresses, saveContractAddress} = require('../utils');
 const ethers = require("ethers");
-const c = require('./config.json');
+const c = require('../configs/config.json');
 const config = c[hre.network.name];
 
 async function main() {
