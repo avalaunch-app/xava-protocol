@@ -9,7 +9,7 @@ async function main() {
 
     const Airdrop = await hre.ethers.getContractFactory("Airdrop");
     // Token which is being airdropped
-    const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+    const tokenAddress = '0xd1c3f94DE7e5B45fa4eDBBA472491a9f4B166FC4';
 
     const numberOfPortions = 26;
 
