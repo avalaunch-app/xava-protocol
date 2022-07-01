@@ -100,6 +100,15 @@ module.exports = {
           },
         },
       },
+      "contracts/AvalaunchMarketplace.sol": {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 999999
+          },
+        },
+      },
       "contracts/AllocationStaking.sol": {
         version: '0.6.12',
         settings: {
