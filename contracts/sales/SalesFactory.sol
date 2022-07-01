@@ -2,11 +2,14 @@
 pragma solidity 0.6.12;
 
 import "../interfaces/IAdmin.sol";
+import "../interfaces/IAvalaunchMarketplace.sol";
 
 contract SalesFactory {
 
     // Admin contract
     IAdmin public admin;
+    // Marketplace contract address
+    IAvalaunchMarketplace public marketplace;
     // Allocation staking contract address
     address public allocationStaking;
     // Collateral contract address
@@ -21,7 +24,6 @@ contract SalesFactory {
     // Events
     event SaleDeployed(address saleContract);
     event ImplementationChanged(address implementation);
-    event AllocationStakingSet(address allocationStaking);
 
     // Restricting calls only to sale admin
     modifier onlyAdmin {
@@ -29,10 +31,10 @@ contract SalesFactory {
         _;
     }
 
-    constructor (address _adminContract, address _allocationStaking, address _collateral) public {
+    constructor(address _adminContract, address _allocationStaking, address _collateral, address _marketplace) public {
         admin = IAdmin(_adminContract);
+        marketplace = IAvalaunchMarketplace(_marketplace);
         allocationStaking = _allocationStaking;
-        emit AllocationStakingSet(allocationStaking);
         collateral = _collateral;
     }
 
@@ -70,6 +72,8 @@ contract SalesFactory {
 
         // Mark sale as created through official factory
         isSaleCreatedThroughFactory[sale] = true;
+        // Approve sale on marketplace
+        marketplace.approveSale(sale);
         // Add sale to allSales
         allSales.push(sale);
 

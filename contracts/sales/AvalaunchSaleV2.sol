@@ -7,6 +7,7 @@ import "../interfaces/IAllocationStaking.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/IDexalotPortfolio.sol";
 import "../interfaces/ICollateral.sol";
+import "../interfaces/IAvalaunchMarketplace.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
@@ -25,6 +26,8 @@ contract AvalaunchSaleV2 is Initializable {
     IAdmin public admin;
     // Pointer to collateral contract
     ICollateral public collateral;
+    // Pointer to marketplace contract
+    IAvalaunchMarketplace public marketplace;
     // Pointer to dexalot portfolio contract
     IDexalotPortfolio public dexalotPortfolio;
 
@@ -49,6 +52,17 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 saleEnd;                     // Sale end timestamp
     }
 
+    struct Participation {
+        uint256 amountBought;                // Amount of tokens bought
+        uint256 amountAVAXPaid;
+        uint256 timeParticipated;
+        uint256 roundId;
+        uint256[] portionAmounts;
+        PortionStates[] portionStates;
+        uint256 boostedAmountAVAXPaid;
+        uint256 boostedAmountBought;
+    }
+
     struct Registration {
         uint256 registrationTimeStarts;
         uint256 registrationTimeEnds;
@@ -58,27 +72,6 @@ contract AvalaunchSaleV2 is Initializable {
     struct Round {
         uint256 startTime;
         uint256 maxParticipation;
-    }
-
-    struct Participation {
-        uint256 amountBought;                // Amount of tokens bought
-        uint256 amountAVAXPaid;
-        uint256 timeParticipated;
-        uint256 roundId;
-        uint256[] portionAmounts;
-        PortionStates[] portionStates;
-        bool isParticipationBoosted;
-        uint256 boostedAmountAVAXPaid;
-        uint256 boostedAmountBought;
-    }
-
-    struct Portion {
-        uint256 unlockTime;
-        uint256 tokenAmount;
-        bool isWithdrawn;
-        bool isWithdrawnToDexalot;
-        bool isOnMarket;
-        bool isSold;
     }
 
     // Sale state structure
@@ -120,19 +113,23 @@ contract AvalaunchSaleV2 is Initializable {
     // Sale setter lock flag
     bool public isLockOn;
 
+    // Empty global arrays for cheaper participation initialization
+    PortionStates[] public _emptyPortionStates;
+    uint256[] public _emptyUint256;
+
+    // Events
     event TokensSold(address user, uint256 amount);
     event UserRegistered(address user, uint256 roundId);
     event TokenPriceSet(uint256 newPrice);
     event MaxParticipationSet(uint256 roundId, uint256 maxParticipation);
     event TokensWithdrawn(address user, uint256 amount);
     event SaleCreated(address saleOwner, uint256 tokenPriceInAVAX, uint256 amountOfTokensToSell, uint256 saleEnd);
+    event SaleTokenSet(address indexed saleToken, uint256 timestamp);
     event RegistrationTimeSet(uint256 registrationTimeStarts, uint256 registrationTimeEnds);
     event RoundAdded(uint256 roundId, uint256 startTime, uint256 maxParticipation);
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
     event TokensWithdrawnToDexalot(address user, uint256 amount);
     event SettersLocked(uint256 time);
-    event ParticipationMigrated(address user, uint256 vaultId);
-    event VaultBurned(address user, uint256 vaultId);
     event ParticipationBoosted(address user, uint256 amountAVAX, uint256 amountTokens);
 
     // Restricting calls only to sale owner
@@ -162,15 +159,18 @@ contract AvalaunchSaleV2 is Initializable {
     function initialize(
         address _admin,
         address _allocationStaking,
-        address _collateral
-    ) public initializer {
+        address _collateral,
+        address _marketplace
+    ) external initializer {
         require(_admin != address(0));
         require(_allocationStaking != address(0));
         require(_collateral != address(0));
+        require(_marketplace != address(0));
 
         admin = IAdmin(_admin);
         allocationStaking = IAllocationStaking(_allocationStaking);
         collateral = ICollateral(_collateral);
+        marketplace = IAvalaunchMarketplace(_marketplace);
         factory = ISalesFactory(msg.sender);
     }
 
@@ -212,6 +212,9 @@ contract AvalaunchSaleV2 is Initializable {
         }
 
         numberOfVestedPortions = _unlockingTimes.length;
+
+        _emptyPortionStates = new PortionStates[](numberOfVestedPortions);
+        _emptyUint256 = new uint256[](numberOfVestedPortions);
 
         require(precision == 0, "Invalid percentage calculation.");
     }
@@ -321,6 +324,7 @@ contract AvalaunchSaleV2 is Initializable {
     ifUnlocked
     {
         sale.token = IERC20(saleToken);
+        emit SaleTokenSet(saleToken, block.timestamp);
     }
 
     /**
@@ -661,26 +665,11 @@ contract AvalaunchSaleV2 is Initializable {
         // Increase amount of AVAX raised
         sale.totalAVAXRaised = sale.totalAVAXRaised.add(amountAVAX);
 
-        Participation storage p;
+        Participation storage p = userToParticipation[user];
         if (!isBooster) {
-            // Empty bool array used to be set as initial for 'isPortionWithdrawn' and 'isPortionWithdrawnToDexalot'
-            // Size determined by number of sale portions
-            PortionStates[] memory _empty = new PortionStates[](
-                numberOfVestedPortions
-            );
-            // Create new participation object for user
-            p = userToParticipation[user];
-            // Assign participation attributes
-            p.amountBought = amountOfTokensBuying;
-            p.amountAVAXPaid = amountAVAX;
-            p.timeParticipated = block.timestamp;
-            p.roundId = roundId;
-            p.portionStates = _empty;
+            initParticipationForUser(user, amountOfTokensBuying, amountAVAX, block.timestamp, roundId);
         } else { // if (isBooster)
-            p = userToParticipation[user];
-            require(!p.isParticipationBoosted, "Participation already boosted.");
-            // Mark participation as boosted
-            p.isParticipationBoosted = true;
+            require(p.boostedAmountBought > 0, "Participation already boosted.");
         }
 
         if (roundId == stakingRoundId || roundId == boosterRoundId) { // Every round except validator
@@ -700,8 +689,7 @@ contract AvalaunchSaleV2 is Initializable {
                 lastPercent = vestingPercentPerPortion[i];
                 lastAmount = amountOfTokensBuying.mul(lastPercent).div(portionVestingPrecision);
             }
-            if (!isBooster) p.portionAmounts.push(lastAmount);
-            else p.portionAmounts[i] += lastAmount;
+            p.portionAmounts[i] += lastAmount;
         }
 
         if (!isBooster) {
@@ -730,6 +718,25 @@ contract AvalaunchSaleV2 is Initializable {
         }
     }
 
+    function initParticipationForUser(
+        address user,
+        uint256 amountOfTokensBuying,
+        uint256 amountAVAX,
+        uint256 timeParticipated,
+        uint256 roundId
+    ) internal {
+        userToParticipation[user] = Participation({
+            amountBought: amountOfTokensBuying,
+            amountAVAXPaid: amountAVAX,
+            timeParticipated: timeParticipated,
+            roundId: roundId,
+            portionAmounts: _emptyUint256,
+            portionStates: _emptyPortionStates,
+            boostedAmountAVAXPaid: 0,
+            boostedAmountBought: 0
+        });
+    }
+
     /**
      * @notice Function to withdraw unlocked portions to wallet or Dexalot portfolio
      */
@@ -752,7 +759,7 @@ contract AvalaunchSaleV2 is Initializable {
             bool eligible;
 
             if (
-                p.portionStates[portionId] == PortionStates.Available && (
+                p.portionStates[portionId] == PortionStates.Available && p.portionAmounts[portionId] > 0 && (
                     vestingPortionsUnlockTime[portionId] <= block.timestamp || (portionId == 0 && toDexalot)
                 )
             ) eligible = true;
@@ -792,8 +799,50 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to add available portions to market
      */
-    function addPortionsToMarket() external {
+    function addPortionsToMarket(uint256[] calldata portions, uint256[] calldata prices) external {
+        // TODO: enforce requirement on other functions
+        require(portions.length == prices.length);
+        for(uint256 i = 0; i < portions.length; i++) {
+            uint256 portionId = portions[i];
+            require(userToParticipation[msg.sender].portionStates[portionId] == PortionStates.Available);
+            userToParticipation[msg.sender].portionStates[portionId] = PortionStates.OnMarket;
+        }
+        marketplace.listPortions(msg.sender, portions, prices);
+    }
 
+    function removePortionsFromMarket(uint256[] calldata portions, uint256[] calldata prices) external {
+        require(portions.length == prices.length);
+        for(uint256 i = 0; i < portions.length; i++) {
+            uint256 portionId = portions[i];
+            require(userToParticipation[msg.sender].portionStates[portionId] == PortionStates.OnMarket);
+            userToParticipation[msg.sender].portionStates[portionId] = PortionStates.Available;
+        }
+        marketplace.removePortions(msg.sender, portions);
+    }
+
+    /**
+     * @notice Function to transfer portions from seller to buyer
+     */
+    function transferPortions(address seller, address buyer, uint256[] calldata portions) external {
+        require(msg.sender == address(marketplace), "Restricted to marketplace.");
+        Participation storage pSeller = userToParticipation[seller];
+        Participation storage pBuyer = userToParticipation[buyer];
+        if(pBuyer.amountBought == 0) {
+            initParticipationForUser(buyer, 0, 0, 0, 0);
+        }
+        for(uint256 i = 0; i < portions.length; i++) {
+            uint256 portionId = portions[i];
+            require(pSeller.portionStates[portionId] == PortionStates.OnMarket, "Portion not available.");
+            pSeller.portionStates[portionId] = PortionStates.Sold;
+            PortionStates portionState = pBuyer.portionStates[portionId];
+            // solve the edge case of portions on market
+            require(portionState != PortionStates.OnMarket, "Can't buy portion with same id of one you put on market.");
+            if(portionState == PortionStates.Available) {
+                pBuyer.portionAmounts[portionId] += pSeller.portionAmounts[portionId];
+            } else {
+                pBuyer.portionAmounts[portionId] = pSeller.portionAmounts[portionId];
+            }
+        }
     }
 
     /**
