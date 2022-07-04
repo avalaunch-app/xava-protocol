@@ -54,13 +54,13 @@ contract AvalaunchSaleV2 is Initializable {
 
     struct Participation {
         uint256 amountBought;                // Amount of tokens bought
-        uint256 amountAVAXPaid;
-        uint256 timeParticipated;
-        uint256 roundId;
-        uint256[] portionAmounts;
-        PortionStates[] portionStates;
-        uint256 boostedAmountAVAXPaid;
-        uint256 boostedAmountBought;
+        uint256 amountAVAXPaid;              // Amount of $AVAX paid for tokens
+        uint256 timeParticipated;            // Timestamp of participation time
+        uint256 roundId;                     // Round user is registered for
+        uint256[] portionAmounts;            // Amount of tokens for each portion
+        PortionStates[] portionStates;       // State of each portion
+        uint256 boostedAmountAVAXPaid;       // Amount of $AVAX paid for boost
+        uint256 boostedAmountBought;         // Amount of tokens bought with boost
     }
 
     struct Registration {
@@ -98,10 +98,6 @@ contract AvalaunchSaleV2 is Initializable {
     uint256 public numberOfVestedPortions;
     // Precision for percent for portion vesting
     uint256 public portionVestingPrecision;
-    // Added configurable round ID for staking round
-    uint256 public stakingRoundId;
-    // Added configurable round ID for staking round
-    uint256 public boosterRoundId;
     // Max vesting time shift
     uint256 public maxVestingTimeShift;
     // Registration deposit AVAX, deposited during the registration, returned after the participation.
@@ -167,11 +163,11 @@ contract AvalaunchSaleV2 is Initializable {
         require(_collateral != address(0));
         require(_marketplace != address(0));
 
+        factory = ISalesFactory(msg.sender);
         admin = IAdmin(_admin);
         allocationStaking = IAllocationStaking(_allocationStaking);
         collateral = ICollateral(_collateral);
         marketplace = IAvalaunchMarketplace(_marketplace);
-        factory = ISalesFactory(msg.sender);
     }
 
     /**
@@ -249,25 +245,20 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 _amountOfTokensToSell,
         uint256 _saleEnd,
         uint256 _portionVestingPrecision,
-        uint256 _stakingRoundId,
         uint256 _registrationDepositAVAX
     )
     external
     onlyAdmin
     {
         require(!sale.isCreated, "Sale already created.");
-        require(
-            _moderator != address(0),
-            "Invalid sale owner address."
-        );
+        require(_moderator != address(0), "Invalid moderator address.");
         require(
             _tokenPriceInAVAX != 0 &&
             _amountOfTokensToSell != 0 &&
             _saleEnd > block.timestamp,
             "Invalid input."
         );
-        require(_portionVestingPrecision >= 100, "Should be at least 100");
-        require(_stakingRoundId > 0, "Invalid staking round id.");
+        require(_portionVestingPrecision >= 100, "Invalid vesting precision.");
 
         // Set params
         sale.token = IERC20(_token);
@@ -281,10 +272,6 @@ contract AvalaunchSaleV2 is Initializable {
         registrationDepositAVAX = _registrationDepositAVAX;
         // Set portion vesting precision
         portionVestingPrecision = _portionVestingPrecision;
-        // Set staking round id
-        stakingRoundId = _stakingRoundId;
-        // Set booster round id
-        boosterRoundId = _stakingRoundId.add(1);
 
         // Emit event
         emit SaleCreated(
@@ -424,7 +411,7 @@ contract AvalaunchSaleV2 is Initializable {
             "Registration deposit doesn't match."
         );
         require(roundId != 0, "Invalid round id.");
-        require(roundId <= stakingRoundId, "Invalid round id");
+        require(roundId <= uint8(Rounds.Staking), "Invalid round id");
         require(
             block.timestamp >= registration.registrationTimeStarts &&
             block.timestamp <= registration.registrationTimeEnds,
@@ -437,7 +424,7 @@ contract AvalaunchSaleV2 is Initializable {
             ),
             "Invalid signature."
         );
-        require(block.timestamp < signatureExpirationTimestamp, "Signature expired.");
+        require(block.timestamp <= signatureExpirationTimestamp, "Signature expired.");
         require(
             addressToRoundRegisteredFor[msg.sender] == 0,
             "User already registered."
@@ -446,7 +433,7 @@ contract AvalaunchSaleV2 is Initializable {
         // Rounds are 1,2,3
         addressToRoundRegisteredFor[msg.sender] = roundId;
         // Special cases for staking round
-        if (roundId == stakingRoundId) {
+        if (roundId == uint8(Rounds.Staking)) {
             // Lock users stake
             allocationStaking.setTokensUnlockTime(
                 0,
@@ -567,7 +554,7 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 amountXavaToBurn,
         uint256 roundId
     ) external payable onlyCollateral {
-        _participate(user, msg.value, amount, amountXavaToBurn, roundId, true, false);
+        _participate(user, amount, amountXavaToBurn, roundId);
     }
 
     /**
@@ -577,7 +564,7 @@ contract AvalaunchSaleV2 is Initializable {
         address user,
         uint256 amountXavaToBurn
     ) external payable onlyCollateral {
-        _participate(user, msg.value, 0, amountXavaToBurn, boosterRoundId, true, true);
+        _participate(user, 0, amountXavaToBurn, uint256(Rounds.Booster));
     }
 
     /**
@@ -598,7 +585,7 @@ contract AvalaunchSaleV2 is Initializable {
             ),
             "Invalid signature."
         );
-        _participate(msg.sender, msg.value, amount, amountXavaToBurn, roundId, false, false);
+        _participate(msg.sender, amount, amountXavaToBurn, roundId);
     }
 
     /**
@@ -606,13 +593,13 @@ contract AvalaunchSaleV2 is Initializable {
      */
     function _participate(
         address user,
-        uint256 amountAVAX,
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId,
-        bool isCollateralCaller,
-        bool isBooster
+        uint256 roundId
     ) internal {
+
+        bool isCollateralCaller = msg.sender == address(collateral);
+        bool isBooster = roundId == uint8(Rounds.Booster);
 
         if (!isBooster) {
             // User must have registered for the round in advance
@@ -635,7 +622,7 @@ contract AvalaunchSaleV2 is Initializable {
 
         // Compute the amount of tokens user is buying
         uint256 amountOfTokensBuying =
-            (amountAVAX).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
+            (msg.value).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
 
         if (!isCollateralCaller) {
             // Must buy more than 0 tokens
@@ -663,16 +650,16 @@ contract AvalaunchSaleV2 is Initializable {
         // Increase amount of sold tokens
         sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
         // Increase amount of AVAX raised
-        sale.totalAVAXRaised = sale.totalAVAXRaised.add(amountAVAX);
+        sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
 
         Participation storage p = userToParticipation[user];
         if (!isBooster) {
-            initParticipationForUser(user, amountOfTokensBuying, amountAVAX, block.timestamp, roundId);
+            initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, roundId);
         } else { // if (isBooster)
             require(p.boostedAmountBought > 0, "Participation already boosted.");
         }
 
-        if (roundId == stakingRoundId || roundId == boosterRoundId) { // Every round except validator
+        if (roundId == uint8(Rounds.Staking) || isBooster) { // Every round except validator
             // Burn XAVA from this user
             allocationStaking.redistributeXava(
                 0,
@@ -706,18 +693,17 @@ contract AvalaunchSaleV2 is Initializable {
             emit TokensSold(user, amountOfTokensBuying);
         } else { // if (isBooster)
             // Add msg.value to boosted avax paid
-            p.boostedAmountAVAXPaid = amountAVAX;
+            p.boostedAmountAVAXPaid = msg.value;
             // Add amountOfTokensBuying as boostedAmount
             p.boostedAmountBought = amountOfTokensBuying;
-            // Increase total amount avax paid
-            p.amountAVAXPaid = p.amountAVAXPaid.add(amountAVAX);
-            // Increase total amount of tokens bought
-            p.amountBought = p.amountBought.add(amountOfTokensBuying);
             // Emit participation boosted event
-            emit ParticipationBoosted(user, amountAVAX, amountOfTokensBuying);
+            emit ParticipationBoosted(user, msg.value, amountOfTokensBuying);
         }
     }
 
+    /**
+     * @notice function to initialize participation structure for user
+     */
     function initParticipationForUser(
         address user,
         uint256 amountOfTokensBuying,
@@ -800,22 +786,23 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to add available portions to market
      */
     function addPortionsToMarket(uint256[] calldata portions, uint256[] calldata prices) external {
-        // TODO: enforce requirement on other functions
         require(portions.length == prices.length);
         for(uint256 i = 0; i < portions.length; i++) {
-            uint256 portionId = portions[i];
-            require(userToParticipation[msg.sender].portionStates[portionId] == PortionStates.Available);
-            userToParticipation[msg.sender].portionStates[portionId] = PortionStates.OnMarket;
+            Participation storage p = userToParticipation[msg.sender];
+            require(p.portionStates[portions[i]] == PortionStates.Available);
+            p.portionStates[portions[i]] = PortionStates.OnMarket;
         }
         marketplace.listPortions(msg.sender, portions, prices);
     }
 
-    function removePortionsFromMarket(uint256[] calldata portions, uint256[] calldata prices) external {
-        require(portions.length == prices.length);
+    /**
+     * @notice Function to remove portions from market
+     */
+    function removePortionsFromMarket(uint256[] calldata portions) external {
         for(uint256 i = 0; i < portions.length; i++) {
-            uint256 portionId = portions[i];
-            require(userToParticipation[msg.sender].portionStates[portionId] == PortionStates.OnMarket);
-            userToParticipation[msg.sender].portionStates[portionId] = PortionStates.Available;
+            Participation storage p = userToParticipation[msg.sender];
+            require(p.portionStates[portions[i]] == PortionStates.OnMarket);
+            p.portionStates[portions[i]] = PortionStates.Available;
         }
         marketplace.removePortions(msg.sender, portions);
     }
@@ -835,12 +822,13 @@ contract AvalaunchSaleV2 is Initializable {
             require(pSeller.portionStates[portionId] == PortionStates.OnMarket, "Portion not available.");
             pSeller.portionStates[portionId] = PortionStates.Sold;
             PortionStates portionState = pBuyer.portionStates[portionId];
-            // solve the edge case of portions on market
-            require(portionState != PortionStates.OnMarket, "Can't buy portion with same id of one you put on market.");
-            if(portionState == PortionStates.Available) {
+            // case 1: portion with same id is on market - revert
+            require(portionState != PortionStates.OnMarket, "Can't buy portion with same id you listed on market.");
+            if (portionState == PortionStates.Available) { // case 2: portion is available
                 pBuyer.portionAmounts[portionId] += pSeller.portionAmounts[portionId];
-            } else {
+            } else { // case 3: portion is unavailable (withdrawn or sold)
                 pBuyer.portionAmounts[portionId] = pSeller.portionAmounts[portionId];
+                pBuyer.portionStates[portionId] = PortionStates.Available;
             }
         }
     }
@@ -912,7 +900,7 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to verify admin signed signatures
      */
-    function verifySignature(bytes32 hash, bytes memory signature) public view returns (bool) {
+    function verifySignature(bytes32 hash, bytes memory signature) internal view returns (bool) {
         return admin.isAdmin((hash.toEthSignedMessageHash()).recover(signature));
     }
 
@@ -939,15 +927,11 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to get participation for passed user address
      */
-    function getParticipationArrays(address _user)
+    function getParticipationArrays(address user)
     external
     view
-    returns (
-        uint256[] memory,
-        PortionStates[] memory
-    )
-    {
-        Participation memory p = userToParticipation[_user];
+    returns (uint256[] memory, PortionStates[] memory) {
+        Participation memory p = userToParticipation[user];
         return (
             p.portionAmounts,
             p.portionStates
@@ -964,7 +948,7 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to get vesting info
      */
-    function getVestingInfo() external view returns (uint256[] memory, uint256[] memory){
+    function getVestingInfo() external view returns (uint256[] memory, uint256[] memory) {
         return (vestingPortionsUnlockTime, vestingPercentPerPortion);
     }
 

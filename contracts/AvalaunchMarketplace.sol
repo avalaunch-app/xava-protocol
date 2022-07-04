@@ -42,10 +42,12 @@ contract AvalaunchMarketplace is Initializable {
      * @notice Function to list user's portions to market
      */
     function listPortions(address owner, uint256[] calldata portions, uint256[] calldata prices) external onlyOfficialSales {
+        require(portions.length == prices.length, "Array size mismatch.");
         for(uint i = 0; i < portions.length; i++) {
-            require(userToPortions[owner][msg.sender][portions[i]] == 0, "Portion already listed.");
-            userToPortions[owner][msg.sender][portions[i]] = prices[i];
-            emit PortionListed(owner, msg.sender, portions[i], prices[i]);
+            uint256 portionId = portions[i];
+            require(userToPortions[owner][msg.sender][portionId] == 0, "Portion already listed.");
+            userToPortions[owner][msg.sender][portionId] = prices[i];
+            emit PortionListed(owner, msg.sender, portionId, prices[i]);
         }
     }
 
@@ -60,7 +62,7 @@ contract AvalaunchMarketplace is Initializable {
     }
 
     /**
-     * @notice Function to buy portions
+     * @notice Function to buy portions from market
      */
     function buyPortions(address sale, address owner, uint256[] calldata portions) external payable {
         require(officialSales[sale], "Invalid sale address.");
@@ -68,11 +70,12 @@ contract AvalaunchMarketplace is Initializable {
         IAvalaunchSaleV2(sale).transferPortions(owner, msg.sender, portions);
         uint256 total;
         for(uint i = 0; i < portions.length; i++) {
-            uint256 singlePortionPrice = userToPortions[owner][sale][portions[i]];
+            uint256 portionId = portions[i];
+            uint256 singlePortionPrice = userToPortions[owner][sale][portionId];
             require(singlePortionPrice > 0, "Portion not buyable.");
             total = total.add(singlePortionPrice);
-            delete userToPortions[owner][sale][portions[i]];
-            emit PortionSold(owner, msg.sender, sale, portions[i], singlePortionPrice);
+            delete userToPortions[owner][sale][portionId];
+            emit PortionSold(owner, msg.sender, sale, portionId, singlePortionPrice);
         }
         require(msg.value == total, "Invalid AVAX amount sent.");
         // Forward msg.value to portion owner (with message)
