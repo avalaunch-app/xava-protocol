@@ -34,7 +34,7 @@ contract AvalaunchSaleV2 is Initializable {
     // Participation Types
     enum ParticipationTypes { Normal, Auto, Boost }
     // Rounds
-    enum Rounds { Public, Validator, Staking, Booster }
+    enum Rounds { None, Validator, Staking, Booster }
     // Portion States
     enum PortionStates { Available, Withdrawn, WithdrawnToDexalot, OnMarket, Sold }
 
@@ -185,7 +185,7 @@ contract AvalaunchSaleV2 is Initializable {
             vestingPercentPerPortion.length == 0 && vestingPortionsUnlockTime.length == 0,
             "Vesting params already set."
         );
-        require(_unlockingTimes.length == _percents.length, "Array length mismatch.");
+        require(_unlockingTimes.length == _percents.length, "Array size mismatch.");
         require(_maxVestingTimeShift <= 30 days, "Maximal shift is 30 days.");
         require(portionVestingPrecision > 0, "Sale params not set.");
 
@@ -218,14 +218,11 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to shift vested portion unlock times
      */
-    function shiftVestingUnlockingTimes(uint256 timeToShift) external onlyAdmin {
+    function shiftVestingUnlockingTimes(uint256 timeToShift) public onlyAdmin {
         require(
             timeToShift > 0 && timeToShift < maxVestingTimeShift,
             "Invalid shift time."
         );
-
-        // Time can be shifted only once.
-        maxVestingTimeShift = 0;
 
         // Shift the unlock time
         for (uint256 i = 0; i < numberOfVestedPortions; i++) {
@@ -362,7 +359,7 @@ contract AvalaunchSaleV2 is Initializable {
         require(sale.isCreated);
         require(
             startTimes.length == maxParticipations.length,
-            "Invalid array lengths."
+            "Array size mismatch."
         );
         require(roundIds.length == 0, "Rounds set already.");
         require(startTimes.length > 0);
@@ -462,21 +459,39 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to postpone the sale
      */
-    function postponeSale(uint256 timeToShift) external onlyAdmin {
-        require(
-            block.timestamp < roundIdToRound[roundIds[0]].startTime,
-            "1st round already started."
-        );
+    function postponeSale(uint256 timeToShift) public onlyAdmin {
+
+        require(block.timestamp < sale.saleEnd);
+
+        uint256 lastRoundStartTime;
+        uint256 lastRoundSaleEndDiff;
+        uint256 saleEndFirstUnlockDiff = vestingPortionsUnlockTime[0].sub(sale.saleEnd);
+
+        uint256 i = getCurrentRound();
+
         // Iterate through all registered rounds and postpone them
-        for (uint256 i = 0; i < roundIds.length; i++) {
+        for (; i < roundIds.length; i++) {
             Round storage round = roundIdToRound[roundIds[i]];
-            // Require that timeToShift does not extend sale over it's end
-            require(
-                round.startTime.add(timeToShift) < sale.saleEnd,
-                "Start time can not be greater than end time."
-            );
-            // Postpone sale
-            round.startTime = round.startTime.add(timeToShift);
+            uint256 newStartTime = round.startTime.add(timeToShift);
+
+            if ((i + 1) == roundIds.length) {
+                lastRoundSaleEndDiff = sale.saleEnd.sub(round.startTime);
+                lastRoundStartTime = newStartTime;
+            }
+
+            round.startTime = newStartTime;
+        }
+
+        if (lastRoundStartTime > sale.saleEnd) {
+            sale.saleEnd = lastRoundStartTime.add(lastRoundSaleEndDiff);
+            if (sale.saleEnd > vestingPortionsUnlockTime[0]) {
+                // TODO: decide on shift type
+                shiftVestingUnlockingTimes(saleEndFirstUnlockDiff.add(sale.saleEnd - vestingPortionsUnlockTime[0]));
+            }
+        }
+
+        if (sale.saleEnd > dexalotUnlockTime && dexalotUnlockTime != 0) {
+            dexalotUnlockTime = sale.saleEnd;
         }
     }
 
@@ -484,15 +499,17 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to extend registration period
      */
     function extendRegistrationPeriod(uint256 timeToAdd) external onlyAdmin {
-        require(
-            registration.registrationTimeEnds.add(timeToAdd) <
-            roundIdToRound[roundIds[0]].startTime,
-            "Registration period overflows sale start."
-        );
 
-        registration.registrationTimeEnds = registration
-            .registrationTimeEnds
-            .add(timeToAdd);
+        uint256 extendedRegistrationTime = registration.registrationTimeEnds.add(timeToAdd);
+        uint256 firstRoundStartTime = roundIdToRound[roundIds[0]].startTime;
+
+        require(block.timestamp < registration.registrationTimeEnds, "Registration ended.");
+
+        if (extendedRegistrationTime > firstRoundStartTime) {
+            postponeSale(extendedRegistrationTime - firstRoundStartTime);
+        }
+
+        registration.registrationTimeEnds = extendedRegistrationTime;
     }
 
     /**
@@ -504,11 +521,11 @@ contract AvalaunchSaleV2 is Initializable {
             block.timestamp < roundIdToRound[roundIds[0]].startTime,
             "1st round already started."
         );
-        require(rounds.length == caps.length, "Invalid array length.");
+        require(rounds.length == caps.length, "Array size mismatch.");
 
         // Set max participation per round
         for (uint256 i = 0; i < rounds.length; i++) {
-            require(caps[i] > 0, "Max participation can't be 0.");
+            require(caps[i] > 0, "Invalid max participation.");
 
             Round storage round = roundIdToRound[rounds[i]];
             round.maxParticipation = caps[i];
@@ -523,16 +540,7 @@ contract AvalaunchSaleV2 is Initializable {
      */
     function depositTokens() external onlyModerator ifUnlocked {
         // Require that setSaleParams was called
-        require(
-            sale.isCreated,
-            "Sale parameters not set."
-        );
-
-        // Require that tokens are not deposited
-        require(
-            !sale.tokensDeposited,
-            "Tokens already deposited."
-        );
+        require(sale.isCreated, "Sale not created.");
 
         // Mark that tokens are deposited
         sale.tokensDeposited = true;
