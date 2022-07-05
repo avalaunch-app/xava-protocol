@@ -466,6 +466,11 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 lastRoundStartTime;
         uint256 lastRoundSaleEndDiff;
         uint256 saleEndFirstUnlockDiff = vestingPortionsUnlockTime[0].sub(sale.saleEnd);
+        uint256 saleEndDexalotUnlockDiff;
+
+        if (dexalotUnlockTime > sale.saleEnd) {
+            saleEndFirstUnlockDiff = dexalotUnlockTime.sub(sale.saleEnd);
+        }
 
         uint256 i = getCurrentRound();
 
@@ -485,31 +490,34 @@ contract AvalaunchSaleV2 is Initializable {
         if (lastRoundStartTime > sale.saleEnd) {
             sale.saleEnd = lastRoundStartTime.add(lastRoundSaleEndDiff);
             if (sale.saleEnd > vestingPortionsUnlockTime[0]) {
-                // TODO: decide on shift type
                 shiftVestingUnlockingTimes(saleEndFirstUnlockDiff.add(sale.saleEnd - vestingPortionsUnlockTime[0]));
             }
         }
 
-        if (sale.saleEnd > dexalotUnlockTime && dexalotUnlockTime != 0) {
-            dexalotUnlockTime = sale.saleEnd;
+        if (sale.saleEnd > dexalotUnlockTime) {
+            dexalotUnlockTime = sale.saleEnd.add(saleEndDexalotUnlockDiff);
         }
     }
 
     /**
      * @notice Function to extend registration period
      */
-    function extendRegistrationPeriod(uint256 timeToAdd) external onlyAdmin {
+    function extendRegistrationPeriod(uint256 startTimestampIncrease, uint256 endTimestampIncrease) external onlyAdmin {
 
-        uint256 extendedRegistrationTime = registration.registrationTimeEnds.add(timeToAdd);
-        uint256 firstRoundStartTime = roundIdToRound[roundIds[0]].startTime;
-
-        require(block.timestamp < registration.registrationTimeEnds, "Registration ended.");
-
-        if (extendedRegistrationTime > firstRoundStartTime) {
-            postponeSale(extendedRegistrationTime - firstRoundStartTime);
+        if (block.timestamp < registration.registrationTimeStarts) {
+            registration.registrationTimeStarts = registration.registrationTimeStarts.add(startTimestampIncrease);
         }
 
-        registration.registrationTimeEnds = extendedRegistrationTime;
+        if (block.timestamp < registration.registrationTimeEnds) {
+            uint256 extendedRegistrationTime = registration.registrationTimeEnds.add(endTimestampIncrease);
+            uint256 firstRoundStartTime = roundIdToRound[roundIds[0]].startTime;
+
+            if (extendedRegistrationTime > firstRoundStartTime) {
+                postponeSale(extendedRegistrationTime - firstRoundStartTime);
+            }
+
+            registration.registrationTimeEnds = extendedRegistrationTime;
+        }
     }
 
     /**
@@ -519,13 +527,13 @@ contract AvalaunchSaleV2 is Initializable {
         // Require that round has not already started
         require(
             block.timestamp < roundIdToRound[roundIds[0]].startTime,
-            "1st round already started."
+            "Rounds already started."
         );
         require(rounds.length == caps.length, "Array size mismatch.");
 
         // Set max participation per round
         for (uint256 i = 0; i < rounds.length; i++) {
-            require(caps[i] > 0, "Invalid max participation.");
+            require(caps[i] > 0, "Invalid cap.");
 
             Round storage round = roundIdToRound[rounds[i]];
             round.maxParticipation = caps[i];
@@ -606,6 +614,8 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 roundId
     ) internal {
 
+        require(roundId == getCurrentRound(), "Invalid round.");
+
         bool isCollateralCaller = msg.sender == address(collateral);
         bool isBooster = roundId == uint8(Rounds.Booster);
 
@@ -622,12 +632,6 @@ contract AvalaunchSaleV2 is Initializable {
             require(isParticipated[user], "Only participated users.");
         }
 
-        // Assert that
-        require(
-            roundId == getCurrentRound(),
-            "Invalid round."
-        );
-
         // Compute the amount of tokens user is buying
         uint256 amountOfTokensBuying =
             (msg.value).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
@@ -637,16 +641,10 @@ contract AvalaunchSaleV2 is Initializable {
             require(amountOfTokensBuying > 0, "Can't buy 0 tokens");
 
             // Check in terms of user allo
-            require(
-                amountOfTokensBuying <= amount,
-                "Exceeding allowance."
-            );
+            require(amountOfTokensBuying <= amount, "Exceeding allowance.");
 
             // Check for overflowing round's max participation
-            require(
-                amount <= roundIdToRound[roundId].maxParticipation,
-                "Crossing max participation."
-            );
+            require(amount <= roundIdToRound[roundId].maxParticipation, "Crossing max participation.");
         }
 
         // Require that amountOfTokensBuying is less than sale token leftover cap
