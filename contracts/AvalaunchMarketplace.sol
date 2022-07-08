@@ -79,7 +79,9 @@ contract AvalaunchMarketplace is Initializable {
         }
         require(msg.value == total, "Invalid AVAX amount sent.");
         // Forward msg.value to portion owner (with message)
-        (bool success, ) = owner.call{value: msg.value}(bytes("Your portion(s) just got sold! Greetings from Avalaunch Team :)"));
+        (bool success, ) = owner.call{value: msg.value}(
+            bytes("Your portion(s) just got sold! Greetings from Avalaunch Team :)")
+        );
         require(success);
     }
 
