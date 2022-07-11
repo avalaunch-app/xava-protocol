@@ -98,8 +98,6 @@ contract AvalaunchSaleV2 is Initializable {
     uint256 public portionVestingPrecision;
     // Max vesting time shift
     uint256 public maxVestingTimeShift;
-    // Registration deposit AVAX, deposited during the registration, returned after the participation.
-    uint256 public registrationDepositAVAX;
     // Accounting total AVAX collected, after sale end admin can withdraw this
     uint256 public registrationFees;
     // Timestamp of sale.tokenPriceInAvax latest update
@@ -112,6 +110,9 @@ contract AvalaunchSaleV2 is Initializable {
     // Empty global arrays for cheaper participation initialization
     PortionStates[] public _emptyPortionStates;
     uint256[] public _emptyUint256;
+
+    // Registration deposit AVAX, deposited during the registration, returned after the participation.
+    uint256 private constant registrationDepositAVAX = 1 ether;
 
     // Events
     event TokensSold(address user, uint256 amount);
@@ -246,8 +247,7 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 _tokenPriceInAVAX,
         uint256 _amountOfTokensToSell,
         uint256 _saleEnd,
-        uint256 _portionVestingPrecision,
-        uint256 _registrationDepositAVAX
+        uint256 _portionVestingPrecision
     )
     external
     onlyAdmin
@@ -270,8 +270,6 @@ contract AvalaunchSaleV2 is Initializable {
         sale.amountOfTokensToSell = _amountOfTokensToSell;
         sale.saleEnd = _saleEnd;
 
-        // Deposit in AVAX, sent during the registration
-        registrationDepositAVAX = _registrationDepositAVAX;
         // Set portion vesting precision
         portionVestingPrecision = _portionVestingPrecision;
 
@@ -403,8 +401,7 @@ contract AvalaunchSaleV2 is Initializable {
     payable
     {
         require(msg.value == registrationDepositAVAX, "Invalid deposit amount.");
-        require(roundId != 0, "Invalid round id.");
-        require(roundId <= uint8(Rounds.Staking), "Invalid round id");
+        require(roundId != 0 && roundId <= uint8(Rounds.Staking), "Invalid round id.");
         require(
             block.timestamp >= registration.registrationTimeStarts &&
             block.timestamp <= registration.registrationTimeEnds,
@@ -660,11 +657,7 @@ contract AvalaunchSaleV2 is Initializable {
         }
 
         // Require that amountOfTokensBuying is less than sale token leftover cap
-        require(
-            amountOfTokensBuying <= sale.amountOfTokensToSell.sub(sale.totalTokensSold),
-            "Out of tokens."
-        );
-
+        require(amountOfTokensBuying <= sale.amountOfTokensToSell.sub(sale.totalTokensSold), "Out of tokens.");
         // Increase amount of sold tokens
         sale.totalTokensSold = sale.totalTokensSold.add(amountOfTokensBuying);
         // Increase amount of AVAX raised
@@ -674,7 +667,7 @@ contract AvalaunchSaleV2 is Initializable {
         if (!isBooster) {
             initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, roundId);
         } else { // if (isBooster)
-            require(p.boostedAmountBought > 0, "Already boosted.");
+            require(p.boostedAmountBought == 0, "Already boosted.");
         }
 
         if (roundId == uint8(Rounds.Staking) || isBooster) { // Every round except validator
@@ -807,7 +800,10 @@ contract AvalaunchSaleV2 is Initializable {
         for(uint256 i = 0; i < portions.length; i++) {
             Participation storage p = userToParticipation[msg.sender];
             uint256 portionId = portions[i];
-            require(p.portionStates[portionId] == PortionStates.Available && p.portionAmounts[portionId] > 0);
+            require(
+                p.portionStates[portionId] == PortionStates.Available && p.portionAmounts[portionId] > 0,
+                "Portion unavailable."
+            );
             p.portionStates[portionId] = PortionStates.OnMarket;
         }
         marketplace.listPortions(msg.sender, portions, prices);
@@ -819,7 +815,7 @@ contract AvalaunchSaleV2 is Initializable {
     function removePortionsFromMarket(uint256[] calldata portions) external {
         for(uint256 i = 0; i < portions.length; i++) {
             Participation storage p = userToParticipation[msg.sender];
-            require(p.portionStates[portions[i]] == PortionStates.OnMarket);
+            require(p.portionStates[portions[i]] == PortionStates.OnMarket, "Portion not on market.");
             p.portionStates[portions[i]] = PortionStates.Available;
         }
         marketplace.removePortions(msg.sender, portions);
@@ -840,9 +836,9 @@ contract AvalaunchSaleV2 is Initializable {
             require(pSeller.portionStates[portionId] == PortionStates.OnMarket, "Portion unavailable.");
             pSeller.portionStates[portionId] = PortionStates.Sold;
             PortionStates portionState = pBuyer.portionStates[portionId];
-            // case 1: portion with same id is on market
-            // case 2: portion is available
-            // case 3: portion is unavailable (withdrawn or sold)
+            /* case 1: portion with same id is on market
+               case 2: portion is available
+               case 3: portion is unavailable (withdrawn or sold) */
             require(portionState != PortionStates.OnMarket, "Can't buy portion with same id you listed on market.");
             if (portionState == PortionStates.Available) {
                 pBuyer.portionAmounts[portionId] += pSeller.portionAmounts[portionId];
