@@ -550,13 +550,16 @@ contract AvalaunchSale is Initializable {
         }
     }
 
+    // Function to asynchronously set the amount of tokens to sell
+    function setAmountOfTokensToSell(uint256 _amountOfTokensToSell) external onlySaleOwner onlyIfGateOpen {
+        require(!sale.tokensDeposited);
+        sale.amountOfTokensToSell = _amountOfTokensToSell;
+    }
+
     // Function for owner to deposit tokens, can be called only once.
-    function depositTokens(uint256 _amountOfTokensToSell) external onlySaleOwner onlyIfGateOpen {
+    function depositTokens() external onlySaleOwner onlyIfGateOpen {
         // Require that setSaleParams was called
         require(sale.isCreated);
-
-        // Override sale.amountOfTokensToSell
-        if (_amountOfTokensToSell > 0) sale.amountOfTokensToSell = _amountOfTokensToSell;
 
         // Require that tokens are not deposited
         require(
