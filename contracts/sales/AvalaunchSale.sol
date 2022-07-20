@@ -551,7 +551,8 @@ contract AvalaunchSale is Initializable {
     }
 
     // Function to asynchronously set the amount of tokens to sell
-    function setAmountOfTokensToSell(uint256 _amountOfTokensToSell) external onlySaleOwner onlyIfGateOpen {
+    function setAmountOfTokensToSell(uint256 _amountOfTokensToSell, uint256 _tokenPriceInUSD) external onlySaleOwner onlyIfGateOpen {
+        sale.tokenPriceInUSD = _tokenPriceInUSD;
         sale.amountOfTokensToSell = _amountOfTokensToSell;
     }
 
