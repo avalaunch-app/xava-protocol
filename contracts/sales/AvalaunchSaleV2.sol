@@ -219,18 +219,18 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to shift vested portion unlock times externally by admin
      * @param timeToShift is amount of time to add to all portion unlock times
      */
-    function shiftVestingUnlockingTimes(uint256 timeToShift) external onlyAdmin {
-        _shiftVestingUnlockingTimes(timeToShift);
+    function shiftVestingUnlockingTimes(uint256 timeToShift, bool shiftAll) external onlyAdmin {
+        _shiftVestingUnlockingTimes(timeToShift, shiftAll);
     }
 
     /**
      * @notice Function to shift vested portion unlock times internally
      * @param timeToShift is amount of time to add to all portion unlock times
      */
-    function _shiftVestingUnlockingTimes(uint256 timeToShift) internal {
+    function _shiftVestingUnlockingTimes(uint256 timeToShift, bool shiftAll) internal {
         require(timeToShift > 0 && timeToShift < maxVestingTimeShift, "Invalid shift time.");
 
-        bool movable;
+        bool movable = shiftAll;
         // Shift the unlock time for each portion
         for (uint256 i = 0; i < numberOfVestedPortions; i++) {
             // Shift only portions that time didn't reach yet
@@ -530,7 +530,7 @@ contract AvalaunchSaleV2 is Initializable {
 
         sale.saleEnd = lastRoundStartTime.add(lastRoundSaleEndDiff);
         if (sale.saleEnd > vestingPortionsUnlockTime[0]) {
-            _shiftVestingUnlockingTimes(saleEndFirstUnlockDiff.add(sale.saleEnd - vestingPortionsUnlockTime[0]));
+            _shiftVestingUnlockingTimes(saleEndFirstUnlockDiff.add(sale.saleEnd - vestingPortionsUnlockTime[0]), true);
         }
 
         if (saleEndDexalotUnlockDiff != 0) dexalotUnlockTime = sale.saleEnd.add(saleEndDexalotUnlockDiff);
