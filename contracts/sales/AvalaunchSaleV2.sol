@@ -465,7 +465,7 @@ contract AvalaunchSaleV2 is Initializable {
         );
         require(lastPriceUpdateTimestamp + 5 minutes < block.timestamp);
         // Set new token price via internal call
-        setNewTokenPrice(price);
+        _setNewTokenPrice(price);
     }
 
     /**
@@ -474,13 +474,13 @@ contract AvalaunchSaleV2 is Initializable {
      */
     function overrideTokenPrice(uint256 price) external onlyModerator ifUnlocked {
         // Set new token price via internal call
-        setNewTokenPrice(price);
+        _setNewTokenPrice(price);
     }
 
     /**
      * @notice Function for internal set of token price in $AVAX
      */
-    function setNewTokenPrice(uint256 price) internal {
+    function _setNewTokenPrice(uint256 price) internal {
         // Update parameters
         sale.tokenPriceInAVAX = price;
         lastPriceUpdateTimestamp = block.timestamp;
@@ -691,7 +691,7 @@ contract AvalaunchSaleV2 is Initializable {
 
         Participation storage p = userToParticipation[user];
         if (!isBooster) {
-            initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, roundId);
+            _initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, roundId);
         } else { // if (isBooster)
             require(p.boostedAmountBought == 0, "Already boosted.");
         }
@@ -740,7 +740,7 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice function to initialize participation structure for user
      */
-    function initParticipationForUser(
+    function _initParticipationForUser(
         address user,
         uint256 amountBought,
         uint256 amountAVAXPaid,
@@ -855,7 +855,7 @@ contract AvalaunchSaleV2 is Initializable {
         Participation storage pSeller = userToParticipation[seller];
         Participation storage pBuyer = userToParticipation[buyer];
         if(pBuyer.amountBought == 0) {
-            initParticipationForUser(buyer, 0, 0, 0, 0);
+            _initParticipationForUser(buyer, 0, 0, 0, 0);
         }
         for(uint256 i = 0; i < portions.length; i++) {
             uint256 portionId = portions[i];
