@@ -216,10 +216,18 @@ contract AvalaunchSaleV2 is Initializable {
     }
 
     /**
-     * @notice Function to shift vested portion unlock times
+     * @notice Function to shift vested portion unlock times externally by admin
      * @param timeToShift is amount of time to add to all portion unlock times
      */
-    function shiftVestingUnlockingTimes(uint256 timeToShift) public onlyAdmin {
+    function shiftVestingUnlockingTimes(uint256 timeToShift) external onlyAdmin {
+        _shiftVestingUnlockingTimes(timeToShift);
+    }
+
+    /**
+     * @notice Function to shift vested portion unlock times internally
+     * @param timeToShift is amount of time to add to all portion unlock times
+     */
+    function _shiftVestingUnlockingTimes(uint256 timeToShift) internal {
         require(timeToShift > 0 && timeToShift < maxVestingTimeShift, "Invalid shift time.");
 
         bool movable;
@@ -483,11 +491,19 @@ contract AvalaunchSaleV2 is Initializable {
     // ------------------------------------ Reached this point --------------------------------------------- //
 
     /**
-     * @notice Function to postpone the sale rounds
+     * @notice Function to postpone the sale rounds externally by admin
+     * @param timeToShift is time increase to rounds start time
+     */
+    function postponeSaleRounds(uint256 timeToShift) external onlyAdmin {
+        _postponeSaleRounds(timeToShift);
+    }
+
+    /**
+     * @notice Function to postpone the sale rounds internally
      * @param timeToShift is time increase to rounds start time
      * @dev Function will also shift vesting unlock times if sale end crosses first unlock time
      */
-    function postponeSaleRounds(uint256 timeToShift) public onlyAdmin {
+    function _postponeSaleRounds(uint256 timeToShift) internal {
         require(block.timestamp < sale.saleEnd);
 
         uint256 lastRoundStartTime;
@@ -514,7 +530,7 @@ contract AvalaunchSaleV2 is Initializable {
 
         sale.saleEnd = lastRoundStartTime.add(lastRoundSaleEndDiff);
         if (sale.saleEnd > vestingPortionsUnlockTime[0]) {
-            shiftVestingUnlockingTimes(saleEndFirstUnlockDiff.add(sale.saleEnd - vestingPortionsUnlockTime[0]));
+            _shiftVestingUnlockingTimes(saleEndFirstUnlockDiff.add(sale.saleEnd - vestingPortionsUnlockTime[0]));
         }
 
         if (saleEndDexalotUnlockDiff != 0) dexalotUnlockTime = sale.saleEnd.add(saleEndDexalotUnlockDiff);
@@ -534,7 +550,7 @@ contract AvalaunchSaleV2 is Initializable {
             uint256 firstRoundStartTime = roundIdToRound[roundIds[0]].startTime;
 
             if (extendedRegistrationTime > firstRoundStartTime) {
-                postponeSaleRounds(extendedRegistrationTime - firstRoundStartTime);
+                _postponeSaleRounds(extendedRegistrationTime - firstRoundStartTime);
             }
 
             registration.registrationTimeEnds = extendedRegistrationTime;
