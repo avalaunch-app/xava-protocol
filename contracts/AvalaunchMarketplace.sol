@@ -56,7 +56,7 @@ contract AvalaunchMarketplace is Initializable {
      */
     function removePortions(address owner, uint256[] calldata portions) external onlyOfficialSales {
         for(uint i = 0; i < portions.length; i++) {
-            userToPortions[owner][msg.sender][portions[i]] = 0;
+            delete userToPortions[owner][msg.sender][portions[i]];
             emit PortionRemoved(owner, msg.sender, portions[i]);
         }
     }

@@ -113,6 +113,7 @@ contract AvalaunchSaleV2 is Initializable {
 
     // Registration deposit AVAX, deposited during the registration, returned after the participation.
     uint256 private constant registrationDepositAVAX = 1 ether;
+    // TODO: make flexible
 
     // Events
     event TokensSold(address user, uint256 amount);
@@ -187,7 +188,6 @@ contract AvalaunchSaleV2 is Initializable {
     {
         require(_unlockingTimes.length == _percents.length);
         require(vestingPercentPerPortion.length == 0 && vestingPortionsUnlockTime.length == 0, "Already set.");
-        require(_maxVestingTimeShift <= 30 days, "Maximal shift is 30 days.");
         require(portionVestingPrecision != 0, "Sale params not set.");
 
         // Set max vesting time shift
