@@ -15,6 +15,10 @@ contract AvalaunchMarketplace is Initializable {
     ISalesFactory public factory;
     // Pointer to admin contract
     IAdmin public admin;
+    // Fee percent taken from sold portions
+    uint256 public feePercentage;
+    // Total fees ever collected
+    uint256 public totalFeesCollected;
     // Mapping for approved sales
     mapping(address => bool) public officialSales;
     // Mapping for market visible portions
@@ -32,8 +36,15 @@ contract AvalaunchMarketplace is Initializable {
         _;
     }
 
-    function initialize(address _admin, address _factory) external initializer {
+    // Restricting calls only to sale admin
+    modifier onlyAdmin() {
+        require(admin.isAdmin(msg.sender), "Only admin.");
+        _;
+    }
+
+    function initialize(address _admin, address _factory, uint256 _feePercentage) external initializer {
         require(_admin != address(0) && _factory != address(0));
+        feePercentage = _feePercentage;
         admin = IAdmin(_admin);
         factory = ISalesFactory(_factory);
     }
@@ -78,10 +89,24 @@ contract AvalaunchMarketplace is Initializable {
             emit PortionSold(owner, msg.sender, sale, portionId, singlePortionPrice);
         }
         require(msg.value == total, "Invalid AVAX amount sent.");
+        // Compute fee amount
+        uint256 feeAmount = msg.value.mul(feePercentage).div(100);
+        // Increase total fees collected
+        totalFeesCollected += feeAmount;
         // Forward msg.value to portion owner (with message)
-        (bool success, ) = owner.call{value: msg.value}(
+        (bool success, ) = owner.call{value: msg.value - feeAmount}(
             bytes("Your portion(s) just got sold! Greetings from Avalaunch Team :)")
         );
+        require(success);
+    }
+
+    /**
+     * @notice Function to withdraw $AVAX from contract
+     * @dev $AVAX is accumulated from sold portion fees
+     */
+    function withdrawAVAX() external onlyAdmin {
+        require(address(this).balance != 0);
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
         require(success);
     }
 
