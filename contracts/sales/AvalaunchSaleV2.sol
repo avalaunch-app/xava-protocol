@@ -98,6 +98,8 @@ contract AvalaunchSaleV2 is Initializable {
     uint256 public portionVestingPrecision;
     // Max vesting time shift
     uint256 public maxVestingTimeShift;
+    // Registration deposit AVAX, deposited during the registration, returned after the participation.
+    uint256 public registrationDepositAVAX;
     // Accounting total AVAX collected, after sale end admin can withdraw this
     uint256 public registrationFees;
     // Timestamp of sale.tokenPriceInAvax latest update
@@ -110,10 +112,6 @@ contract AvalaunchSaleV2 is Initializable {
     // Empty global arrays for cheaper participation initialization
     PortionStates[] private _emptyPortionStates;
     uint256[] private _emptyUint256;
-
-    // Registration deposit AVAX, deposited during the registration, returned after the participation.
-    uint256 private constant registrationDepositAVAX = 1 ether;
-    // TODO: make flexible
 
     // Events
     event TokensSold(address user, uint256 amount);
@@ -259,7 +257,8 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 _tokenPriceInAVAX,
         uint256 _amountOfTokensToSell,
         uint256 _saleEnd,
-        uint256 _portionVestingPrecision
+        uint256 _portionVestingPrecision,
+        uint256 _registrationDepositAVAX
     )
     external
     onlyAdmin
@@ -282,6 +281,7 @@ contract AvalaunchSaleV2 is Initializable {
 
         // Set portion vesting precision
         portionVestingPrecision = _portionVestingPrecision;
+        registrationDepositAVAX = _registrationDepositAVAX;
 
         // Emit event
         emit SaleCreated(
