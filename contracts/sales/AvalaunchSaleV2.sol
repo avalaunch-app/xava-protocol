@@ -31,13 +31,14 @@ contract AvalaunchSaleV2 is Initializable {
     // Pointer to dexalot portfolio contract
     IDexalotPortfolio public dexalotPortfolio;
 
-    // Round Types
-    enum Rounds { None, Validator, Staking, Booster }
+    // Sale Phases
+    enum Phases { Idle, Registration, Validator, Staking, Booster }
     // Portion States
     enum PortionStates { Available, Withdrawn, WithdrawnToDexalot, OnMarket, Sold }
 
     struct Sale {
         IERC20 token;                        // Official sale token
+        Phases phase;                        // Current phase of sale
         bool isCreated;                      // Sale creation marker
         bool earningsWithdrawn;              // Earnings withdrawal marker
         bool leftoverWithdrawn;              // Leftover withdrawal marker
@@ -54,38 +55,23 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 amountBought;                // Amount of tokens bought
         uint256 amountAVAXPaid;              // Amount of $AVAX paid for tokens
         uint256 timeParticipated;            // Timestamp of participation time
-        uint256 roundId;                     // Round user is registered for
+        uint256 phaseId;                     // Phase user is registered for
         uint256[] portionAmounts;            // Amount of tokens for each portion
         PortionStates[] portionStates;       // State of each portion
         uint256 boostedAmountAVAXPaid;       // Amount of $AVAX paid for boost
         uint256 boostedAmountBought;         // Amount of tokens bought with boost
     }
 
-    struct Registration {
-        uint256 registrationTimeStarts;      // Registration start time
-        uint256 registrationTimeEnds;        // Registration end time
-        uint256 numberOfRegistrants;         // Number of registrants
-    }
-
-    struct Round {
-        uint256 startTime;                   // Round start time
-        uint256 maxParticipation;            // Maximum participation allowed
-    }
-
     // Sale state structure
     Sale public sale;
-    // Registration state structure
-    Registration public registration;
-    // Mapping round Id to round
-    mapping(uint256 => Round) public roundIdToRound;
     // Mapping user to his participation
     mapping(address => Participation) public userToParticipation;
     // User to round for which he registered
-    mapping(address => uint256) public addressToRoundRegisteredFor;
-    // mapping if user is participated or not
+    mapping(address => uint256) public addressToPhaseRegisteredFor;
+    // Mapping if user is participated or not
     mapping(address => bool) public isParticipated;
-    // Array storing round ids - starting from 1
-    uint256[] public roundIds;
+    // Number of sale registrants
+    uint256 private numberOfRegistrants;
     // Times when portions are getting unlocked
     uint256[] public vestingPortionsUnlockTime;
     // Percent of the participation user can withdraw
@@ -96,8 +82,6 @@ contract AvalaunchSaleV2 is Initializable {
     uint256 public numberOfVestedPortions;
     // Precision for percent for portion vesting
     uint256 public portionVestingPrecision;
-    // Max vesting time shift
-    uint256 public maxVestingTimeShift;
     // Registration deposit AVAX, deposited during the registration, returned after the participation.
     uint256 public registrationDepositAVAX;
     // Accounting total AVAX collected, after sale end admin can withdraw this
@@ -115,18 +99,15 @@ contract AvalaunchSaleV2 is Initializable {
 
     // Events
     event TokensSold(address user, uint256 amount);
-    event UserRegistered(address user, uint256 roundId);
+    event UserRegistered(address user, uint256 phaseId);
     event NewTokenPriceSet(uint256 newPrice);
-    event MaxParticipationSet(uint256 roundId, uint256 maxParticipation);
-    event TokensWithdrawn(address user, uint256 amount);
     event SaleCreated(address saleOwner, uint256 tokenPriceInAVAX, uint256 amountOfTokensToSell, uint256 saleEnd);
-    event SaleTokenSet(address indexed saleToken, uint256 timestamp);
-    event RegistrationTimeSet(uint256 registrationTimeStarts, uint256 registrationTimeEnds);
-    event RoundAdded(uint256 roundId, uint256 startTime, uint256 maxParticipation);
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
+    event TokensWithdrawn(address user, uint256 amount);
     event TokensWithdrawnToDexalot(address user, uint256 amount);
     event LockActivated(uint256 time);
     event ParticipationBoosted(address user, uint256 amountAVAX, uint256 amountTokens);
+    event PhaseChanged(Phases phase);
 
     // Restricting calls only to sale owner
     modifier onlyModerator() {
@@ -174,12 +155,10 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to set vesting params
      * @param _unlockingTimes is array of unlock times for each portion
      * @param _percents are percents of purchased tokens that are distributed among portions
-     * @param _maxVestingTimeShift is maximal possible time shift for portion unlock times
      */
     function setVestingParams(
         uint256[] calldata _unlockingTimes,
-        uint256[] calldata _percents,
-        uint256 _maxVestingTimeShift
+        uint256[] calldata _percents
     )
     external
     onlyAdmin
@@ -188,8 +167,6 @@ contract AvalaunchSaleV2 is Initializable {
         require(vestingPercentPerPortion.length == 0 && vestingPortionsUnlockTime.length == 0, "Already set.");
         require(portionVestingPrecision != 0, "Sale params not set.");
 
-        // Set max vesting time shift
-        maxVestingTimeShift = _maxVestingTimeShift;
         // Set number of vested portions
         numberOfVestedPortions = _unlockingTimes.length;
         // Create empty arrays with slot number of numberOfVestedPortions
@@ -214,20 +191,11 @@ contract AvalaunchSaleV2 is Initializable {
     }
 
     /**
-     * @notice Function to shift vested portion unlock times externally by admin
+     * @notice Function to shift vested portion unlock times by admin
      * @param timeToShift is amount of time to add to all portion unlock times
      */
-    function shiftVestingUnlockingTimes(uint256 timeToShift, bool shiftAll) external onlyAdmin {
-        _shiftVestingUnlockingTimes(timeToShift, shiftAll);
-    }
-
-    /**
-     * @notice Function to shift vested portion unlock times internally
-     * @param timeToShift is amount of time to add to all portion unlock times
-     */
-    function _shiftVestingUnlockingTimes(uint256 timeToShift, bool shiftAll) internal {
-        require(timeToShift > 0 && timeToShift < maxVestingTimeShift, "Invalid shift time.");
-
+    function shiftVestingUnlockTimes(uint256 timeToShift, bool shiftAll, bool dexalot) external onlyAdmin {
+        require(timeToShift > 0, "Invalid shift time.");
         bool movable = shiftAll;
         // Shift the unlock time for each portion
         for (uint256 i = 0; i < numberOfVestedPortions; i++) {
@@ -239,6 +207,9 @@ contract AvalaunchSaleV2 is Initializable {
                     timeToShift
                 );
             }
+        }
+        if (dexalot) {
+            dexalotUnlockTime = dexalotUnlockTime.add(timeToShift);
         }
     }
 
@@ -293,6 +264,13 @@ contract AvalaunchSaleV2 is Initializable {
     }
 
     /**
+     * @notice Function to shift sale end
+     */
+    function shiftSaleEnd(uint256 timeToShift) external onlyAdmin {
+        sale.saleEnd = sale.saleEnd.add(timeToShift);
+    }
+
+    /**
      * @notice Function to set Dexalot parameters
      * @param _dexalotPortfolio is official Dexalot Portfolio contract address
      * @param _dexalotUnlockTime is unlock time for first portion withdrawal to Dexalot Portfolio
@@ -306,9 +284,16 @@ contract AvalaunchSaleV2 is Initializable {
     onlyAdmin
     ifUnlocked
     {
-        require(_dexalotPortfolio != address(0) && dexalotUnlockTime > sale.saleEnd);
+        require(_dexalotPortfolio != address(0) && dexalotUnlockTime >= sale.saleEnd);
         dexalotPortfolio = IDexalotPortfolio(_dexalotPortfolio);
         dexalotUnlockTime = _dexalotUnlockTime;
+    }
+
+    /**
+     * @notice Function to shift dexalot unlocking time
+     */
+    function shiftDexalotUnlockTime(uint256 timeToShift) external onlyAdmin {
+        dexalotUnlockTime = dexalotUnlockTime.add(timeToShift);
     }
 
     /**
@@ -323,119 +308,43 @@ contract AvalaunchSaleV2 is Initializable {
     onlyAdmin
     ifUnlocked
     {
-        require(address(sale.token) == address(0));
+        require(address(saleToken) != address(0));
         sale.token = IERC20(saleToken);
-        emit SaleTokenSet(saleToken, block.timestamp);
-    }
-
-    /**
-     * @notice Function to set registration period parameters
-     * @param _registrationTimeStarts is timestamp of registration start
-     * @param _registrationTimeEnds is timestamp of registration end
-     */
-    function setRegistrationTime(
-        uint256 _registrationTimeStarts,
-        uint256 _registrationTimeEnds
-    )
-    external
-    onlyAdmin
-    ifUnlocked
-    {
-        // Require that the sale is created and registration timestamps are correct
-        require(sale.isCreated);
-        require(_registrationTimeStarts >= block.timestamp && _registrationTimeEnds > _registrationTimeStarts);
-        if (roundIds.length > 0) require(_registrationTimeEnds < roundIdToRound[roundIds[0]].startTime);
-        require(_registrationTimeEnds < sale.saleEnd);
-
-        // Set registration start and end time
-        registration.registrationTimeStarts = _registrationTimeStarts;
-        registration.registrationTimeEnds = _registrationTimeEnds;
-
-        // Emit event
-        emit RegistrationTimeSet(
-            registration.registrationTimeStarts,
-            registration.registrationTimeEnds
-        );
-    }
-
-    /**
-     * @notice Function to set round configuration for the upcoming sale
-     * @param startTimes are starting times for each round of the sale
-     * @param maxParticipations are maximum allowed participations for each round
-     */
-    function setRounds(
-        uint256[] calldata startTimes,
-        uint256[] calldata maxParticipations
-    )
-    external
-    onlyAdmin
-    {
-        require(startTimes.length == maxParticipations.length);
-        require(sale.isCreated);
-        require(roundIds.length == 0, "Rounds already set.");
-        require(startTimes.length > 0);
-        require(startTimes[0] > registration.registrationTimeEnds);
-        require(startTimes[0] >= block.timestamp);
-
-        uint256 lastTimestamp = 0;
-        // Set rounds and their caps
-        for (uint256 i = 0; i < startTimes.length; i++) {
-            require(startTimes[i] < sale.saleEnd);
-            require(maxParticipations[i] > 0);
-            // Make sure each round is latter than previous
-            require(startTimes[i] > lastTimestamp);
-            lastTimestamp = startTimes[i];
-
-            // Compute round id, starting from 1 (0 is none)
-            uint256 roundId = i + 1;
-            // Push round id to array of ids
-            roundIds.push(roundId);
-            // Create round
-            Round memory round = Round(startTimes[i], maxParticipations[i]);
-            // Map round id to round
-            roundIdToRound[roundId] = round;
-
-            // Emit event
-            emit RoundAdded(roundId, round.startTime, round.maxParticipation);
-        }
     }
 
     /**
      * @notice Function to register for the upcoming sale
      * @param signature is pass for sale registration provided by admins
      * @param signatureExpirationTimestamp is timestamp after which signature is no longer valid
-     * @param roundId is id of round user is registering for
+     * @param phaseId is id of phase user is registering for
      */
     function registerForSale(
         bytes memory signature,
         uint256 signatureExpirationTimestamp,
-        uint256 roundId
+        uint256 phaseId
     )
     external
     payable
     {
         // Sale registration validity checks
         require(msg.value == registrationDepositAVAX, "Invalid deposit amount.");
-        require(roundId != 0 && roundId <= uint8(Rounds.Staking), "Invalid round id.");
-        require(
-            block.timestamp >= registration.registrationTimeStarts &&
-            block.timestamp <= registration.registrationTimeEnds,
-            "Registration is closed."
-        );
+        // Register only for validator or staking phase
+        require(phaseId > uint8(Phases.Registration) && phaseId < uint8(Phases.Booster), "Invalid phase id.");
+        require(sale.phase == Phases.Registration);
         require(block.timestamp <= signatureExpirationTimestamp, "Signature expired.");
-        require(addressToRoundRegisteredFor[msg.sender] == 0, "Already registered.");
+        require(addressToPhaseRegisteredFor[msg.sender] == 0, "Already registered.");
 
         // Make sure signature is signed by admin, with proper parameters
         checkSignatureValidity(
-            keccak256(abi.encodePacked(signatureExpirationTimestamp, msg.sender, roundId, address(this))),
+            keccak256(abi.encodePacked(signatureExpirationTimestamp, msg.sender, phaseId, address(this))),
             signature
         );
 
         // Set user's registration round
-        addressToRoundRegisteredFor[msg.sender] = roundId;
+        addressToPhaseRegisteredFor[msg.sender] = phaseId;
 
         // Locking tokens for participants of staking round until the sale ends
-        if (roundId == uint8(Rounds.Staking)) {
+        if (phaseId == uint8(Phases.Staking)) {
             allocationStaking.setTokensUnlockTime(
                 0,
                 msg.sender,
@@ -443,11 +352,11 @@ contract AvalaunchSaleV2 is Initializable {
             );
         }
         // Increment number of registered users
-        registration.numberOfRegistrants++;
+        numberOfRegistrants++;
         // Increase earnings from registration fees
         registrationFees += msg.value;
         // Emit event
-        emit UserRegistered(msg.sender, roundId);
+        emit UserRegistered(msg.sender, phaseId);
     }
 
     /**
@@ -488,103 +397,6 @@ contract AvalaunchSaleV2 is Initializable {
         emit NewTokenPriceSet(price);
     }
 
-    // ------------------------------------ Reached this point --------------------------------------------- //
-
-    /**
-     * @notice Function to postpone the sale rounds externally by admin
-     * @param timeToShift is time increase to rounds start time
-     */
-    function postponeSaleRounds(uint256 timeToShift) external onlyAdmin {
-        _postponeSaleRounds(timeToShift);
-    }
-
-    /**
-     * @notice Function to postpone the sale rounds internally
-     * @param timeToShift is time increase to rounds start time
-     * @dev Function will also shift vesting unlock times if sale end crosses first unlock time
-     */
-    function _postponeSaleRounds(uint256 timeToShift) internal {
-        require(block.timestamp < sale.saleEnd);
-
-        uint256 lastRoundStartTime;
-        uint256 lastRoundSaleEndDiff;
-        uint256 saleEndDexalotUnlockDiff;
-        uint256 saleEndFirstUnlockDiff = vestingPortionsUnlockTime[0].sub(sale.saleEnd);
-
-        if (dexalotUnlockTime > sale.saleEnd) {
-            saleEndDexalotUnlockDiff = dexalotUnlockTime - sale.saleEnd;
-        }
-
-        uint256 i = getCurrentRound();
-        // Iterate through all registered rounds and postpone them
-        for (; i < roundIds.length; i++) {
-            Round storage round = roundIdToRound[roundIds[i]];
-            uint256 newStartTime = round.startTime.add(timeToShift);
-
-            if ((i + 1) == roundIds.length) {
-                lastRoundSaleEndDiff = sale.saleEnd.sub(round.startTime);
-                lastRoundStartTime = newStartTime;
-            }
-            round.startTime = newStartTime;
-        }
-
-        sale.saleEnd = lastRoundStartTime.add(lastRoundSaleEndDiff);
-        if (sale.saleEnd > vestingPortionsUnlockTime[0]) {
-            _shiftVestingUnlockingTimes(saleEndFirstUnlockDiff.add(sale.saleEnd - vestingPortionsUnlockTime[0]), true);
-        }
-
-        if (saleEndDexalotUnlockDiff != 0) dexalotUnlockTime = sale.saleEnd.add(saleEndDexalotUnlockDiff);
-    }
-
-    /**
-     * @notice Function to extend registration period
-     */
-    function extendRegistrationPeriod(uint256 startTimestampIncrease, uint256 endTimestampIncrease) external onlyAdmin {
-
-        if (startTimestampIncrease > 0 && block.timestamp < registration.registrationTimeStarts) {
-            registration.registrationTimeStarts = registration.registrationTimeStarts.add(startTimestampIncrease);
-        }
-
-        if (endTimestampIncrease > 0 && block.timestamp < registration.registrationTimeEnds) {
-            uint256 extendedRegistrationTime = registration.registrationTimeEnds.add(endTimestampIncrease);
-            uint256 firstRoundStartTime = roundIdToRound[roundIds[0]].startTime;
-
-            if (extendedRegistrationTime > firstRoundStartTime) {
-                _postponeSaleRounds(extendedRegistrationTime - firstRoundStartTime);
-            }
-
-            registration.registrationTimeEnds = extendedRegistrationTime;
-        }
-    }
-
-    /**
-     * @notice Function to set max participation cap per round
-     */
-    function setCapPerRound(
-        uint256[] calldata rounds,
-        uint256[] calldata caps
-    )
-    external
-    onlyAdmin
-    {
-        require(rounds.length == caps.length);
-        // Require that round has not already started
-        require(
-            block.timestamp < roundIdToRound[roundIds[0]].startTime,
-            "Rounds already started."
-        );
-
-        // Set max participation per round
-        for (uint256 i = 0; i < rounds.length; i++) {
-            require(caps[i] > 0, "Invalid cap.");
-
-            Round storage round = roundIdToRound[rounds[i]];
-            round.maxParticipation = caps[i];
-
-            emit MaxParticipationSet(rounds[i], round.maxParticipation);
-        }
-    }
-
     /**
      * @notice Function to deposit sale tokens
      * @dev Only sale moderator may deposit
@@ -611,9 +423,9 @@ contract AvalaunchSaleV2 is Initializable {
         address user,
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId
+        uint256 phaseId
     ) external payable onlyCollateral {
-        _participate(user, amount, amountXavaToBurn, roundId);
+        _participate(user, amount, amountXavaToBurn, phaseId);
     }
 
     /**
@@ -623,7 +435,7 @@ contract AvalaunchSaleV2 is Initializable {
         address user,
         uint256 amountXavaToBurn
     ) external payable onlyCollateral {
-        _participate(user, 0, amountXavaToBurn, uint256(Rounds.Booster));
+        _participate(user, 0, amountXavaToBurn, uint256(Phases.Booster));
     }
 
     /**
@@ -632,16 +444,16 @@ contract AvalaunchSaleV2 is Initializable {
     function participate(
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId,
+        uint256 phaseId,
         bytes calldata signature
     ) external payable {
         require(msg.sender == tx.origin, "Only direct calls.");
         // Make sure admin signature is valid
         checkSignatureValidity(
-            keccak256(abi.encodePacked(msg.sender, amount, amountXavaToBurn, roundId, address(this))),
+            keccak256(abi.encodePacked(msg.sender, amount, amountXavaToBurn, phaseId, address(this))),
             signature
         );
-        _participate(msg.sender, amount, amountXavaToBurn, roundId);
+        _participate(msg.sender, amount, amountXavaToBurn, phaseId);
     }
 
     /**
@@ -651,17 +463,17 @@ contract AvalaunchSaleV2 is Initializable {
         address user,
         uint256 amount,
         uint256 amountXavaToBurn,
-        uint256 roundId
+        uint256 phaseId
     ) internal {
 
-        require(roundId == getCurrentRound(), "Invalid round.");
+        require(phaseId == uint8(sale.phase), "Invalid round.");
 
         bool isCollateralCaller = msg.sender == address(collateral);
-        bool isBooster = roundId == uint8(Rounds.Booster);
+        bool isBooster = phaseId == uint8(Phases.Booster);
 
         if (!isBooster) {
             // User must have registered for the round in advance
-            require(addressToRoundRegisteredFor[user] == roundId, "Not registered for this round.");
+            require(addressToPhaseRegisteredFor[user] == phaseId, "Not registered for this round.");
             // Check user haven't participated before
             require(!isParticipated[user], "Already participated.");
         } else { // if (isBooster)
@@ -678,8 +490,6 @@ contract AvalaunchSaleV2 is Initializable {
             require(amountOfTokensBuying > 0, "Can't buy 0 tokens");
             // Check in terms of user allo
             require(amountOfTokensBuying <= amount, "Exceeding allowance.");
-            // Check for overflowing round's max participation
-            require(amount <= roundIdToRound[roundId].maxParticipation, "Crossing max participation.");
         }
 
         // Require that amountOfTokensBuying is less than sale token leftover cap
@@ -691,12 +501,12 @@ contract AvalaunchSaleV2 is Initializable {
 
         Participation storage p = userToParticipation[user];
         if (!isBooster) {
-            _initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, roundId);
+            _initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, phaseId);
         } else { // if (isBooster)
             require(p.boostedAmountBought == 0, "Already boosted.");
         }
 
-        if (roundId == uint8(Rounds.Staking) || isBooster) { // Every round except validator
+        if (phaseId == uint8(Phases.Staking) || isBooster) { // Every round except validator
             // Burn XAVA from this user
             allocationStaking.redistributeXava(
                 0,
@@ -745,13 +555,13 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 amountBought,
         uint256 amountAVAXPaid,
         uint256 timeParticipated,
-        uint256 roundId
+        uint256 phaseId
     ) internal {
         userToParticipation[user] = Participation({
             amountBought: amountBought,
             amountAVAXPaid: amountAVAXPaid,
             timeParticipated: timeParticipated,
-            roundId: roundId,
+            phaseId: phaseId,
             portionAmounts: _emptyUint256,
             portionStates: _emptyPortionStates,
             boostedAmountAVAXPaid: 0,
@@ -944,26 +754,6 @@ contract AvalaunchSaleV2 is Initializable {
     }
 
     /**
-     * @notice Function to get current active round
-     * @dev Returns zero if sale hasn't start yet, or has already ended
-     */
-    function getCurrentRound() public view returns (uint256) {
-        if (block.timestamp < roundIdToRound[roundIds[0]].startTime || block.timestamp >= sale.saleEnd) {
-            return 0;
-        }
-
-        uint256 i = 0;
-        while (
-            (i + 1) < roundIds.length &&
-            block.timestamp > roundIdToRound[roundIds[i + 1]].startTime
-        ) {
-            i++;
-        }
-
-        return roundIds[i];
-    }
-
-    /**
      * @notice Function to get participation for passed user address
      */
     function getParticipationAmountsAndStates(address user)
@@ -981,7 +771,7 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to get number of registered users for sale
      */
     function getNumberOfRegisteredUsers() external view returns (uint256) {
-        return registration.numberOfRegistrants;
+        return numberOfRegistrants;
     }
 
     /**
@@ -1002,6 +792,25 @@ contract AvalaunchSaleV2 is Initializable {
     }
 
     /**
+     * @notice Function to switch between sale phases by admin
+     */
+    function changePhase(Phases _phase) external onlyAdmin {
+        sale.phase = _phase;
+        emit PhaseChanged(_phase);
+    }
+
+    /**
+     * @notice Function which locks setters after initial configuration
+     * @dev Contract lock can be activated only once and never unlocked
+     */
+    function activateLock() external onlyAdmin ifUnlocked {
+        // Lock the setters
+        isLockOn = true;
+        // Emit relevant event
+        emit LockActivated(block.timestamp);
+    }
+
+    /**
      * @notice Function to parse token symbol as bytes32
      */
     function getTokenSymbolBytes32() internal view returns (bytes32 _symbol) {
@@ -1011,19 +820,6 @@ contract AvalaunchSaleV2 is Initializable {
         assembly {
             _symbol := mload(add(symbol, 32))
         }
-    }
-
-    /**
-     * @notice Function which locks setters after initial configuration
-     * @dev Contract lock can be activated only once and never unlocked
-     */
-    function activateLock(bytes memory signature) external onlyModerator ifUnlocked {
-        // Make sure admin signature is valid
-        checkSignatureValidity(keccak256(abi.encodePacked("Activate lock.", address(this))), signature);
-        // Lock the setters
-        isLockOn = true;
-        // Emit relevant event
-        emit LockActivated(block.timestamp);
     }
 
     /**
