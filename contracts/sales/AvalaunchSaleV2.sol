@@ -38,7 +38,6 @@ contract AvalaunchSaleV2 is Initializable {
 
     struct Sale {
         IERC20 token;                        // Official sale token
-        Phases phase;                        // Current phase of sale
         bool isCreated;                      // Sale creation marker
         bool earningsWithdrawn;              // Earnings withdrawal marker
         bool leftoverWithdrawn;              // Leftover withdrawal marker
@@ -49,6 +48,7 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 totalTokensSold;             // Amount of sold tokens
         uint256 totalAVAXRaised;             // Total AVAX amount raised
         uint256 saleEnd;                     // Sale end timestamp
+        Phases phase;                        // Current phase of sale
     }
 
     struct Participation {
@@ -66,12 +66,12 @@ contract AvalaunchSaleV2 is Initializable {
     Sale public sale;
     // Mapping user to his participation
     mapping(address => Participation) public userToParticipation;
-    // User to round for which he registered
+    // User to phase for which he registered
     mapping(address => uint256) public addressToPhaseRegisteredFor;
     // Mapping if user is participated or not
     mapping(address => bool) public isParticipated;
     // Number of sale registrants
-    uint256 private numberOfRegistrants;
+    uint256 public numberOfRegistrants;
     // Times when portions are getting unlocked
     uint256[] public vestingPortionsUnlockTime;
     // Percent of the participation user can withdraw
@@ -203,14 +203,11 @@ contract AvalaunchSaleV2 is Initializable {
             if (!movable && block.timestamp < vestingPortionsUnlockTime[i]) movable = true;
             // Each portion is after the previous so once movable flag is active all latter portions may be shifted
             if (movable) {
-                vestingPortionsUnlockTime[i] = vestingPortionsUnlockTime[i].add(
-                    timeToShift
-                );
+                vestingPortionsUnlockTime[i] = vestingPortionsUnlockTime[i].add(timeToShift);
             }
         }
-        if (dexalot) {
-            dexalotUnlockTime = dexalotUnlockTime.add(timeToShift);
-        }
+
+        if (dexalot) dexalotUnlockTime = dexalotUnlockTime.add(timeToShift);
     }
 
     /**
@@ -340,10 +337,10 @@ contract AvalaunchSaleV2 is Initializable {
             signature
         );
 
-        // Set user's registration round
+        // Set user's registration phase
         addressToPhaseRegisteredFor[msg.sender] = phaseId;
 
-        // Locking tokens for participants of staking round until the sale ends
+        // Locking tokens for participants of staking phase until the sale ends
         if (phaseId == uint8(Phases.Staking)) {
             allocationStaking.setTokensUnlockTime(
                 0,
@@ -466,14 +463,14 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 phaseId
     ) internal {
 
-        require(phaseId == uint8(sale.phase), "Invalid round.");
+        require(phaseId == uint8(sale.phase), "Invalid phase.");
 
         bool isCollateralCaller = msg.sender == address(collateral);
         bool isBooster = phaseId == uint8(Phases.Booster);
 
         if (!isBooster) {
-            // User must have registered for the round in advance
-            require(addressToPhaseRegisteredFor[user] == phaseId, "Not registered for this round.");
+            // User must have registered for the phase in advance
+            require(addressToPhaseRegisteredFor[user] == phaseId, "Not registered for this phase.");
             // Check user haven't participated before
             require(!isParticipated[user], "Already participated.");
         } else { // if (isBooster)
@@ -506,7 +503,7 @@ contract AvalaunchSaleV2 is Initializable {
             require(p.boostedAmountBought == 0, "Already boosted.");
         }
 
-        if (phaseId == uint8(Phases.Staking) || isBooster) { // Every round except validator
+        if (phaseId == uint8(Phases.Staking) || isBooster) {
             // Burn XAVA from this user
             allocationStaking.redistributeXava(
                 0,
@@ -545,28 +542,6 @@ contract AvalaunchSaleV2 is Initializable {
             // Emit participation boosted event
             emit ParticipationBoosted(user, msg.value, amountOfTokensBuying);
         }
-    }
-
-    /**
-     * @notice function to initialize participation structure for user
-     */
-    function _initParticipationForUser(
-        address user,
-        uint256 amountBought,
-        uint256 amountAVAXPaid,
-        uint256 timeParticipated,
-        uint256 phaseId
-    ) internal {
-        userToParticipation[user] = Participation({
-            amountBought: amountBought,
-            amountAVAXPaid: amountAVAXPaid,
-            timeParticipated: timeParticipated,
-            phaseId: phaseId,
-            portionAmounts: _emptyUint256,
-            portionStates: _emptyPortionStates,
-            boostedAmountAVAXPaid: 0,
-            boostedAmountBought: 0
-        });
     }
 
     /**
@@ -744,16 +719,6 @@ contract AvalaunchSaleV2 is Initializable {
     }
 
     /**
-     * @notice Function to verify admin signed signatures
-     */
-    function checkSignatureValidity(bytes32 hash, bytes memory signature) internal view {
-        require(
-            admin.isAdmin((hash.toEthSignedMessageHash()).recover(signature)),
-            "Invalid signature."
-        );
-    }
-
-    /**
      * @notice Function to get participation for passed user address
      */
     function getParticipationAmountsAndStates(address user)
@@ -765,13 +730,6 @@ contract AvalaunchSaleV2 is Initializable {
             p.portionAmounts,
             p.portionStates
         );
-    }
-
-    /**
-     * @notice Function to get number of registered users for sale
-     */
-    function getNumberOfRegisteredUsers() external view returns (uint256) {
-        return numberOfRegistrants;
     }
 
     /**
@@ -808,6 +766,38 @@ contract AvalaunchSaleV2 is Initializable {
         isLockOn = true;
         // Emit relevant event
         emit LockActivated(block.timestamp);
+    }
+
+    /**
+     * @notice function to initialize participation structure for user
+     */
+    function _initParticipationForUser(
+        address user,
+        uint256 amountBought,
+        uint256 amountAVAXPaid,
+        uint256 timeParticipated,
+        uint256 phaseId
+    ) internal {
+        userToParticipation[user] = Participation({
+        amountBought: amountBought,
+        amountAVAXPaid: amountAVAXPaid,
+        timeParticipated: timeParticipated,
+        phaseId: phaseId,
+        portionAmounts: _emptyUint256,
+        portionStates: _emptyPortionStates,
+        boostedAmountAVAXPaid: 0,
+        boostedAmountBought: 0
+        });
+    }
+
+    /**
+     * @notice Function to verify admin signed signatures
+     */
+    function checkSignatureValidity(bytes32 hash, bytes memory signature) internal view {
+        require(
+            admin.isAdmin((hash.toEthSignedMessageHash()).recover(signature)),
+            "Invalid signature."
+        );
     }
 
     /**
