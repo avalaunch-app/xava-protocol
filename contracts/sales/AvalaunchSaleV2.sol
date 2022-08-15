@@ -38,6 +38,7 @@ contract AvalaunchSaleV2 is Initializable {
 
     struct Sale {
         IERC20 token;                        // Official sale token
+        Phases phase;                        // Current phase of sale
         bool isCreated;                      // Sale creation marker
         bool earningsWithdrawn;              // Earnings withdrawal marker
         bool leftoverWithdrawn;              // Leftover withdrawal marker
@@ -48,7 +49,6 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 totalTokensSold;             // Amount of sold tokens
         uint256 totalAVAXRaised;             // Total AVAX amount raised
         uint256 saleEnd;                     // Sale end timestamp
-        Phases phase;                        // Current phase of sale
     }
 
     struct Participation {
@@ -98,10 +98,10 @@ contract AvalaunchSaleV2 is Initializable {
     uint256[] private _emptyUint256;
 
     // Events
+    event SaleCreated(address saleOwner, uint256 tokenPriceInAVAX, uint256 amountOfTokensToSell, uint256 saleEnd);
     event TokensSold(address user, uint256 amount);
     event UserRegistered(address user, uint256 phaseId);
     event NewTokenPriceSet(uint256 newPrice);
-    event SaleCreated(address saleOwner, uint256 tokenPriceInAVAX, uint256 amountOfTokensToSell, uint256 saleEnd);
     event RegistrationAVAXRefunded(address user, uint256 amountRefunded);
     event TokensWithdrawn(address user, uint256 amount);
     event TokensWithdrawnToDexalot(address user, uint256 amount);
@@ -327,7 +327,7 @@ contract AvalaunchSaleV2 is Initializable {
         require(msg.value == registrationDepositAVAX, "Invalid deposit amount.");
         // Register only for validator or staking phase
         require(phaseId > uint8(Phases.Registration) && phaseId < uint8(Phases.Booster), "Invalid phase id.");
-        require(sale.phase == Phases.Registration);
+        require(sale.phase == Phases.Registration, "Must be called during registration phase.");
         require(block.timestamp <= signatureExpirationTimestamp, "Signature expired.");
         require(addressToPhaseRegisteredFor[msg.sender] == 0, "Already registered.");
 
@@ -473,7 +473,7 @@ contract AvalaunchSaleV2 is Initializable {
             require(addressToPhaseRegisteredFor[user] == phaseId, "Not registered for this phase.");
             // Check user haven't participated before
             require(!isParticipated[user], "Already participated.");
-        } else { // if (isBooster)
+        } else {
             // Check user has participated before
             require(isParticipated[user], "Only participated users.");
         }
@@ -484,7 +484,7 @@ contract AvalaunchSaleV2 is Initializable {
 
         if (!isCollateralCaller) {
             // Must buy more than 0 tokens
-            require(amountOfTokensBuying > 0, "Can't buy 0 tokens");
+            require(amountOfTokensBuying > 0, "Can't buy 0 tokens.");
             // Check in terms of user allo
             require(amountOfTokensBuying <= amount, "Exceeding allowance.");
         }
@@ -499,7 +499,7 @@ contract AvalaunchSaleV2 is Initializable {
         Participation storage p = userToParticipation[user];
         if (!isBooster) {
             _initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, phaseId);
-        } else { // if (isBooster)
+        } else {
             require(p.boostedAmountBought == 0, "Already boosted.");
         }
 
@@ -764,6 +764,7 @@ contract AvalaunchSaleV2 is Initializable {
     function activateLock() external onlyAdmin ifUnlocked {
         // Lock the setters
         isLockOn = true;
+        // TODO: add requirements
         // Emit relevant event
         emit LockActivated(block.timestamp);
     }
@@ -779,14 +780,14 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 phaseId
     ) internal {
         userToParticipation[user] = Participation({
-        amountBought: amountBought,
-        amountAVAXPaid: amountAVAXPaid,
-        timeParticipated: timeParticipated,
-        phaseId: phaseId,
-        portionAmounts: _emptyUint256,
-        portionStates: _emptyPortionStates,
-        boostedAmountAVAXPaid: 0,
-        boostedAmountBought: 0
+            amountBought: amountBought,
+            amountAVAXPaid: amountAVAXPaid,
+            timeParticipated: timeParticipated,
+            phaseId: phaseId,
+            portionAmounts: _emptyUint256,
+            portionStates: _emptyPortionStates,
+            boostedAmountAVAXPaid: 0,
+            boostedAmountBought: 0
         });
     }
 
