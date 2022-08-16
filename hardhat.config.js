@@ -49,7 +49,7 @@ module.exports = {
       accounts: [process.env.PK || testPK]
     },
     staging: {
-      url: 'https://speedy-nodes-nyc.moralis.io/'+process.env.Moralis+'/avalanche/testnet',
+      url: 'https://api.avax-test.network/ext/bc/C/rpc',
       gasPrice: 225000000000,
       chainId: 43113,
       accounts: [process.env.PK || testPK]
