@@ -14,6 +14,8 @@ contract SalesFactory {
     address public allocationStaking;
     // Collateral contract address
     address public collateral;
+    // Moderator wallet address
+    address public moderator;
     // Official sale creation flag
     mapping (address => bool) public isSaleCreatedThroughFactory;
     // Expose so query can be possible only by position as well
@@ -31,11 +33,12 @@ contract SalesFactory {
         _;
     }
 
-    constructor(address _adminContract, address _allocationStaking, address _collateral, address _marketplace) public {
+    constructor(address _adminContract, address _allocationStaking, address _collateral, address _marketplace, address _moderator) public {
         admin = IAdmin(_adminContract);
         marketplace = IAvalaunchMarketplace(_marketplace);
         allocationStaking = _allocationStaking;
         collateral = _collateral;
+        moderator = _moderator;
     }
 
     /// @notice     Set allocation staking contract address
@@ -45,10 +48,7 @@ contract SalesFactory {
     }
 
     /// @notice     Admin function to deploy a new sale
-    function deploySale()
-    external
-    onlyAdmin
-    {
+    function deploySale() external onlyAdmin {
         // Deploy sale clone
         address sale;
         // Inline assembly works only with local vars
@@ -67,7 +67,12 @@ contract SalesFactory {
         require(sale != address(0), "Sale creation failed");
 
         // Initialize sale
-        (bool success, ) = sale.call(abi.encodeWithSignature("initialize(address,address,address)", address(admin), allocationStaking, collateral));
+        (bool success, ) = sale.call(
+            abi.encodeWithSignature(
+                "initialize(address,address,address,address,address)",
+                address(admin), allocationStaking, collateral, address(marketplace), moderator
+            )
+        );
         require(success, "Initialization failed.");
 
         // Mark sale as created through official factory

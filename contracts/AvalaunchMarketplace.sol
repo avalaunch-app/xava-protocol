@@ -75,7 +75,13 @@ contract AvalaunchMarketplace is Initializable {
     /**
      * @notice Function to buy portions from market
      */
-    function buyPortions(address sale, address owner, uint256[] calldata portions) external payable {
+    function buyPortions(
+        address sale,
+        address owner,
+        uint256[] calldata portions,
+        uint256[] calldata prices,
+        bytes calldata signature
+    ) external payable {
         require(officialSales[sale], "Invalid sale address.");
         // Mark portions as sold on sale contract
         IAvalaunchSaleV2(sale).transferPortions(owner, msg.sender, portions);
