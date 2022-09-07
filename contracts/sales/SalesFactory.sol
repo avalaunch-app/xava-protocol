@@ -33,7 +33,13 @@ contract SalesFactory {
         _;
     }
 
-    constructor(address _adminContract, address _allocationStaking, address _collateral, address _marketplace, address _moderator) public {
+    constructor(
+        address _adminContract,
+        address _allocationStaking,
+        address _collateral,
+        address _marketplace,
+        address _moderator
+    ) public {
         require(_adminContract != address(0));
         require(_allocationStaking != address(0));
         require(_collateral != address(0));

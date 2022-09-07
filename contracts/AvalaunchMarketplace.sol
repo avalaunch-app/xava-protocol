@@ -19,6 +19,8 @@ contract AvalaunchMarketplace is Initializable {
     IAdmin public admin;
     // Fee percent taken from sold portions
     uint256 public feePercentage;
+    // Fee precision
+    uint256 public feePrecision;
     // Total fees ever collected
     uint256 public totalFeesCollected;
     // Mapping for approved sales
@@ -44,11 +46,13 @@ contract AvalaunchMarketplace is Initializable {
         _;
     }
 
-    function initialize(address _admin, address _factory, uint256 _feePercentage) external initializer {
+    function initialize(address _admin, address _factory, uint256 _feePercentage, uint256 _feePrecision) external initializer {
         require(_admin != address(0) && _factory != address(0));
-        feePercentage = _feePercentage;
+        require(_feePercentage > 0 && _feePercentage < _feePrecision && _feePrecision >= 100);
         admin = IAdmin(_admin);
         factory = ISalesFactory(_factory);
+        feePercentage = _feePercentage;
+        feePrecision = _feePrecision;
     }
 
     /**
@@ -59,7 +63,7 @@ contract AvalaunchMarketplace is Initializable {
         if (listedUserPortionsPerSale[owner][msg.sender].length == 0 ) {
             uint256 numberOfVestedPortions = IAvalaunchSaleV2(msg.sender).numberOfVestedPortions();
             for (uint i = 0; i < numberOfVestedPortions; i++) {
-            listedUserPortionsPerSale[owner][msg.sender].push(false);
+                listedUserPortionsPerSale[owner][msg.sender].push(false);
             }
         }
         for (uint i = 0; i < portions.length; i++) {
@@ -119,7 +123,7 @@ contract AvalaunchMarketplace is Initializable {
         }
         require(msg.value == total, "Invalid AVAX amount sent.");
         // Compute fee amount
-        uint256 feeAmount = msg.value.mul(feePercentage).div(100);
+        uint256 feeAmount = msg.value.mul(feePercentage).div(feePrecision);
         // Increase total fees collected
         totalFeesCollected += feeAmount;
         // Forward msg.value to portion owner (with message)
@@ -156,5 +160,22 @@ contract AvalaunchMarketplace is Initializable {
             admin.isAdmin((hash.toEthSignedMessageHash()).recover(signature)),
             "Invalid signature."
         );
+    }
+
+    /**
+     * @notice Function to set new factory contract
+     */
+    function setFactory(address _factory) external onlyAdmin {
+        require(_factory != address(factory) && _factory != address(0));
+        factory = ISalesFactory(_factory);
+    }
+
+    /**
+     * @notice Function to set new fee parameters
+     */
+    function setFeeParams(uint256 _percentage, uint256 _precision) external onlyAdmin {
+        require(_percentage > 0 && _percentage < _precision && _precision >= 100);
+        feePercentage = _percentage;
+        feePrecision = _precision;
     }
 }
