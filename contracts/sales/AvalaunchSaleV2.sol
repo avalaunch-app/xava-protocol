@@ -615,8 +615,8 @@ contract AvalaunchSaleV2 is Initializable {
 
     /**
      * @notice Function to add available portions to market
-     * @param Portions are an array of portion ids
-     * @param Prices are an array of portion prices
+     * @param portions are an array of portion ids
+     * @param prices are an array of portion prices
      */
     function addPortionsToMarket(uint256[] calldata portions, uint256[] calldata prices) external {
         require(portions.length == prices.length);
