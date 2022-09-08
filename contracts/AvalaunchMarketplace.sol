@@ -57,6 +57,12 @@ contract AvalaunchMarketplace is Initializable {
 
     /**
      * @notice Function to list user's portions to market
+     * @param owner is user who wants to list portions
+     * @param portions are portion ids of portions user wants to sell
+     * @param prices is array of initial prices per portion
+     * * After portion is listed, its price is settable without contract interaction and will be saved on backend
+     * * Portion prices are later checked on buy function with admin provided expiring signature
+     * @dev approved sale contract is calling marketplace to list user's portions
      */
     function listPortions(address owner, uint256[] calldata portions, uint256[] calldata prices) external onlyOfficialSales {
         require(portions.length == prices.length, "Array size mismatch.");
@@ -157,7 +163,7 @@ contract AvalaunchMarketplace is Initializable {
      */
     function verifySignature(bytes32 hash, bytes memory signature) internal view {
         require(
-            admin.isAdmin((hash.toEthSignedMessageHash()).recover(signature)),
+            admin.isAdmin(hash.toEthSignedMessageHash().recover(signature)),
             "Invalid signature."
         );
     }

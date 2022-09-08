@@ -454,6 +454,13 @@ contract AvalaunchSaleV2 is Initializable {
      * @param amount is maximal amount of tokens allowed for user to buy
      * @param amountXavaToBurn is amount of xava to be burned from user's stake
      * @param phaseId is round phase id user registered for (Validator, Staking or Booster)
+     * @dev Regular participation by direct call is considered usual flow and it is applicable on 2 rounds - Validator and Staking
+     * * Main diff is that on Staking round participation user's $XAVA is getting burned in small amount
+     * * These rounds can be participated automatically too if user signs up for it and deposits $AVAX to Collateral contract
+     * * Collateral contract will be performing automatic participations for users who signed up
+     * * Booster round is 3rd one, available only for users who participated in one of first 2 rounds
+     * * In booster round, it is possible to participate only through collateral, on user's demand
+     * * This function is checking for different cases based on round type (isBooster) and caller (isCollateralCaller)
      */
     function _participate(
         address user,
@@ -461,18 +468,18 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 amountXavaToBurn,
         uint256 phaseId
     ) internal {
-
-        require(phaseId == uint8(sale.phase), "Invalid phase.");
+        // Make sure selected phase is ongoing and is round phase (Validator, Staking, Booster)
+        require(phaseId > 1 && phaseId == uint8(sale.phase), "Invalid phase.");
 
         bool isCollateralCaller = msg.sender == address(collateral);
         bool isBooster = phaseId == uint8(Phases.Booster);
 
-        if (!isBooster) {
+        if (!isBooster) { // Normal flow
             // User must have registered for the phase in advance
             require(addressToPhaseRegisteredFor[user] == phaseId, "Not registered for this phase.");
             // Check user haven't participated before
             require(!isParticipated[user], "Already participated.");
-        } else {
+        } else { // Booster flow
             // Check user has participated before
             require(isParticipated[user], "Only participated users.");
         }
@@ -481,7 +488,7 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 amountOfTokensBuying =
             (msg.value).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
 
-        if (!isCollateralCaller) {
+        if (!isCollateralCaller) { // Non-collateral flow
             // Must buy more than 0 tokens
             require(amountOfTokensBuying > 0, "Can't buy 0 tokens.");
             // Check in terms of user allo
@@ -496,14 +503,16 @@ contract AvalaunchSaleV2 is Initializable {
         sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
 
         Participation storage p = userToParticipation[user];
-        if (!isBooster) {
+        if (!isBooster) { // Normal flow
+            // Initialize user's participation
             _initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, phaseId);
-        } else {
+        } else { // Booster flow
+            // Check that user already participated
             require(p.boostedAmountBought == 0, "Already boosted.");
         }
 
         if (phaseId == uint8(Phases.Staking) || isBooster) {
-            // Burn XAVA from this user
+            // Burn XAVA from user
             allocationStaking.redistributeXava(
                 0,
                 user,
@@ -521,7 +530,7 @@ contract AvalaunchSaleV2 is Initializable {
             p.portionAmounts[i] += lastAmount;
         }
 
-        if (!isBooster) {
+        if (!isBooster) { // Normal flow
             // Mark user is participated
             isParticipated[user] = true;
             // Increment number of participants in the Sale
@@ -533,7 +542,7 @@ contract AvalaunchSaleV2 is Initializable {
             // Trigger events
             emit RegistrationAVAXRefunded(user, registrationDepositAVAX);
             emit TokensSold(user, amountOfTokensBuying);
-        } else {
+        } else { // Booster flow
             // Add msg.value to boosted avax paid
             p.boostedAmountAVAXPaid = msg.value;
             // Add amountOfTokensBuying as boostedAmount
@@ -545,11 +554,14 @@ contract AvalaunchSaleV2 is Initializable {
 
     /**
      * @notice Function to withdraw unlocked portions to wallet or Dexalot portfolio
+     * @dev This function will deal with specific flow differences on withdrawals to wallet or dexalot
+     * * First portion has different unlocking time for regular and dexalot withdraw
      */
     function withdrawMultiplePortions(uint256[] calldata portionIds, bool toDexalot) external {
 
         if (toDexalot) {
             require(address(dexalotPortfolio) != address(0) && dexalotUnlockTime != 0, "Dexalot withdraw not supported.");
+            // Means first portion is unlocked for dexalot
             require(block.timestamp >= dexalotUnlockTime, "Dexalot withdraw locked.");
         }
 
@@ -603,8 +615,8 @@ contract AvalaunchSaleV2 is Initializable {
 
     /**
      * @notice Function to add available portions to market
-     * @param portions are an array of portion ids
-     * @param prices are an array of portion prices
+     * @param Portions are an array of portion ids
+     * @param Prices are an array of portion prices
      */
     function addPortionsToMarket(uint256[] calldata portions, uint256[] calldata prices) external {
         require(portions.length == prices.length);
@@ -634,11 +646,13 @@ contract AvalaunchSaleV2 is Initializable {
 
     /**
      * @notice Function to transfer portions from seller to buyer
+     * @dev Called by marketplace only
      */
     function transferPortions(address seller, address buyer, uint256[] calldata portions) external {
         require(msg.sender == address(marketplace), "Marketplace only.");
         Participation storage pSeller = userToParticipation[seller];
         Participation storage pBuyer = userToParticipation[buyer];
+        // Initialize portions for user if hasn't participated the sale
         if(pBuyer.amountBought == 0) {
             _initParticipationForUser(buyer, 0, 0, 0, 0);
         }
@@ -803,7 +817,7 @@ contract AvalaunchSaleV2 is Initializable {
      */
     function checkSignatureValidity(bytes32 hash, bytes memory signature) internal view {
         require(
-            admin.isAdmin((hash.toEthSignedMessageHash()).recover(signature)),
+            admin.isAdmin(hash.toEthSignedMessageHash().recover(signature)),
             "Invalid signature."
         );
     }
