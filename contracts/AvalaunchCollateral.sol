@@ -24,10 +24,6 @@ contract AvalaunchCollateral is Initializable {
     mapping (address => mapping (address => bool)) public saleAutoBuyers;
     // User to his collateral balance
     mapping (address => uint256) public userBalance;
-    // mapping of markers for user/sale autoBuy execution
-    mapping (bytes32 => bool) public autoBuyMarkers;
-    // mapping of markers for user/sale boost execution
-    mapping (bytes32 => bool) public boostParticipationMarkers;
 
     // AUTOBUY - TYPE / TYPEHASH / MESSAGEHASH
     string public constant AUTOBUY_TYPE = "AutoBuy(string confirmationMessage,address saleAddress)";
@@ -43,6 +39,11 @@ contract AvalaunchCollateral is Initializable {
     string public constant EIP712_DOMAIN = "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)";
     bytes32 public constant EIP712_DOMAIN_TYPEHASH = keccak256(abi.encodePacked(EIP712_DOMAIN));
     bytes32 public DOMAIN_SEPARATOR;
+
+    // mapping of markers for user/sale autoBuy execution
+    mapping (bytes32 => bool) public autoBuyMarkers;
+    // mapping of markers for user/sale boost execution
+    mapping (bytes32 => bool) public boostParticipationMarkers;
 
     event DepositedCollateral(address indexed wallet, uint256 amountDeposited, uint256 timestamp);
     event WithdrawnCollateral(address indexed wallet, uint256 amountWithdrawn, uint256 timestamp);
