@@ -1,6 +1,6 @@
 {
   "mainnet": {
-    "tokenAddress": "0x0000000000000000000000000000000000000000",
+    "tokenAddress": "0xFd538CA3f58dC309dA55B11f007ff53fb4602876",
     "totalTokens": "4687500",
     "tokenPriceInUSD": "0.05333",
     "tokenPriceInAvax": "0.00298934977",
@@ -26,7 +26,7 @@
     ]
   },
   "mainnet-gold": {
-    "tokenAddress": "0x0000000000000000000000000000000000000000",
+    "tokenAddress": "0xFd538CA3f58dC309dA55B11f007ff53fb4602876",
     "totalTokens": "4500000",
     "tokenPriceInUSD": "0.0333",
     "tokenPriceInAvax": "0.00186659192",
