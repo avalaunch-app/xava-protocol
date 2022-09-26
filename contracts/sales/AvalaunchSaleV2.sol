@@ -307,12 +307,12 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to register for the upcoming sale
      * @param signature is pass for sale registration provided by admins
-     * @param signatureExpirationTimestamp is timestamp after which signature is no longer valid
+     * @param sigExpTime is timestamp after which signature is no longer valid
      * @param phaseId is id of phase user is registering for
      */
     function registerForSale(
         bytes memory signature,
-        uint256 signatureExpirationTimestamp,
+        uint256 sigExpTime,
         uint256 phaseId
     )
     external
@@ -323,12 +323,12 @@ contract AvalaunchSaleV2 is Initializable {
         // Register only for validator or staking phase
         require(phaseId > uint8(Phases.Registration) && phaseId < uint8(Phases.Booster), "Invalid phase id.");
         require(sale.phase == Phases.Registration, "Must be called during registration phase.");
-        require(block.timestamp <= signatureExpirationTimestamp, "Signature expired.");
+        require(block.timestamp <= sigExpTime, "Signature expired.");
         require(addressToPhaseRegisteredFor[msg.sender] == 0, "Already registered.");
 
         // Make sure signature is signed by admin, with proper parameters
-        checkSignatureValidity(
-            keccak256(abi.encodePacked(signatureExpirationTimestamp, msg.sender, phaseId, address(this))),
+        verifySignature(
+            keccak256(abi.encodePacked(sigExpTime, msg.sender, phaseId, address(this), "registerForSale")),
             signature
         );
 
@@ -441,8 +441,8 @@ contract AvalaunchSaleV2 is Initializable {
     ) external payable {
         require(msg.sender == tx.origin, "Only direct calls.");
         // Make sure admin signature is valid
-        checkSignatureValidity(
-            keccak256(abi.encodePacked(msg.sender, amount, amountXavaToBurn, phaseId, address(this))),
+        verifySignature(
+            keccak256(abi.encodePacked(msg.sender, amount, amountXavaToBurn, phaseId, address(this), "participate")),
             signature
         );
         _participate(msg.sender, amount, amountXavaToBurn, phaseId);
@@ -617,6 +617,8 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to add available portions to market
      * @param portions are an array of portion ids
      * @param prices are an array of portion prices
+     * @param signature is admin signed message which acts as an approval for this action
+     * @param sigExpTime is signature expiration timestamp
      */
     function addPortionsToMarket(
         uint256[] calldata portions,
@@ -624,11 +626,11 @@ contract AvalaunchSaleV2 is Initializable {
         bytes calldata signature,
         uint256 sigExpTime
     ) external {
-        checkSignatureValidity(
-            keccak256(abi.encodePacked(msg.sender, address(this), portions, prices, sigExpTime)), 
+        verifySignature(
+            keccak256(abi.encodePacked(msg.sender, address(this), portions, prices, sigExpTime, "addPortionsToMarket")), 
             signature
         );
-        require(block.timestamp < sigExpTime, "Signature expired.");
+        require(block.timestamp <= sigExpTime, "Signature expired.");
         require(portions.length == prices.length);
         for(uint256 i = 0; i < portions.length; i++) {
             Participation storage p = userToParticipation[msg.sender];
@@ -644,17 +646,18 @@ contract AvalaunchSaleV2 is Initializable {
 
     /**
      * @notice Function to remove portions from market
+     * @param portions is array of sale portions user wants to remove from market
      */
     function removePortionsFromMarket(
         uint256[] calldata portions, 
         bytes calldata signature, 
         uint256 sigExpTime
     ) external {
-        checkSignatureValidity(
-            keccak256(abi.encodePacked(msg.sender, address(this), portions, sigExpTime)), 
+        verifySignature(
+            keccak256(abi.encodePacked(msg.sender, address(this), portions, sigExpTime, "removePortionsFromMarket")), 
             signature
         );
-        require(block.timestamp < sigExpTime, "Signature expired.");
+        require(block.timestamp <= sigExpTime, "Signature expired.");
         for(uint256 i = 0; i < portions.length; i++) {
             Participation storage p = userToParticipation[msg.sender];
             require(p.portionStates[portions[i]] == PortionStates.OnMarket, "Portion not on market.");
@@ -834,7 +837,7 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to verify admin signed signatures
      */
-    function checkSignatureValidity(bytes32 hash, bytes memory signature) internal view {
+    function verifySignature(bytes32 hash, bytes memory signature) internal view {
         require(
             admin.isAdmin(hash.toEthSignedMessageHash().recover(signature)),
             "Invalid signature."

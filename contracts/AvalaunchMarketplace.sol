@@ -108,7 +108,7 @@ contract AvalaunchMarketplace is Initializable {
         bytes calldata signature
     ) external payable {
         require(officialSales[sale], "Invalid sale address.");
-        bytes32 msgHash = keccak256(abi.encodePacked(owner, sale, portions, prices, sigExpTimestamp));
+        bytes32 msgHash = keccak256(abi.encodePacked(owner, sale, portions, prices, sigExpTimestamp, "buyPortions"));
         // Make sure provided signature is signed by admin and containing valid data
         verifySignature(msgHash, signature);
         // Make sure signature is used in a valid timeframe
