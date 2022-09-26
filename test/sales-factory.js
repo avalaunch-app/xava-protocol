@@ -265,99 +265,69 @@ describe("SalesFactory", function() {
         expect(await SalesFactory.getLastDeployedSale()).to.equal(ZERO_ADDRESS);
       });
 
-      it("Should return only first sale", async function() {
-        // Given
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
+      describe("With 3 deployed sales", async function() {
+        
+        beforeEach(async function() {
+          // Given
+          await SalesFactory.deploySale();
+          await SalesFactory.deploySale();
+          await SalesFactory.deploySale();
+        });
 
-        // When
-        const sales = await SalesFactory.getAllSales(0, 0);
-
-        // Then
-        expect(sales.length).to.equal(1);
-        expect(sales[0]).to.equal(await SalesFactory.allSales(0));
-      });
-
-      it("Should return only last sale", async function() {
-        // Given
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-
-        // When
-        const sales = await SalesFactory.getAllSales(2, 2);
-
-        // Then
-        expect(sales.length).to.equal(1);
-        expect(sales[0]).to.equal(await SalesFactory.allSales(2));
-      });
-
-      it("Should return all sales", async function() {
-        // Given
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-
-        // When
-        const sales = await SalesFactory.getAllSales(0, 2);
-
-        // Then
-        expect(sales.length).to.equal(3);
-        expect(sales[0]).to.equal(await SalesFactory.allSales(0));
-        expect(sales[1]).to.equal(await SalesFactory.allSales(1));
-        expect(sales[2]).to.equal(await SalesFactory.allSales(2));
-      });
-
-      xit("Should not return 0 sales", async function() {
-        // Given
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-
-        // Then
-        await expect(SalesFactory.getAllSales(2, 2)).to.be.reverted;
-      });
-
-      it("Should not return sales if start index is higher than end index", async function() {
-        // Given
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-
-        // Then
-        await expect(SalesFactory.getAllSales(1, 0)).to.be.reverted;
-      });
-
-      it("Should not allow negative start index", async function() {
-        // Given
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-
-        // Then
-        await expect(SalesFactory.getAllSales(-5, 2)).to.be.reverted;
-      });
-
-      it("Should not allow end index out of bounds", async function() {
-        // Given
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-
-        // Then
-        await expect(SalesFactory.getAllSales(1, 12)).to.be.reverted;
-      });
-
-      it("Should not allow start index out of bounds", async function() {
-        // Given
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-        await SalesFactory.deploySale();
-
-        // Then
-        await expect(SalesFactory.getAllSales(12, 13)).to.be.reverted;
-      });
+        it("Should return only first sale", async function() {
+          // When
+          const sales = await SalesFactory.getAllSales(0, 0);
+  
+          // Then
+          expect(sales.length).to.equal(1);
+          expect(sales[0]).to.equal(await SalesFactory.allSales(0));
+        });
+  
+        it("Should return only last sale", async function() {
+          // When
+          const sales = await SalesFactory.getAllSales(2, 2);
+  
+          // Then
+          expect(sales.length).to.equal(1);
+          expect(sales[0]).to.equal(await SalesFactory.allSales(2));
+        });
+  
+        it("Should return all sales", async function() {
+          // When
+          const sales = await SalesFactory.getAllSales(0, 2);
+  
+          // Then
+          expect(sales.length).to.equal(3);
+          expect(sales[0]).to.equal(await SalesFactory.allSales(0));
+          expect(sales[1]).to.equal(await SalesFactory.allSales(1));
+          expect(sales[2]).to.equal(await SalesFactory.allSales(2));
+        });
+  
+        xit("Should not return 0 sales", async function() {
+          // Then
+          await expect(SalesFactory.getAllSales(2, 2)).to.be.reverted;
+        });
+  
+        it("Should not return sales if start index is higher than end index", async function() {
+          // Then
+          await expect(SalesFactory.getAllSales(1, 0)).to.be.reverted;
+        });
+  
+        it("Should not allow negative start index", async function() {
+          // Then
+          await expect(SalesFactory.getAllSales(-5, 2)).to.be.reverted;
+        });
+  
+        it("Should not allow end index out of bounds", async function() {
+          // Then
+          await expect(SalesFactory.getAllSales(1, 12)).to.be.reverted;
+        });
+  
+        it("Should not allow start index out of bounds", async function() {
+          // Then
+          await expect(SalesFactory.getAllSales(12, 13)).to.be.reverted;
+        });
+      })
     });
   });
 });
