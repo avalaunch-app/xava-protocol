@@ -616,22 +616,20 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to add available portions to market
      * @param portions are an array of portion ids
-     * @param prices are an array of portion prices
      * @param signature is admin signed message which acts as an approval for this action
      * @param sigExpTime is signature expiration timestamp
+     * @dev prices for portions are being set through be - afterwards be will provide user with signature
      */
     function addPortionsToMarket(
         uint256[] calldata portions,
-        uint256[] calldata prices,
         bytes calldata signature,
         uint256 sigExpTime
     ) external {
         verifySignature(
-            keccak256(abi.encodePacked(msg.sender, address(this), portions, prices, sigExpTime, "addPortionsToMarket")), 
+            keccak256(abi.encodePacked(msg.sender, address(this), portions, sigExpTime, "addPortionsToMarket")), 
             signature
         );
         require(block.timestamp <= sigExpTime, "Signature expired.");
-        require(portions.length == prices.length);
         for(uint256 i = 0; i < portions.length; i++) {
             Participation storage p = userToParticipation[msg.sender];
             uint256 portionId = portions[i];
@@ -641,12 +639,13 @@ contract AvalaunchSaleV2 is Initializable {
             );
             p.portionStates[portionId] = PortionStates.OnMarket;
         }
-        marketplace.listPortions(msg.sender, portions, prices);
+        marketplace.listPortions(msg.sender, portions);
     }
 
     /**
      * @notice Function to remove portions from market
      * @param portions is array of sale portions user wants to remove from market
+     * @dev be must confirm action by giving user necessary signature
      */
     function removePortionsFromMarket(
         uint256[] calldata portions, 

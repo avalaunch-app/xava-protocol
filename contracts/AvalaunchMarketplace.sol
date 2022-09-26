@@ -29,7 +29,7 @@ contract AvalaunchMarketplace is Initializable {
     mapping(address => mapping(address => bool[])) public listedUserPortionsPerSale;
 
     // Events
-    event PortionListed(address portionOwner, address saleAddress, uint256 portionId, uint256 initialPortionPrice);
+    event PortionListed(address portionOwner, address saleAddress, uint256 portionId);
     event PortionRemoved(address portionOwner, address saleAddress, uint256 portionId);
     event PortionSold(address portionSeller, address portionBuyer, address saleAddress, uint256 portionId, uint256 portionPrice);
     event SaleApproved(address indexed sale, uint256 indexed timestamp);
@@ -59,13 +59,11 @@ contract AvalaunchMarketplace is Initializable {
      * @notice Function to list user's portions to market
      * @param owner is user who wants to list portions
      * @param portions are portion ids of portions user wants to sell
-     * @param prices is array of initial prices per portion
-     * * After portion is listed, its price is settable without contract interaction and will be saved on backend
-     * * Portion prices are later checked on buy function with admin provided expiring signature
      * @dev approved sale contract is calling marketplace to list user's portions
+     * * After portion is listed, its price is changeable without contract interaction and will be saved on backend
+     * * Portion prices are later checked on buy function with admin provided expirable signature
      */
-    function listPortions(address owner, uint256[] calldata portions, uint256[] calldata prices) external onlyOfficialSales {
-        require(portions.length == prices.length, "Array size mismatch.");
+    function listPortions(address owner, uint256[] calldata portions) external onlyOfficialSales {
         if (listedUserPortionsPerSale[owner][msg.sender].length == 0 ) {
             uint256 numberOfVestedPortions = IAvalaunchSaleV2(msg.sender).numberOfVestedPortions();
             for (uint i = 0; i < numberOfVestedPortions; i++) {
@@ -76,7 +74,7 @@ contract AvalaunchMarketplace is Initializable {
             uint256 portionId = portions[i];
             require(listedUserPortionsPerSale[owner][msg.sender][portionId] == false, "Portion already listed.");
             listedUserPortionsPerSale[owner][msg.sender][portionId] = true;
-            emit PortionListed(owner, msg.sender, portionId, prices[i]);
+            emit PortionListed(owner, msg.sender, portionId);
         }
     }
 
