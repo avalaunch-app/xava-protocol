@@ -618,7 +618,17 @@ contract AvalaunchSaleV2 is Initializable {
      * @param portions are an array of portion ids
      * @param prices are an array of portion prices
      */
-    function addPortionsToMarket(uint256[] calldata portions, uint256[] calldata prices) external {
+    function addPortionsToMarket(
+        uint256[] calldata portions,
+        uint256[] calldata prices,
+        bytes calldata signature,
+        uint256 sigExpTime
+    ) external {
+        checkSignatureValidity(
+            keccak256(abi.encodePacked(msg.sender, address(this), portions, prices, sigExpTime)), 
+            signature
+        );
+        require(block.timestamp < sigExpTime, "Signature expired.");
         require(portions.length == prices.length);
         for(uint256 i = 0; i < portions.length; i++) {
             Participation storage p = userToParticipation[msg.sender];
@@ -635,7 +645,16 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to remove portions from market
      */
-    function removePortionsFromMarket(uint256[] calldata portions) external {
+    function removePortionsFromMarket(
+        uint256[] calldata portions, 
+        bytes calldata signature, 
+        uint256 sigExpTime
+    ) external {
+        checkSignatureValidity(
+            keccak256(abi.encodePacked(msg.sender, address(this), portions, sigExpTime)), 
+            signature
+        );
+        require(block.timestamp < sigExpTime, "Signature expired.");
         for(uint256 i = 0; i < portions.length; i++) {
             Participation storage p = userToParticipation[msg.sender];
             require(p.portionStates[portions[i]] == PortionStates.OnMarket, "Portion not on market.");
