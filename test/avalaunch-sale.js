@@ -3,7 +3,7 @@ const { expect } = require("chai");
 const ethUtil = require("ethereumjs-util")
 const {BigNumber} = require("ethers");
 
-describe("AvalaunchSale", function() {
+xdescribe("AvalaunchSale", function() {
 
   let Admin;
   let Collateral;
