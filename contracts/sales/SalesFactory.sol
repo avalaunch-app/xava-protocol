@@ -41,9 +41,7 @@ contract SalesFactory {
         address _moderator
     ) public {
         require(_adminContract != address(0));
-        require(_allocationStaking != address(0));
         require(_collateral != address(0));
-        require(_marketplace != address(0));
         require(_moderator != address(0));
 
         admin = IAdmin(_adminContract);
@@ -57,6 +55,12 @@ contract SalesFactory {
     function setAllocationStaking(address _allocationStaking) external onlyAdmin {
         require(_allocationStaking != address(0));
         allocationStaking = _allocationStaking;
+    }
+
+    /// @notice     Set official marketplace contract
+    function setAvalaunchMarketplace(address _marketplace) external onlyAdmin {
+        require(_marketplace != address(0));
+        marketplace = IAvalaunchMarketplace(_marketplace);
     }
 
     /// @notice     Admin function to deploy a new sale
