@@ -96,7 +96,7 @@ const main = async () => {
         dexalotUnlockingTime
     });
 
-    const marketplace = await hre.ethers.getContractAt("AvalaunchMarketplace", contracts['AvalaunchMarketplace']);
+    const marketplace = await hre.ethers.getContractAt("AvalaunchMarketplace", contracts['AvalaunchMarketplaceProxy']);
     await marketplace.approveSale(sale.address);
     console.log(' - Sale approved on marketplace');
 
