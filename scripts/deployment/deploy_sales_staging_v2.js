@@ -100,10 +100,10 @@ const main = async () => {
     await marketplace.approveSale(sale.address);
     console.log(' - Sale approved on marketplace');
 
-    // const collateral = await hre.ethers.getContractAt("AvalaunchCollateral", contracts['AvalaunchCollateralProxy']);
-    // await collateral.approveSale(sale.address);
-    // console.log(' - Sale approved on collateral');
-    console.log(boldOut('Make sure sale is approved on collateral!')); // Needs to be done from different wallet
+    const collateral = await hre.ethers.getContractAt("AvalaunchCollateral", contracts['AvalaunchCollateralProxy']);
+    await collateral.approveSale(sale.address);
+    console.log(' - Sale approved on collateral');
+
     console.log(boldOut('Done!'));
 }
 
