@@ -9,6 +9,7 @@ const FEE_PRECISION = 100;
 const START_TIMESTAMP_DELTA = 600;
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
 const PORTION_VESTING_PRECISION = 10000;
 const REGISTRATION_DEPOSIT_AVAX = ethers.utils.parseEther('1').toString();
 const TOTAL_SALE_TOKENS = ethers.utils.parseEther("1000000").toString();
@@ -137,6 +138,16 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             );
         });
 
+        it("Should set different sale token, and then re-set old one", async () => {
+            await sale.setSaleToken(ONE_ADDRESS);
+            let saleDetails = await sale.sale();
+            expect(saleDetails.token).to.equal(ONE_ADDRESS);
+            // Return to a valid token value
+            await sale.setSaleToken(saleToken.address);
+            saleDetails = await sale.sale();
+            expect(saleDetails.token).to.equal(saleToken.address);
+        });
+
         it("Should revert set vesting params with invalid percents", async () => {
             percents[4] = 1999;
 
@@ -155,6 +166,11 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             );
         });
 
+        it("Should get vesting info", async () => {
+            const vestingInfo = await sale.getVestingInfo();
+            //console.log(vestingInfo);
+        });
+
         it("Should not set vesting params for the second time", async () => {
             await expect(sale.setVestingParams(
                 unlockTimes,
@@ -169,19 +185,77 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             expect(await saleToken.balanceOf(sale.address)).to.be.equal(TOTAL_SALE_TOKENS);
             expect(await saleToken.balanceOf(mod.address)).to.be.equal(0);
         });
+
+        it("Should not set new sale token after deposit", async () => {
+            await expect(sale.setSaleToken(saleToken.address))
+                .to.be.revertedWith("Tokens already deposited.");
+        });
+    });
+
+    context("Update Token Price", async () => {
+        it("Should update token price the regular way", async () => {
+            const newPrice = ethers.utils.parseEther("0.00006").toString();
+            await sale.updateTokenPriceInAVAX(newPrice);
+            let saleDetails = await sale.sale();
+            expect(saleDetails.tokenPriceInAVAX).to.equal(newPrice);
+        });
+
+        it("Should not set price if outside of allowed difference", async () => {
+            const newPrice = ethers.utils.parseEther("0.0001").toString();
+            await expect(sale.updateTokenPriceInAVAX(newPrice))
+                .to.be.revertedWith("Price out of range.");
+        });
+
+        it("Should override token price", async () => {
+            const newPrice = ethers.utils.parseEther("0.0001").toString();
+            await sale.overrideTokenPrice(newPrice);
+            let saleDetails = await sale.sale();
+            expect(saleDetails.tokenPriceInAVAX).to.equal(newPrice);
+        });
+
+        after(async () => {
+            // Revert to default price
+            await sale.overrideTokenPrice(SALE_TOKEN_PRICE_IN_AVAX);
+            let saleDetails = await sale.sale();
+            expect(saleDetails.tokenPriceInAVAX).to.equal(SALE_TOKEN_PRICE_IN_AVAX);
+        });
+    });
+
+    context("Lock activation", async () => {
+        it("Should not activate lock if caller is not admin", async () => {
+            await expect(sale.connect(alice).activateLock()).to.be.revertedWith("Only admin.");
+        });
+
+        it("Should activate lock", async () => {
+            expect(await sale.activateLock()).to.emit(sale, "LockActivated");
+        });
+
+        it("Should not activate lock if it is already active", async () => {
+            await expect(sale.activateLock()).to.be.revertedWith("Lock active.");
+        });
     });
 
     context("Registration", async () => {
-
         before(async () => {
             // Change from Idle to Registration Phase
             await sale.connect(deployer).changePhase(1);
         });
 
-        it("Register for sale", async () => {
+        it("Should register for sale", async () => {
             const sigExpTime = await getCurrentBlockTimestamp() + 90;
             const sig = await signRegistration(sigExpTime, alice.address, 3, sale.address);
             await sale.connect(alice).registerForSale(sig, sigExpTime, 3, {value: REGISTRATION_DEPOSIT_AVAX});
+        });
+
+        it("Should not register for sale outside of phase", async () => {
+            await sale.connect(deployer).changePhase(0);
+
+            const sigExpTime = await getCurrentBlockTimestamp() + 90;
+            const sig = await signRegistration(sigExpTime, bob.address, 3, sale.address);
+            await expect(sale.connect(bob).registerForSale(sig, sigExpTime, 3, {value: REGISTRATION_DEPOSIT_AVAX}))
+                .to.be.revertedWith("Must be called during registration phase.");
+
+            await sale.connect(deployer).changePhase(1);
         });
     });
 });

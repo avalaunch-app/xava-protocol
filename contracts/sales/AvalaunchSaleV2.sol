@@ -301,6 +301,7 @@ contract AvalaunchSaleV2 is Initializable {
     ifUnlocked
     {
         require(address(saleToken) != address(0));
+        require(!sale.tokensDeposited, "Tokens already deposited.");
         sale.token = IERC20(saleToken);
     }
 
