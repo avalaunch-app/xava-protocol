@@ -1,7 +1,5 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
-const ethUtil = require("ethereumjs-util");
-
 
 const REWARDS_PER_SECOND = ethers.utils.parseUnits("0.005");
 const FEE_PERCENT = 2;
@@ -232,6 +230,30 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
 
         it("Should not activate lock if it is already active", async () => {
             await expect(sale.activateLock()).to.be.revertedWith("Lock active.");
+        });
+    });
+
+    context("Marketplace setters", async () => {
+
+        it("Should set new sales factory on marketplace", async () => {
+            await marketplace.setFactory(ONE_ADDRESS);
+            expect(await marketplace.factory()).to.equal(ONE_ADDRESS);
+        });
+
+        it("Should set new fee params on marketplace", async () => {
+            await marketplace.setFeeParams(30, 1000);
+            expect(await marketplace.feePercentage()).to.equal(30);
+            expect(await marketplace.feePrecision()).to.equal(1000);
+        });
+
+        // Revert states to original
+        after(async () => {
+            await marketplace.setFactory(salesFactory.address);
+            expect(await marketplace.factory()).to.equal(salesFactory.address);
+
+            await marketplace.setFeeParams(FEE_PERCENT, FEE_PRECISION);
+            expect(await marketplace.feePercentage()).to.equal(FEE_PERCENT);
+            expect(await marketplace.feePrecision()).to.equal(FEE_PRECISION);
         });
     });
 
