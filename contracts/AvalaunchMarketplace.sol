@@ -31,7 +31,7 @@ contract AvalaunchMarketplace is Initializable {
     // Events
     event PortionListed(address portionOwner, address saleAddress, uint256 portionId);
     event PortionRemoved(address portionOwner, address saleAddress, uint256 portionId);
-    event PortionSold(address portionSeller, address portionBuyer, address saleAddress, uint256 portionId, uint256 portionPrice);
+    event PortionSold(address portionSeller, address portionBuyer, address saleAddress, uint256 portionId);
     event SaleApproved(address indexed sale, uint256 indexed timestamp);
 
     // Modifier to receive calls only from official sale contracts
@@ -94,38 +94,39 @@ contract AvalaunchMarketplace is Initializable {
      * @param owner is account which owns the portions
      * @param sigExpTimestamp is signature expiration timestamp
      * @param portions is array of portion ids function caller wants to buy
-     * @param prices is array of price values for portions
+     * @param priceSum is sum of all portion prices
      * @param signature is admin signed data hash which confirms validity of action
      */
     function buyPortions(
         address sale,
         address owner,
         uint256 sigExpTimestamp,
+        uint256 priceSum,
         uint256[] calldata portions,
-        uint256[] calldata prices,
         bytes calldata signature
     ) external payable {
+        // Require that sale address provided is approved by modifier
         require(officialSales[sale], "Invalid sale address.");
-        bytes32 msgHash = keccak256(abi.encodePacked(owner, sale, portions, prices, sigExpTimestamp, "buyPortions"));
+        // Compute signed message hash
+        bytes32 msgHash = keccak256(abi.encodePacked(owner, sale, portions, priceSum, sigExpTimestamp, "buyPortions"));
         // Make sure provided signature is signed by admin and containing valid data
         verifySignature(msgHash, signature);
+        // Require that msg.value is matching sum of all portion prices
+        require(msg.value == priceSum, "Invalid AVAX amount sent.");
         // Make sure signature is used in a valid timeframe
         require(block.timestamp <= sigExpTimestamp, "Signature expired.");
-        // Mark portions as sold on sale contract
-        IAvalaunchSaleV2(sale).transferPortions(owner, msg.sender, portions);
-        uint256 total;
         // Compute total amount to be paid for selected portions
         for(uint i = 0; i < portions.length; i++) {
             uint256 portionId = portions[i];
             // Make sure portion is for sale
             require(listedUserPortionsPerSale[owner][sale][portionId] == true, "Portion not for sale.");
-            total = total.add(prices[i]);
             // Mark portion as 'not for sale'
             listedUserPortionsPerSale[owner][sale][portionId] = false;
             // Trigger relevant event
-            emit PortionSold(owner, msg.sender, sale, portionId, prices[i]);
+            emit PortionSold(owner, msg.sender, sale, portionId);
         }
-        require(msg.value == total, "Invalid AVAX amount sent.");
+        // Make portion transfer state changes on sale contract
+        IAvalaunchSaleV2(sale).transferPortions(owner, msg.sender, portions);
         // Compute fee amount
         uint256 feeAmount = msg.value.mul(feePercentage).div(feePrecision);
         // Increase total fees collected
