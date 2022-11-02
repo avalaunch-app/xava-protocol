@@ -105,21 +105,21 @@ contract AvalaunchMarketplace is Initializable {
         uint256[] calldata portions,
         bytes calldata signature
     ) external payable {
-        // Require that sale address provided is approved by modifier
+        // Require that sale address provided is approved by moderator
         require(officialSales[sale], "Invalid sale address.");
         // Compute signed message hash
         bytes32 msgHash = keccak256(abi.encodePacked(owner, sale, portions, priceSum, sigExpTimestamp, "buyPortions"));
         // Make sure provided signature is signed by admin and containing valid data
         verifySignature(msgHash, signature);
-        // Require that msg.value is matching sum of all portion prices
-        require(msg.value == priceSum, "Invalid AVAX amount sent.");
         // Make sure signature is used in a valid timeframe
         require(block.timestamp <= sigExpTimestamp, "Signature expired.");
-        // Compute total amount to be paid for selected portions
+        // Require that msg.value is matching sum of all portion prices
+        require(msg.value == priceSum, "Invalid AVAX amount sent.");
+        // Delist portions from marketplace
         for(uint i = 0; i < portions.length; i++) {
             uint256 portionId = portions[i];
             // Make sure portion is for sale
-            require(listedUserPortionsPerSale[owner][sale][portionId] == true, "Portion not for sale.");
+            require(listedUserPortionsPerSale[owner][sale][portionId] == true, "Portion not listed.");
             // Mark portion as 'not for sale'
             listedUserPortionsPerSale[owner][sale][portionId] = false;
             // Trigger relevant event
