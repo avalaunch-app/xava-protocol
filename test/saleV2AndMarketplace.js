@@ -9,6 +9,7 @@ const START_TIMESTAMP_DELTA = 600;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
 const PORTION_VESTING_PRECISION = 10000;
+const NUMBER_1E18 = "1000000000000000000";
 const REGISTRATION_DEPOSIT_AVAX = ethers.utils.parseEther('1').toString();
 const TOTAL_SALE_TOKENS = ethers.utils.parseEther("1000000").toString();
 const SALE_TOKEN_PRICE_IN_AVAX = ethers.utils.parseEther("0.00005").toString();
@@ -26,6 +27,26 @@ async function signRegistration(sigExpTime, registrant, phaseId, contractAddress
     const digest = ethers.utils.solidityKeccak256(
         ['uint256', 'address', 'uint256', 'address', 'string'],
         [sigExpTime, registrant, phaseId, contractAddress, "registerForSale"]
+    );
+
+    return await deployer.signMessage(ethers.utils.arrayify(digest));
+}
+
+async function signParticipation(user, amount, amountXavaToBurn, phaseId, contractAddress) {
+
+    const digest = ethers.utils.solidityKeccak256(
+        ['address', 'uint256', 'uint256', 'uint256', 'address', 'string'],
+        [user, amount, amountXavaToBurn, phaseId, contractAddress, "participate"]
+    );
+
+    return await deployer.signMessage(ethers.utils.arrayify(digest));
+}
+
+async function signAddPortionsToMarket(user, contractAddress, portions, sigExpTime) {
+
+    const digest = ethers.utils.solidityKeccak256(
+        ['address', 'address', 'uint256[]', 'uint256', 'string'],
+        [user, contractAddress, portions, sigExpTime, "addPortionsToMarket"]
     );
 
     return await deployer.signMessage(ethers.utils.arrayify(digest));
@@ -96,6 +117,12 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             FEE_PERCENT,
             FEE_PRECISION
         );
+
+        const depositAmount = "100000000000000000000";
+        await xavaToken.transfer(alice.address, depositAmount);
+        await xavaToken.connect(alice).approve(allocationStaking.address, depositAmount);
+        await allocationStaking.add(100, xavaToken.address, true);
+        await allocationStaking.connect(alice).deposit(0, depositAmount);
     });
 
     context("Sale Setup", async () => {
@@ -225,7 +252,7 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         });
 
         it("Should activate lock", async () => {
-            expect(await sale.activateLock()).to.emit(sale, "LockActivated");
+            await expect(sale.activateLock()).to.emit(sale, "LockActivated");
         });
 
         it("Should not activate lock if it is already active", async () => {
@@ -234,7 +261,6 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
     });
 
     context("Marketplace setters", async () => {
-
         it("Should set new sales factory on marketplace", async () => {
             await marketplace.setFactory(ONE_ADDRESS);
             expect(await marketplace.factory()).to.equal(ONE_ADDRESS);
@@ -269,6 +295,13 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             await sale.connect(alice).registerForSale(sig, sigExpTime, 3, {value: REGISTRATION_DEPOSIT_AVAX});
         });
 
+        it("Should not register for sale 2nd time", async () => {
+            const sigExpTime = await getCurrentBlockTimestamp() + 90;
+            const sig = await signRegistration(sigExpTime, alice.address, 3, sale.address);
+            await expect(sale.connect(alice).registerForSale(sig, sigExpTime, 2, {value: REGISTRATION_DEPOSIT_AVAX}))
+                .to.be.revertedWith("Already registered.");
+        });
+
         it("Should not register for sale outside of phase", async () => {
             await sale.connect(deployer).changePhase(0);
 
@@ -278,6 +311,54 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
                 .to.be.revertedWith("Must be called during registration phase.");
 
             await sale.connect(deployer).changePhase(1);
+        });
+    });
+
+    context("Participation", async () => {
+        let amount = "1000000000000000000000"
+        let amountXavaToBurn = "1000000000000000000";
+        let phaseId = 3;
+        let participationMsgValue = ethers.utils.parseEther('0.02').toString();
+
+        before(async () => {
+            // Change from Idle to Registration Phase
+            await sale.connect(deployer).changePhase(3);
+        });
+
+        it("Should participate", async () => {
+            const sig = await signParticipation(alice.address, amount, amountXavaToBurn, phaseId, sale.address);
+            await expect(sale.connect(alice).participate(amount, amountXavaToBurn, 3, sig, {value: participationMsgValue}))
+                .to.emit(sale, "TokensSold")
+                .withArgs(alice.address, ethers.BigNumber.from(participationMsgValue).mul(NUMBER_1E18).div(SALE_TOKEN_PRICE_IN_AVAX));
+        });
+
+        it("Should not participate for 2nd time", async () => {
+            const sig = await signParticipation(alice.address, amount, amountXavaToBurn, phaseId, sale.address);
+            await expect(sale.connect(alice).participate(amount, amountXavaToBurn, 3, sig, {value: participationMsgValue}))
+                .to.be.revertedWith("Already participated.");
+        });
+
+        it("Should not participate for 2nd time", async () => {
+            await sale.changePhase(2);
+            const sig = await signParticipation(alice.address, amount, amountXavaToBurn, phaseId, sale.address);
+            await expect(sale.connect(alice).participate(amount, amountXavaToBurn, 3, sig, {value: participationMsgValue}))
+                .to.be.revertedWith("Invalid phase.");
+            await sale.changePhase(3);
+        });
+    });
+
+    context("Marketplace actions", async () => {
+        it("Should add portions to market", async () => {
+            const portions = [0,1];
+            const sigExpTime = await getCurrentBlockTimestamp() + 500;
+            const sig = await signAddPortionsToMarket(
+                alice.address, sale.address, portions, sigExpTime
+            );
+            await sale.connect(alice).addPortionsToMarket(portions, sig, sigExpTime);
+
+            // Check that portions are put on market successfully
+            expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 0)).to.equal(true);
+            expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 1)).to.equal(true);
         });
     });
 });
