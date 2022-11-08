@@ -259,6 +259,7 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to shift sale end timestamp
      */
     function shiftSaleEnd(uint256 timeToShift) external onlyAdmin {
+        require(block.timestamp < sale.saleEnd, "Sale already ended.");
         sale.saleEnd = sale.saleEnd.add(timeToShift);
     }
 
