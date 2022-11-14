@@ -377,6 +377,11 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             expect((await sale.sale()).saleEnd).to.equal(BigNumber.from(saleData.saleEnd).add(60*5));
         });
 
+        it("Should not shift sale end if crossing unlock times", async () => {
+            await expect(sale.shiftSaleEnd(60 * 5))
+                .to.be.revertedWith("Sale end crossing vesting unlock times.");
+        });
+
         it("Shift vesting unlock times", async () => {
             const vestingInfo = await sale.getVestingInfo();
             await sale.shiftVestingUnlockTimes(60*10); // Shift all portion unlock times by 10 minutes
