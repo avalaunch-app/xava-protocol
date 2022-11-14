@@ -1,5 +1,6 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
+const { BigNumber } = require("ethers");
 
 const REWARDS_PER_SECOND = ethers.utils.parseUnits("0.005");
 const FEE_PERCENT = 2;
@@ -215,6 +216,13 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             await expect(sale.setSaleToken(saleToken.address))
                 .to.be.revertedWith("Tokens already deposited.");
         });
+
+        it("Set dexalot parameters", async () => {
+            const unlockTime = await getCurrentBlockTimestamp() + 3600 * 10; // In 10 hrs
+            await sale.setDexalotParameters(ONE_ADDRESS, unlockTime);
+            expect(await sale.dexalotPortfolio()).to.equal(ONE_ADDRESS);
+            expect(await sale.dexalotUnlockTime()).to.equal(unlockTime);
+        });
     });
 
     context("Update Token Price", async () => {
@@ -359,6 +367,22 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             // Check that portions are put on market successfully
             expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 0)).to.equal(true);
             expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 1)).to.equal(true);
+        });
+    });
+
+    context("Misc", async () => {
+        it("Shift sale end", async () => {
+            const saleData = await sale.sale();
+            await sale.shiftSaleEnd(60 * 5); // Shift end by 5 minutes
+            expect((await sale.sale()).saleEnd).to.equal(BigNumber.from(saleData.saleEnd).add(60*5));
+        });
+
+        it("Shift vesting unlock times", async () => {
+            const vestingInfo = await sale.getVestingInfo();
+            await sale.shiftVestingUnlockTimes(60*10); // Shift all portion unlock times by 10 minutes
+            for (let i = 0; i < vestingInfo[0].length; i++) { // Check that all portions are shifted
+                expect((await sale.getVestingInfo())[0][i]).to.equal(BigNumber.from(vestingInfo[0][i]).add(60*10));
+            }
         });
     });
 });
