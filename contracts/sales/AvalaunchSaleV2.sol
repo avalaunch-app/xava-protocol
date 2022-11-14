@@ -259,8 +259,10 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to shift sale end timestamp
      */
     function shiftSaleEnd(uint256 timeToShift) external onlyAdmin {
+        require(timeToShift > 0, "Invalid time to shift.");
         require(block.timestamp < sale.saleEnd, "Sale already ended.");
         sale.saleEnd = sale.saleEnd.add(timeToShift);
+        require(sale.saleEnd < vestingPortionsUnlockTime[0], "Sale end crossing vesting unlock times.");
     }
 
     /**
