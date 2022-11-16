@@ -265,6 +265,7 @@ contract AvalaunchSaleV2 is Initializable {
         require(block.timestamp < sale.saleEnd, "Sale already ended.");
         sale.saleEnd = sale.saleEnd.add(timeToShift);
         require(sale.saleEnd < vestingPortionsUnlockTime[0], "Sale end crossing vesting unlock times.");
+        if (dexalotUnlockTime > 0) require(sale.saleEnd < dexalotUnlockTime, "Sale end crossing dexalot unlock time.");
     }
 
     /**
@@ -281,7 +282,7 @@ contract AvalaunchSaleV2 is Initializable {
     onlyAdmin
     ifUnlocked
     {
-        require(_dexalotPortfolio != address(0) && _dexalotUnlockTime >= sale.saleEnd);
+        require(_dexalotPortfolio != address(0) && _dexalotUnlockTime >= sale.saleEnd && sale.saleEnd > 0);
         dexalotPortfolio = IDexalotPortfolio(_dexalotPortfolio);
         dexalotUnlockTime = _dexalotUnlockTime;
     }
