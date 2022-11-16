@@ -59,8 +59,8 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 phaseId;                     // Phase user is registered for
         uint256[] portionAmounts;            // Amount of tokens for each portion
         PortionStates[] portionStates;       // State of each portion
-        uint256 boostedAmountBought;         // Amount of tokens bought with boost
         uint256 boostedAmountAVAXPaid;       // Amount of $AVAX paid for boost
+        uint256 boostedAmountBought;         // Amount of tokens bought with boost
         uint256 amountBoughtOnMarketplace;   // Amount of tokens purchased on marketplace
         uint256 amountSoldOnMarketplace;     // Amount of tokens sold on marketplace
     }
@@ -844,8 +844,8 @@ contract AvalaunchSaleV2 is Initializable {
             phaseId: phaseId,
             portionAmounts: _emptyUint256,
             portionStates: _emptyPortionStates,
-            boostedAmountBought: 0,
             boostedAmountAVAXPaid: 0,
+            boostedAmountBought: 0,
             amountBoughtOnMarketplace: 0,
             amountSoldOnMarketplace: 0
         });
