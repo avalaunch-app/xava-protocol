@@ -23,6 +23,8 @@ contract AvalaunchMarketplace is Initializable {
     uint256 public feePrecision;
     // Total fees ever collected
     uint256 public totalFeesCollected;
+    // Total market traded volume
+    uint256 public totalVolumeTraded;
     // Mapping for approved sales
     mapping(address => bool) public officialSales;
     // Mapping for market visible portions
@@ -125,6 +127,8 @@ contract AvalaunchMarketplace is Initializable {
             // Trigger relevant event
             emit PortionSold(owner, msg.sender, sale, portionId);
         }
+        // Increase traded volume
+        totalVolumeTraded += msg.value;
         // Make portion transfer state changes on sale contract
         IAvalaunchSaleV2(sale).transferPortions(owner, msg.sender, portions);
         // Compute fee amount
