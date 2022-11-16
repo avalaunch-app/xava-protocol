@@ -61,6 +61,8 @@ contract AvalaunchSaleV2 is Initializable {
         PortionStates[] portionStates;       // State of each portion
         uint256 boostedAmountAVAXPaid;       // Amount of $AVAX paid for boost
         uint256 boostedAmountBought;         // Amount of tokens bought with boost
+        uint256 amountBoughtOnMarketplace;   // Amount of tokens purchased on marketplace
+        uint256 amountSoldOnMarketplace;     // Amount of tokens sold on marketplace
     }
 
     // Sale state structure
@@ -629,6 +631,7 @@ contract AvalaunchSaleV2 is Initializable {
         bytes calldata signature,
         uint256 sigExpTime
     ) external {
+        require(block.timestamp > sale.saleEnd && sale.phase == Phases.Idle, "Sale still in progress.");
         verifySignature(
             keccak256(abi.encodePacked(msg.sender, address(this), portions, sigExpTime, "addPortionsToMarket")), 
             signature
@@ -678,9 +681,11 @@ contract AvalaunchSaleV2 is Initializable {
         Participation storage pSeller = userToParticipation[seller];
         Participation storage pBuyer = userToParticipation[buyer];
         // Initialize portions for user if hasn't participated the sale
-        if(pBuyer.amountBought == 0) {
-            _initParticipationForUser(buyer, 0, 0, 0, 0);
+        if(!isParticipated[buyer]) {
+            _initParticipationForUser(buyer, 0, 0, block.timestamp, uint(sale.phase) /*==Phases.Idle*/);
+            isParticipated[buyer] = true;
         }
+        uint256 totalAmountExchanged;
         for(uint256 i = 0; i < portions.length; i++) {
             uint256 portionId = portions[i];
             require(pSeller.portionStates[portionId] == PortionStates.OnMarket, "Portion unavailable.");
@@ -689,14 +694,19 @@ contract AvalaunchSaleV2 is Initializable {
             /* case 1: portion with same id is on market
                case 2: portion is available
                case 3: portion is unavailable (withdrawn or sold) */
+            uint256 amountToSell = pSeller.portionAmounts[portionId];
             require(portionState != PortionStates.OnMarket, "Can't buy portion with same id you listed on market.");
             if (portionState == PortionStates.Available) {
-                pBuyer.portionAmounts[portionId] += pSeller.portionAmounts[portionId];
+                pBuyer.portionAmounts[portionId] += amountToSell;
             } else {
-                pBuyer.portionAmounts[portionId] = pSeller.portionAmounts[portionId];
+                pBuyer.portionAmounts[portionId] = amountToSell;
                 pBuyer.portionStates[portionId] = PortionStates.Available;
             }
+            totalAmountExchanged += amountToSell;
         }
+        // Update personal stats for transfer participants
+        pSeller.amountSoldOnMarketplace = pSeller.amountSoldOnMarketplace.add(totalAmountExchanged);
+        pBuyer.amountBoughtOnMarketplace = pBuyer.amountBoughtOnMarketplace.add(totalAmountExchanged);
     }
 
     /**
@@ -704,7 +714,7 @@ contract AvalaunchSaleV2 is Initializable {
      */
     function withdrawEarningsAndLeftover(bool earnings, bool leftover) external onlyModerator {
         // Make sure sale ended
-        require(block.timestamp >= sale.saleEnd);
+        require(block.timestamp > sale.saleEnd);
         // Perform withdrawals
         if (earnings) withdrawEarningsInternal();
         if (leftover) withdrawLeftoverInternal();
@@ -742,7 +752,7 @@ contract AvalaunchSaleV2 is Initializable {
      * @dev only after sale has ended and there is fund leftover
      */
     function withdrawRegistrationFees() external onlyAdmin {
-        require(block.timestamp >= sale.saleEnd, "Sale isn't over.");
+        require(block.timestamp > sale.saleEnd, "Sale isn't over.");
         require(registrationFees > 0, "No fees accumulated.");
         // Transfer AVAX to the admin wallet
         safeTransferAVAX(msg.sender, registrationFees);
@@ -798,6 +808,8 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to switch between sale phases by admin
      */
     function changePhase(Phases _phase) external onlyAdmin {
+        // Require that sale is not over for changing phase state to other than idle
+        if(_phase != Phases.Idle) require(block.timestamp < sale.saleEnd);
         // switch the currently active phase
         sale.phase = _phase;
         // Emit relevant event
@@ -833,7 +845,9 @@ contract AvalaunchSaleV2 is Initializable {
             portionAmounts: _emptyUint256,
             portionStates: _emptyPortionStates,
             boostedAmountAVAXPaid: 0,
-            boostedAmountBought: 0
+            boostedAmountBought: 0,
+            amountBoughtOnMarketplace: 0,
+            amountSoldOnMarketplace: 0
         });
     }
 
