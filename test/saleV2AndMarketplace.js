@@ -14,6 +14,7 @@ const NUMBER_1E18 = "1000000000000000000";
 const REGISTRATION_DEPOSIT_AVAX = ethers.utils.parseEther('1').toString();
 const TOTAL_SALE_TOKENS = ethers.utils.parseEther("1000000").toString();
 const SALE_TOKEN_PRICE_IN_AVAX = ethers.utils.parseEther("0.00005").toString();
+const SALE_TIME_TO_SHIFT = 6 * 50;
 
 let admin, allocationStaking, marketplace, xavaToken, salesFactory, collateral;
 let deployer, mod, alice, bob, charlie;
@@ -355,7 +356,35 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         });
     });
 
+    context("Misc", async () => {
+        it("Shift sale end", async () => {
+            const saleData = await sale.sale();
+            await sale.shiftSaleEnd(SALE_TIME_TO_SHIFT); // Shift end by 5 minutes
+            expect((await sale.sale()).saleEnd).to.equal(BigNumber.from(saleData.saleEnd).add(SALE_TIME_TO_SHIFT));
+        });
+
+        it("Should not shift sale end if crossing unlock times", async () => {
+            await expect(sale.shiftSaleEnd(SALE_TIME_TO_SHIFT))
+                .to.be.revertedWith("Sale end crossing vesting unlock times.");
+        });
+
+        it("Shift vesting unlock times", async () => {
+            const vestingInfo = await sale.getVestingInfo();
+            await sale.shiftVestingUnlockTimes(60*10); // Shift all portion unlock times by 10 minutes
+            for (let i = 0; i < vestingInfo[0].length; i++) { // Check that all portions are shifted
+                expect((await sale.getVestingInfo())[0][i]).to.equal(BigNumber.from(vestingInfo[0][i]).add(60*10));
+            }
+        });
+    });
+
     context("Marketplace actions", async () => {
+
+        before(async () => {
+            const time = saleEndTime - await getCurrentBlockTimestamp() + SALE_TIME_TO_SHIFT;
+            await hre.network.provider.send('evm_increaseTime', [time]);
+            await sale.changePhase(0);
+        });
+
         it("Should add portions to market", async () => {
             const portions = [0,1];
             const sigExpTime = await getCurrentBlockTimestamp() + 500;
@@ -367,27 +396,6 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             // Check that portions are put on market successfully
             expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 0)).to.equal(true);
             expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 1)).to.equal(true);
-        });
-    });
-
-    context("Misc", async () => {
-        it("Shift sale end", async () => {
-            const saleData = await sale.sale();
-            await sale.shiftSaleEnd(60 * 5); // Shift end by 5 minutes
-            expect((await sale.sale()).saleEnd).to.equal(BigNumber.from(saleData.saleEnd).add(60*5));
-        });
-
-        it("Should not shift sale end if crossing unlock times", async () => {
-            await expect(sale.shiftSaleEnd(60 * 5))
-                .to.be.revertedWith("Sale end crossing vesting unlock times.");
-        });
-
-        it("Shift vesting unlock times", async () => {
-            const vestingInfo = await sale.getVestingInfo();
-            await sale.shiftVestingUnlockTimes(60*10); // Shift all portion unlock times by 10 minutes
-            for (let i = 0; i < vestingInfo[0].length; i++) { // Check that all portions are shifted
-                expect((await sale.getVestingInfo())[0][i]).to.equal(BigNumber.from(vestingInfo[0][i]).add(60*10));
-            }
         });
     });
 });
