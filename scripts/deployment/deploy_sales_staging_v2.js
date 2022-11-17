@@ -38,14 +38,36 @@ const main = async () => {
     console.log(` - Sale token deployed to: ${greenOut(saleToken.address)}`);
 
     // compute the states for a new sale
-    const saleEndTime = await getCurrentBlockTimestamp() + 3600 * 12;
+    const saleEndTime = await getCurrentBlockTimestamp() + 3600 * 0.5;
     // token amount & pricing
-    const tokenPriceInAvax = ethers.utils.parseEther("0.00005").toString();
+    const tokenPriceInAvax = ethers.utils.parseEther("0.009").toString();
     const totalTokens = ethers.utils.parseEther("1000000").toString();
     // vesting
     const tokensUnlockTime = saleEndTime + 600;
-    const unlockingTimes = [tokensUnlockTime, tokensUnlockTime + 3600, tokensUnlockTime + 3600 * 2, tokensUnlockTime + 3600 * 3, tokensUnlockTime + 3600 * 4];
-    const percents = [2000, 2000, 2000, 2000, 2000];
+    const unlockingTimes = [
+        tokensUnlockTime, 
+        tokensUnlockTime + 3600, 
+        tokensUnlockTime + 3600 * 2, 
+        tokensUnlockTime + 3600 * 3, 
+        tokensUnlockTime + 3600 * 4,
+        tokensUnlockTime + 3600 * 5, 
+        tokensUnlockTime + 3600 * 6, 
+        tokensUnlockTime + 3600 * 7, 
+        tokensUnlockTime + 3600 * 8, 
+        tokensUnlockTime + 3600 * 9
+    ];
+    const percents = [
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000,
+        1000
+    ];
     // dexalot
     const dexalotPortfolio = "0x780380eB4787775b07dfa60fB11C2CdAD6A44f7C";
     const dexalotUnlockingTime = saleEndTime + 300;
