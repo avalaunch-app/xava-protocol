@@ -85,7 +85,7 @@ const sendAsync = (payload) =>
         });
     });
 
-const generateSignatureV4 = async (message, type, primaryType) => {
+const generateSignatureV4 = async (message, type, primaryType, signer) => {
     const data = {
         domain: {
             name: 'AvalaunchApp',
@@ -107,7 +107,7 @@ const generateSignatureV4 = async (message, type, primaryType) => {
     };
 
     const msgParams = JSON.stringify(data);
-    const from = deployer.address;
+    const from = signer.address;
     const params = [from, msgParams];
     const method = 'eth_signTypedData_v4';
 
@@ -177,6 +177,8 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         await salesFactory.deploySale();
 
         sale = await ethers.getContractAt("AvalaunchSaleV2", await salesFactory.getLastDeployedSale());
+
+        await collateral.approveSale(sale.address);
 
         await allocationStaking.initialize(
             xavaToken.address,
@@ -286,10 +288,16 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         });
 
         it("Set dexalot parameters", async () => {
-            const unlockTime = await getCurrentBlockTimestamp() + 3600 * 10; // In 10 hrs
+            const unlockTime = saleEndTime + 300;
             await sale.setDexalotParameters(ONE_ADDRESS, unlockTime);
             expect(await sale.dexalotPortfolio()).to.equal(ONE_ADDRESS);
             expect(await sale.dexalotUnlockTime()).to.equal(unlockTime);
+        });
+
+        it("Should shift dexalot unlock time", async () => {
+            const initialDexalotUnlockTime = await sale.dexalotUnlockTime();
+            await sale.shiftDexalotUnlockTime(60);
+            expect(await sale.dexalotUnlockTime()).to.equal(BigNumber.from(initialDexalotUnlockTime).add(60));
         });
     });
 
@@ -365,10 +373,16 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             await sale.connect(deployer).changePhase(1);
         });
 
-        it("Should register for sale", async () => {
+        it("Should register for sale (alice)", async () => {
             const sigExpTime = await getCurrentBlockTimestamp() + 90;
             const sig = await signRegistration(sigExpTime, alice.address, 3, sale.address);
             await sale.connect(alice).registerForSale(sig, sigExpTime, 3, {value: REGISTRATION_DEPOSIT_AVAX});
+        });
+
+        it("Should register for sale (charlie)", async () => {
+            const sigExpTime = await getCurrentBlockTimestamp() + 90;
+            const sig = await signRegistration(sigExpTime, charlie.address, 3, sale.address);
+            await sale.connect(charlie).registerForSale(sig, sigExpTime, 3, {value: REGISTRATION_DEPOSIT_AVAX});
         });
 
         it("Should not register for sale 2nd time", async () => {
@@ -405,7 +419,7 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             const sig = await signParticipation(alice.address, amount, amountXavaToBurn, phaseId, sale.address);
             await expect(sale.connect(alice).participate(amount, amountXavaToBurn, 3, sig, {value: participationMsgValue}))
                 .to.emit(sale, "TokensSold")
-                .withArgs(alice.address, ethers.BigNumber.from(participationMsgValue).mul(NUMBER_1E18).div(SALE_TOKEN_PRICE_IN_AVAX));
+                .withArgs(alice.address, BigNumber.from(participationMsgValue).mul(NUMBER_1E18).div(SALE_TOKEN_PRICE_IN_AVAX));
         });
 
         it("Should not participate for 2nd time", async () => {
@@ -423,6 +437,7 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         });
 
         it("Should boost participation", async () => {
+            await sale.changePhase(4);
             let messageJSON = {
                 confirmationMessage: "Boost participation.",
                 saleAddress: sale.address
@@ -437,11 +452,15 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             let primaryType = {
                 primaryType: 'Boost'
             };
-            const sig = await generateSignatureV4(message, type, primaryType);
-            const sig = await signParticipation(alice.address, amount, amountXavaToBurn, phaseId, sale.address);
-            await expect(sale.connect(alice).participate(amount, amountXavaToBurn, 3, sig, {value: participationMsgValue}))
-                .to.emit(sale, "TokensSold")
-                .withArgs(alice.address, ethers.BigNumber.from(participationMsgValue).mul(NUMBER_1E18).div(SALE_TOKEN_PRICE_IN_AVAX));
+            const sig = await generateSignatureV4(message, type, primaryType, alice);
+            const boostAmountAVAX = ethers.utils.parseEther('0.2');
+            const amountXavaToBurn = ethers.utils.parseEther('0.005');
+            const boostFee = ethers.utils.parseEther('0.02');
+            // console.log(await sale.getParticipationAmountsAndStates(alice.address));
+            await expect(collateral.connect(deployer).boostParticipation(sale.address, boostAmountAVAX, amountXavaToBurn, alice.address, boostFee, sig))
+                .to.emit(sale, "ParticipationBoosted")
+                .withArgs(alice.address, boostAmountAVAX, BigNumber.from(boostAmountAVAX).mul(NUMBER_1E18).div(SALE_TOKEN_PRICE_IN_AVAX));
+            // console.log(await sale.getParticipationAmountsAndStates(alice.address));
         });
     });
 
@@ -506,6 +525,33 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             await sale.connect(alice).removePortionsFromMarket(portions, sig, sigExpTime);
             // Check that portions are removed from market successfully
             expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 1)).to.equal(false);
+        });
+    });
+
+    context("Withdrawal", async () => {
+        it("Should withdraw portion", async () => {
+            await hre.network.provider.send('evm_increaseTime', [1500]); // Shift enough for portion to unlock
+            const i = 1; // PortionId
+            const data = await sale.getParticipationAmountsAndStates(alice.address);
+            //console.log(data);
+            await expect(sale.connect(alice).withdrawMultiplePortions([i], false))
+                .to.emit(sale, "TokensWithdrawn")
+                .withArgs(alice.address, data[0][i]);
+        });
+    });
+
+    context("Post sale actions", async () => {
+        it("Should withdraw earnings and leftover", async () => {
+            await sale.connect(mod).withdrawEarningsAndLeftover(true,true);
+        });
+        it("Should withdraw registration fees", async () => {
+            await sale.withdrawRegistrationFees();
+        });
+        it("Should not withdraw registration fees when none accumulated", async () => {
+            await expect(sale.withdrawRegistrationFees()).to.be.revertedWith("No fees accumulated.");
+        });
+        it("Should withdraw unused funds", async () => {
+            await sale.withdrawUnusedFunds();
         });
     });
 });
