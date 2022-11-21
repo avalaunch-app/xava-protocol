@@ -582,7 +582,7 @@ contract AvalaunchSaleV2 is Initializable {
             require(block.timestamp >= dexalotUnlockTime, "Dexalot withdraw locked.");
         }
 
-        uint256 totalToWithdraw = 0;
+        uint256 totalToWithdraw;
 
         // Retrieve participation from storage
         Participation storage p = userToParticipation[msg.sender];
@@ -603,13 +603,8 @@ contract AvalaunchSaleV2 is Initializable {
                 if (!toDexalot) p.portionStates[portionId] = PortionStates.Withdrawn;
                 else p.portionStates[portionId] = PortionStates.WithdrawnToDexalot;
 
-                // Compute amount withdrawing
-                uint256 amountWithdrawing = p
-                    .amountBought
-                    .mul(vestingPercentPerPortion[portionId])
-                    .div(portionVestingPrecision);
                 // Withdraw percent which is unlocked at that portion
-                totalToWithdraw = totalToWithdraw.add(amountWithdrawing);
+                totalToWithdraw = totalToWithdraw.add(p.portionAmounts[portionId]);
             }
         }
 
