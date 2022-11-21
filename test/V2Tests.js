@@ -54,6 +54,72 @@ async function signAddPortionsToMarket(user, contractAddress, portions, sigExpTi
     return await deployer.signMessage(ethers.utils.arrayify(digest));
 }
 
+async function signRemovePortionsFromMarket(user, contractAddress, portions, sigExpTime) {
+
+    const digest = ethers.utils.solidityKeccak256(
+        ['address', 'address', 'uint256[]', 'uint256', 'string'],
+        [user, contractAddress, portions, sigExpTime, "removePortionsFromMarket"]
+    );
+
+    return await deployer.signMessage(ethers.utils.arrayify(digest));
+}
+
+async function signBuyPortions(seller, buyer, sale, portions, pricesum, sigExpTime) {
+
+    const digest = ethers.utils.solidityKeccak256(
+        ['address', 'address', 'address', 'uint256[]', 'uint256', 'uint256', 'string'],
+        [seller, buyer, sale, portions, pricesum, sigExpTime, "buyPortions"]
+    );
+
+    return await deployer.signMessage(ethers.utils.arrayify(digest));
+}
+
+const sendAsync = (payload) =>
+    new Promise((resolve, reject) => {
+        hre.web3.currentProvider.send(payload, (err, res) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(res.result);
+            }
+        });
+    });
+
+const generateSignatureV4 = async (message, type, primaryType) => {
+    const data = {
+        domain: {
+            name: 'AvalaunchApp',
+            version: '1',
+            chainId: 43114,
+            verifyingContract: collateral.address.toString(),
+        },
+        message,
+        ...primaryType,
+        types: {
+            EIP712Domain: [
+                { name: 'name', type: 'string' },
+                { name: 'version', type: 'string' },
+                { name: 'chainId', type: 'uint256' },
+                { name: 'verifyingContract', type: 'address' },
+            ],
+            ...type,
+        },
+    };
+
+    const msgParams = JSON.stringify(data);
+    const from = deployer.address;
+    const params = [from, msgParams];
+    const method = 'eth_signTypedData_v4';
+
+    return await sendAsync(
+        {
+            method,
+            params,
+            from
+        }
+    );
+}
+
 describe("Avalaunch Sale V2/Marketplace Tests", async () => {
 
     before(async () => {
@@ -73,6 +139,7 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         collateral = await collateralFactory.deploy();
         await collateral.deployed();
         await collateral.initialize(deployer.address, admin.address, 43114);
+        await collateral.connect(alice).depositCollateral({value: ethers.utils.parseEther('5')});
 
         const xavaTokenFactory = await ethers.getContractFactory("XavaToken");
         xavaToken = await xavaTokenFactory.deploy("Avalaunch Token", "XAVA", "1000000000000000000000000", 18);
@@ -354,6 +421,28 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
                 .to.be.revertedWith("Invalid phase.");
             await sale.changePhase(3);
         });
+
+        it("Should boost participation", async () => {
+            let messageJSON = {
+                confirmationMessage: "Boost participation.",
+                saleAddress: sale.address
+            };
+            let message = eval(messageJSON);
+            let type = {
+                Boost: [
+                    { name: 'confirmationMessage', type: 'string' },
+                    { name: 'saleAddress', type: 'address' }
+                ],
+            };
+            let primaryType = {
+                primaryType: 'Boost'
+            };
+            const sig = await generateSignatureV4(message, type, primaryType);
+            const sig = await signParticipation(alice.address, amount, amountXavaToBurn, phaseId, sale.address);
+            await expect(sale.connect(alice).participate(amount, amountXavaToBurn, 3, sig, {value: participationMsgValue}))
+                .to.emit(sale, "TokensSold")
+                .withArgs(alice.address, ethers.BigNumber.from(participationMsgValue).mul(NUMBER_1E18).div(SALE_TOKEN_PRICE_IN_AVAX));
+        });
     });
 
     context("Misc", async () => {
@@ -396,6 +485,27 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             // Check that portions are put on market successfully
             expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 0)).to.equal(true);
             expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 1)).to.equal(true);
+        });
+
+        it("Should buy portion", async () => {
+            const portions = [0];
+            const sigExpTime = await getCurrentBlockTimestamp() + 500;
+            const priceSum = ethers.utils.parseEther('0.1');
+            const sig = await signBuyPortions(alice.address, bob.address, sale.address, portions, priceSum, sigExpTime);
+            await marketplace.connect(bob).buyPortions(sale.address, alice.address, sigExpTime, priceSum, portions, sig, {value: priceSum});
+            //console.log(await sale.userToParticipation(bob.address));
+            expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 0)).to.equal(false);
+        });
+
+        it("Should remove portions from market", async () => {
+            const portions = [1];
+            const sigExpTime = await getCurrentBlockTimestamp() + 500;
+            const sig = await signRemovePortionsFromMarket(
+                alice.address, sale.address, portions, sigExpTime
+            );
+            await sale.connect(alice).removePortionsFromMarket(portions, sig, sigExpTime);
+            // Check that portions are removed from market successfully
+            expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 1)).to.equal(false);
         });
     });
 });

@@ -282,7 +282,15 @@ contract AvalaunchSaleV2 is Initializable {
     onlyAdmin
     ifUnlocked
     {
-        require(_dexalotPortfolio != address(0) && _dexalotUnlockTime >= sale.saleEnd && sale.saleEnd > 0);
+        // Require that dexalot unlock time is inbetween sale end and first vesting unlock..
+        // ..and that vesting params are already set
+        require(
+            _dexalotPortfolio != address(0) && 
+            _dexalotUnlockTime >= sale.saleEnd && 
+            _dexalotUnlockTime <= vestingPortionsUnlockTime[0] &&
+            vestingPortionsUnlockTime.length > 0 &&
+            sale.saleEnd > 0
+        );
         dexalotPortfolio = IDexalotPortfolio(_dexalotPortfolio);
         dexalotUnlockTime = _dexalotUnlockTime;
     }
@@ -291,7 +299,9 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to shift dexalot unlocking time
      */
     function shiftDexalotUnlockTime(uint256 timeToShift) external onlyAdmin {
-        dexalotUnlockTime = dexalotUnlockTime.add(timeToShift);
+        uint256 shiftedDexalotUnlockTime = dexalotUnlockTime.add(timeToShift);
+        require(block.timestamp < dexalotUnlockTime && shiftedDexalotUnlockTime <= vestingPortionsUnlockTime[0]);
+        dexalotUnlockTime = shiftedDexalotUnlockTime;
     }
 
     /**
