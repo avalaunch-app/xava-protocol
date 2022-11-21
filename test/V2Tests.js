@@ -10,7 +10,7 @@ const START_TIMESTAMP_DELTA = 600;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
 const PORTION_VESTING_PRECISION = 10000;
-const NUMBER_1E18 = "1000000000000000000";
+const NUMBER_1E18 = ethers.utils.parseEther("1");
 const REGISTRATION_DEPOSIT_AVAX = ethers.utils.parseEther('1').toString();
 const TOTAL_SALE_TOKENS = ethers.utils.parseEther("1000000").toString();
 const SALE_TOKEN_PRICE_IN_AVAX = ethers.utils.parseEther("0.00005").toString();
@@ -140,6 +140,7 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         await collateral.deployed();
         await collateral.initialize(deployer.address, admin.address, 43114);
         await collateral.connect(alice).depositCollateral({value: ethers.utils.parseEther('5')});
+        await collateral.connect(bob).depositCollateral({value: ethers.utils.parseEther('5')});
 
         const xavaTokenFactory = await ethers.getContractFactory("XavaToken");
         xavaToken = await xavaTokenFactory.deploy("Avalaunch Token", "XAVA", "1000000000000000000000000", 18);
@@ -191,9 +192,12 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
 
         const depositAmount = "100000000000000000000";
         await xavaToken.transfer(alice.address, depositAmount);
+        await xavaToken.transfer(bob.address, depositAmount);
         await xavaToken.connect(alice).approve(allocationStaking.address, depositAmount);
+        await xavaToken.connect(bob).approve(allocationStaking.address, depositAmount);
         await allocationStaking.add(100, xavaToken.address, true);
         await allocationStaking.connect(alice).deposit(0, depositAmount);
+        await allocationStaking.connect(bob).deposit(0, depositAmount);
     });
 
     context("Sale Setup", async () => {
@@ -379,6 +383,12 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             await sale.connect(alice).registerForSale(sig, sigExpTime, 3, {value: REGISTRATION_DEPOSIT_AVAX});
         });
 
+        it("Should register for sale (bob)", async () => {
+            const sigExpTime = await getCurrentBlockTimestamp() + 90;
+            const sig = await signRegistration(sigExpTime, bob.address, 3, sale.address);
+            await sale.connect(bob).registerForSale(sig, sigExpTime, 3, {value: REGISTRATION_DEPOSIT_AVAX});
+        });
+
         it("Should register for sale (charlie)", async () => {
             const sigExpTime = await getCurrentBlockTimestamp() + 90;
             const sig = await signRegistration(sigExpTime, charlie.address, 3, sale.address);
@@ -428,12 +438,37 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
                 .to.be.revertedWith("Already participated.");
         });
 
-        it("Should not participate for 2nd time", async () => {
+        it("Should not participate in wrong phase", async () => {
             await sale.changePhase(2);
             const sig = await signParticipation(alice.address, amount, amountXavaToBurn, phaseId, sale.address);
             await expect(sale.connect(alice).participate(amount, amountXavaToBurn, 3, sig, {value: participationMsgValue}))
                 .to.be.revertedWith("Invalid phase.");
             await sale.changePhase(3);
+        });
+
+        it("Should auto-participate", async () => {
+            let messageJSON = {
+                confirmationMessage: "Turn AutoBUY ON.",
+                saleAddress: sale.address
+            };
+            let message = eval(messageJSON);
+            let type = {
+                AutoBuy: [
+                    { name: 'confirmationMessage', type: 'string' },
+                    { name: 'saleAddress', type: 'address' }
+                ],
+            };
+            let primaryType = {
+                primaryType: 'AutoBuy'
+            };
+            const sig = await generateSignatureV4(message, type, primaryType, bob);
+            const amountAVAX = ethers.utils.parseEther('0.2');
+            const amount = BigNumber.from(amountAVAX).mul(NUMBER_1E18).div(SALE_TOKEN_PRICE_IN_AVAX).toString();
+            const amountXavaToBurn = ethers.utils.parseEther('0.005');
+            const fee = ethers.utils.parseEther('0.02');
+            await expect(collateral.connect(deployer).autoParticipate(sale.address, amountAVAX, amount, amountXavaToBurn, 3, bob.address, fee, sig))
+                .to.emit(sale, "TokensSold")
+                .withArgs(bob.address, amount);
         });
 
         it("Should boost participation", async () => {
