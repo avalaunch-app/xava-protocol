@@ -199,6 +199,7 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to shift vested portion unlock times by admin
      * @param timeToShift is amount of time to add to all portion unlock times
+     * @dev will shift all portions which's unlock time hasn't passed yet
      */
     function shiftVestingUnlockTimes(uint256 timeToShift) external onlyAdmin {
         require(timeToShift > 0, "Invalid shift time.");
@@ -259,6 +260,7 @@ contract AvalaunchSaleV2 is Initializable {
 
     /**
      * @notice Function to shift sale end timestamp
+     * @dev sale end timestamp needs to be before any unlock times
      */
     function shiftSaleEnd(uint256 timeToShift) external onlyAdmin {
         require(timeToShift > 0, "Invalid time to shift.");
@@ -286,9 +288,9 @@ contract AvalaunchSaleV2 is Initializable {
         // ..and that vesting params are already set
         require(
             _dexalotPortfolio != address(0) && 
-            _dexalotUnlockTime >= sale.saleEnd && 
+            _dexalotUnlockTime > sale.saleEnd && 
             _dexalotUnlockTime <= vestingPortionsUnlockTime[0] &&
-            vestingPortionsUnlockTime.length > 0 &&
+            vestingPortionsUnlockTime[0] > 0 &&
             sale.saleEnd > 0
         );
         dexalotPortfolio = IDexalotPortfolio(_dexalotPortfolio);
