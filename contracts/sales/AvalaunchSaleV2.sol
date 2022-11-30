@@ -114,26 +114,46 @@ contract AvalaunchSaleV2 is Initializable {
 
     // Restricting calls only to moderator
     modifier onlyModerator() {
-        require(msg.sender == moderator, "Only moderator.");
+        _onlyModerator();
         _;
+    }
+
+    // Internal function containing onlyModerator modifier logic
+    function _onlyModerator() private view {
+        require(msg.sender == moderator, "Only moderator.");
     }
 
     // Restricting calls only to sale admin
     modifier onlyAdmin() {
-        require(admin.isAdmin(msg.sender), "Only admin.");
+        _onlyAdmin();
         _;
+    }
+
+    // Internal function containing onlyAdmin modifier logic
+    function _onlyAdmin() private view {
+        require(admin.isAdmin(msg.sender), "Only admin.");
     }
 
     // Restricting calls only to collateral contract
     modifier onlyCollateral() {
-        require(msg.sender == address(collateral), "Only collateral.");
+        _onlyCollateral();
         _;
+    }
+
+    // Internal function containing onlyCollateral modifier logic
+    function _onlyCollateral() private view {
+        require(msg.sender == address(collateral), "Only collateral.");
     }
 
     // Restricting setter calls after gate closing
     modifier ifUnlocked() {
-        require(!isLockOn, "Lock active.");
+        _ifUnlocked();
         _;
+    }
+
+    // Internal function containing ifUnlocked modifier logic
+    function _ifUnlocked() private view {
+        require(!isLockOn, "Lock active.");
     }
 
     function initialize(
