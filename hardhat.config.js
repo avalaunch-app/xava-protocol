@@ -52,7 +52,7 @@ module.exports = {
       url: 'https://api.avax-test.network/ext/bc/C/rpc',
       gasPrice: 225000000000,
       chainId: 43113,
-      accounts: [process.env.PK || testPK]
+      accounts: [process.env.PK2 || testPK]
     },
     mainnet: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
@@ -78,7 +78,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200
+            runs: 999999
           },
         },
       },
@@ -87,7 +87,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 185
+            runs: 200
           },
         },
       },
