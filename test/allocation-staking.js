@@ -1,8 +1,6 @@
-const { ethers, upgrades } = require("hardhat");
+const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const ethUtil = require("ethereumjs-util");
-const hre = require("hardhat");
-const { zeroPad } = require("ethers/lib/utils");
 
 describe("AllocationStaking", function() {
 
