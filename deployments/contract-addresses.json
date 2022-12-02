@@ -92,10 +92,10 @@
         "SalesFactory": "0xA50Aa3ca8510d20C8576bCf0bDB6f42fc81415Bf",
         "AllocationStakingProxy": "0x8BeBB9907c72708442BD4195Bd354A9bAdC2a816",
         "ProxyAdmin": "0x4Ed5B9C2C3E0689d516F312e88b12D96D2548A66",
-        "LatestSale": "0xa53F8c9F2CE340a4ED842bcBa5107bBA7Ad519DF",
+        "LatestSale": "0x69CCb83b538902abFa576E7429c40B12bB066177",
         "AvalaunchCollateral": "0x739B226fa938BF0cA5F1BF49E4F89104fE226073",
         "AvalaunchCollateralProxy": "0x3F6715c77B978fb7824a64BBBB502bbB09EcA00b",
-        "Sale-Implementation": "0x549Eba3B7877028F858Df428ad00E7E2773b2784",
+        "Sale-Implementation": "0x5C69d6694605791D334D596b833D8d04922Cd648",
         "AvalaunchMarketplace": "0x222aB1076d0866394c238194716a5063D824B611",
         "AvalaunchMarketplaceProxy": "0xda7C53E855f188038FBAeC9fca07130ac5842468"
     }
