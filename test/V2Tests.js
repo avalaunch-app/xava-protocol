@@ -561,30 +561,57 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             // Check that portions are removed from market successfully
             expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 1)).to.equal(false);
         });
+
+        it("Should withdraw fees from Marketplace", async () => {
+            const marketplaceBalanceBefore = await ethers.provider.getBalance(marketplace.address);
+            expect(marketplaceBalanceBefore.toNumber()).to.be.greaterThan(0);
+            await marketplace.withdrawAVAX();
+            const marketplaceBalanceAfter = await ethers.provider.getBalance(marketplace.address);
+            expect(marketplaceBalanceAfter).to.equal(0);
+        });
     });
 
     context("Withdrawal", async () => {
+
+        before(async () => {
+            await hre.network.provider.send('evm_increaseTime', [1500]); // Shift enough for portions to unlock
+        })
+
         it("Should withdraw portion", async () => {
-            await hre.network.provider.send('evm_increaseTime', [1500]); // Shift enough for portion to unlock
             const i = 1; // PortionId
+            const alicesTokensBefore = await saleToken.balanceOf(alice.address);
             const data = await sale.getParticipationAmountsAndStates(alice.address);
             //console.log(data);
             await expect(sale.connect(alice).withdrawMultiplePortions([i], false))
                 .to.emit(sale, "TokensWithdrawn")
                 .withArgs(alice.address, data[0][i]);
+            const alicesTokensAfter = await saleToken.balanceOf(alice.address);
+            expect(alicesTokensBefore.add(data[0][i])).to.equal(alicesTokensAfter);
         });
+
+        it("Should not withdraw same portion twice", async () => {
+            const i = 1; // PortionId
+            const alicesTokensBefore = await saleToken.balanceOf(alice.address);
+            //console.log(data);
+            await expect(sale.connect(alice).withdrawMultiplePortions([i], false)).not.to.emit(sale, "TokensWithdrawn");
+            const alicesTokensAfter = await saleToken.balanceOf(alice.address);
+            expect(alicesTokensBefore).to.equal(alicesTokensAfter);
+        })
     });
 
     context("Post sale actions", async () => {
         it("Should withdraw earnings and leftover", async () => {
             await sale.connect(mod).withdrawEarningsAndLeftover(true,true);
         });
+
         it("Should withdraw registration fees", async () => {
             await sale.withdrawRegistrationFees();
         });
+
         it("Should not withdraw registration fees when none accumulated", async () => {
             await expect(sale.withdrawRegistrationFees()).to.be.revertedWith("No fees accumulated.");
         });
+        
         it("Should withdraw unused funds", async () => {
             await sale.withdrawUnusedFunds();
         });
