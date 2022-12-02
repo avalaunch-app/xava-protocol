@@ -499,7 +499,7 @@ contract AvalaunchSaleV2 is Initializable {
      * * Collateral contract will be performing automatic participations for users who signed up
      * * Booster round is 3rd one, available only for users who participated in one of first 2 rounds
      * * In booster round, it is possible to participate only through collateral, on user's demand
-     * * This function is checking for different cases based on round type (isBooster) and caller (isCollateralCaller)
+     * * Function flow changes based on round type
      */
     function _participate(
         address user,
@@ -508,9 +508,8 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 phaseId
     ) internal {
         // Make sure selected phase is ongoing and is round phase (Validator, Staking, Booster)
-        require(phaseId > 1 && phaseId == uint8(sale.phase), "Invalid phase.");
+        require(phaseId > uint256(Phases.Registration) && phaseId == uint8(sale.phase), "Invalid phase.");
 
-        bool isCollateralCaller = msg.sender == address(collateral);
         bool isBooster = phaseId == uint8(Phases.Booster);
 
         if (!isBooster) { // Normal flow
@@ -527,9 +526,10 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 amountOfTokensBuying =
             (msg.value).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
 
-        if (!isCollateralCaller) { // Non-collateral flow
-            // Must buy more than 0 tokens
-            require(amountOfTokensBuying > 0, "Can't buy 0 tokens.");
+        // Cannot buy zero tokens
+        require(amountOfTokensBuying > 0, "Can't buy 0 tokens.");
+
+        if (!isBooster) {
             // Check in terms of user allo
             require(amountOfTokensBuying <= amount, "Exceeding allowance.");
         }
@@ -546,7 +546,7 @@ contract AvalaunchSaleV2 is Initializable {
             // Initialize user's participation
             _initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, phaseId);
         } else { // Booster flow
-            // Check that user already participated
+            // Cannot boost participation more than once
             require(p.boostedAmountBought == 0, "Already boosted.");
         }
 
@@ -601,7 +601,7 @@ contract AvalaunchSaleV2 is Initializable {
         if (toDexalot) {
             require(address(dexalotPortfolio) != address(0) && dexalotUnlockTime != 0, "Dexalot withdraw not supported.");
             // Means first portion is unlocked for dexalot
-            require(block.timestamp >= dexalotUnlockTime, "Dexalot withdraw locked.");
+            require(block.timestamp >= dexalotUnlockTime, "Dexalot withdraw is locked.");
         }
 
         uint256 totalToWithdraw;
@@ -751,7 +751,7 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Internal function to withdraw earnings
      */
-    function withdrawEarningsInternal() internal  {
+    function withdrawEarningsInternal() internal {
         // Make sure moderator can't withdraw twice
         require(!sale.earningsWithdrawn);
         sale.earningsWithdrawn = true;
