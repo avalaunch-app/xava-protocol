@@ -307,8 +307,8 @@ contract AvalaunchSaleV2 is Initializable {
         // Require that dexalot unlock time is inbetween sale end and first vesting unlock..
         // ..and that vesting params are already set
         require(
-            _dexalotPortfolio != address(0) && 
-            _dexalotUnlockTime > sale.saleEnd && 
+            _dexalotPortfolio != address(0) &&
+            _dexalotUnlockTime > sale.saleEnd &&
             _dexalotUnlockTime <= vestingPortionsUnlockTime[0] &&
             vestingPortionsUnlockTime[0] > 0 &&
             sale.saleEnd > 0
@@ -576,8 +576,8 @@ contract AvalaunchSaleV2 is Initializable {
             numberOfParticipants++;
             // Decrease of available registration fees
             registrationFees = registrationFees.sub(registrationDepositAVAX);
-            // Transfer registration deposit amount in AVAX back to the users
-            sale.token.safeTransfer(user, registrationDepositAVAX);
+            // Transfer registration deposit amount in AVAX back to the users.
+            safeTransferAVAX(user, registrationDepositAVAX);
             // Trigger events
             emit RegistrationAVAXRefunded(user, registrationDepositAVAX);
             emit TokensSold(user, amountOfTokensBuying);
@@ -661,7 +661,7 @@ contract AvalaunchSaleV2 is Initializable {
     ) external {
         require(block.timestamp > sale.saleEnd && sale.phase == Phases.Idle, "Sale still in progress.");
         verifySignature(
-            keccak256(abi.encodePacked(msg.sender, address(this), portions, sigExpTime, "addPortionsToMarket")), 
+            keccak256(abi.encodePacked(msg.sender, address(this), portions, sigExpTime, "addPortionsToMarket")),
             signature
         );
         require(block.timestamp <= sigExpTime, "Signature expired.");
@@ -683,12 +683,12 @@ contract AvalaunchSaleV2 is Initializable {
      * @dev be must confirm action by giving user necessary signature
      */
     function removePortionsFromMarket(
-        uint256[] calldata portions, 
-        bytes calldata signature, 
+        uint256[] calldata portions,
+        bytes calldata signature,
         uint256 sigExpTime
     ) external {
         verifySignature(
-            keccak256(abi.encodePacked(msg.sender, address(this), portions, sigExpTime, "removePortionsFromMarket")), 
+            keccak256(abi.encodePacked(msg.sender, address(this), portions, sigExpTime, "removePortionsFromMarket")),
             signature
         );
         require(block.timestamp <= sigExpTime, "Signature expired.");
