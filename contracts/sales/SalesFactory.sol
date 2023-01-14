@@ -94,9 +94,13 @@ contract SalesFactory {
             mstore(0x20, or(shl(0x78, imp), 0x5af43d82803e903d91602b57fd5bf3))
             sale := create(0, 0x09, 0x37)
         }
-
         // Require that sale was created
         require(sale != address(0), "Sale creation failed.");
+
+        // Mark sale as created through official factory
+        isSaleCreatedThroughFactory[sale] = true;
+        // Add sale to allSales
+        allSales.push(sale);
 
         // Initialize sale
         (bool success, ) = sale.call(
@@ -107,12 +111,8 @@ contract SalesFactory {
         );
         require(success, "Initialization failed.");
 
-        // Mark sale as created through official factory
-        isSaleCreatedThroughFactory[sale] = true;
         // Approve sale on marketplace
         marketplace.approveSale(sale);
-        // Add sale to allSales
-        allSales.push(sale);
 
         // Emit relevant event
         emit SaleDeployed(sale);
