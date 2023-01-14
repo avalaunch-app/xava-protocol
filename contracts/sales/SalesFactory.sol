@@ -121,7 +121,7 @@ contract SalesFactory {
     /// @notice     Function to get all sales between indexes
     function getAllSales(uint startIndex, uint endIndex) external view returns (address[] memory) {
         // Require valid index input
-        require(endIndex >= startIndex && endIndex <= allSales.length, "Invalid index range.");
+        require(endIndex >= startIndex && endIndex < allSales.length, "Invalid index range.");
         // Create new array for sale addresses
         address[] memory sales = new address[](endIndex - startIndex + 1);
         uint index = 0;
