@@ -51,6 +51,18 @@ contract SalesFactory {
         moderator = _moderator;
     }
 
+    /// @notice     Set moderator address
+    function setModerator(address _moderator) external onlyAdmin {
+        require(_moderator != address(0));
+        moderator = _moderator;
+    }
+
+    /// @notice     Set collateral contract address
+    function setCollateral(address _collateral) external onlyAdmin {
+        require(_collateral != address(0));
+        collateral = _collateral;
+    }
+
     /// @notice     Set allocation staking contract address
     function setAllocationStaking(address _allocationStaking) external onlyAdmin {
         require(_allocationStaking != address(0));
