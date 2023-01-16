@@ -7,13 +7,13 @@ import "../interfaces/IAvalaunchMarketplace.sol";
 contract SalesFactory {
 
     // Admin contract
-    IAdmin public admin;
+    IAdmin public immutable admin;
     // Marketplace contract address
     IAvalaunchMarketplace public marketplace;
     // Allocation staking contract address
     address public allocationStaking;
     // Collateral contract address
-    address public collateral;
+    address public immutable collateral;
     // Moderator wallet address
     address public moderator;
     // Official sale creation flag
@@ -27,7 +27,6 @@ contract SalesFactory {
     event SaleDeployed(address saleContract);
     event ImplementationSet(address implementation);
     event ModeratorSet(address moderator);
-    event CollateralSet(address moderator);
     event AllocationStakingSet(address moderator);
     event MarketplaceSet(address moderator);
 
@@ -62,21 +61,15 @@ contract SalesFactory {
         emit ModeratorSet(_moderator);
     }
 
-    /// @notice     Set collateral contract address
-    function setCollateral(address _collateral) external onlyAdmin {
-        require(_collateral != address(0), "SE2");
-        collateral = _collateral;
-    }
-
     /// @notice     Set allocation staking contract address
     function setAllocationStaking(address _allocationStaking) external onlyAdmin {
-        require(_allocationStaking != address(0), "SE3");
+        require(_allocationStaking != address(0), "SE2");
         allocationStaking = _allocationStaking;
     }
 
     /// @notice     Set official marketplace contract
     function setAvalaunchMarketplace(address _marketplace) external onlyAdmin {
-        require(_marketplace != address(0), "SE4");
+        require(_marketplace != address(0), "SE3");
         marketplace = IAvalaunchMarketplace(_marketplace);
     }
 
