@@ -123,7 +123,7 @@ describe("SalesFactory", function() {
         await Admin.removeAdmin(deployer.address);
 
         // Then
-        await expect(SalesFactory.deploySale()).to.be.revertedWith("Only Admin can deploy sales");
+        await expect(SalesFactory.deploySale()).to.be.revertedWith("Only admin.");
       });
 
       it("Should emit SaleDeployed event", async function() {
