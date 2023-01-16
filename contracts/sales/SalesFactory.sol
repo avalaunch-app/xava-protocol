@@ -25,11 +25,15 @@ contract SalesFactory {
 
     // Events
     event SaleDeployed(address saleContract);
-    event ImplementationChanged(address implementation);
+    event ImplementationSet(address implementation);
+    event ModeratorSet(address moderator);
+    event CollateralSet(address moderator);
+    event AllocationStakingSet(address moderator);
+    event MarketplaceSet(address moderator);
 
     // Restricting calls only to sale admin
     modifier onlyAdmin {
-        require(admin.isAdmin(msg.sender), "Only Admin can deploy sales");
+        require(admin.isAdmin(msg.sender), "Only admin.");
         _;
     }
 
@@ -40,9 +44,9 @@ contract SalesFactory {
         address _marketplace,
         address _moderator
     ) public {
-        require(_adminContract != address(0));
-        require(_collateral != address(0));
-        require(_moderator != address(0));
+        require(_adminContract != address(0), "IE1");
+        require(_collateral != address(0), "IE2");
+        require(_moderator != address(0), "IE3");
 
         admin = IAdmin(_adminContract);
         marketplace = IAvalaunchMarketplace(_marketplace);
@@ -53,26 +57,40 @@ contract SalesFactory {
 
     /// @notice     Set moderator address
     function setModerator(address _moderator) external onlyAdmin {
-        require(_moderator != address(0));
+        require(_moderator != address(0), "SE1");
         moderator = _moderator;
+        emit ModeratorSet(_moderator);
     }
 
     /// @notice     Set collateral contract address
     function setCollateral(address _collateral) external onlyAdmin {
-        require(_collateral != address(0));
+        require(_collateral != address(0), "SE2");
         collateral = _collateral;
     }
 
     /// @notice     Set allocation staking contract address
     function setAllocationStaking(address _allocationStaking) external onlyAdmin {
-        require(_allocationStaking != address(0));
+        require(_allocationStaking != address(0), "SE3");
         allocationStaking = _allocationStaking;
     }
 
     /// @notice     Set official marketplace contract
     function setAvalaunchMarketplace(address _marketplace) external onlyAdmin {
-        require(_marketplace != address(0));
+        require(_marketplace != address(0), "SE4");
         marketplace = IAvalaunchMarketplace(_marketplace);
+    }
+
+    /// @notice     Function to set the latest sale implementation contract
+    function setImplementation(address _implementation) external onlyAdmin {
+        // Require that implementation is different from current one
+        require(
+            _implementation != implementation,
+            "Given implementation is same as current."
+        );
+        // Set new implementation
+        implementation = _implementation;
+        // Emit relevant event
+        emit ImplementationSet(implementation);
     }
 
     /// @notice     Admin function to deploy a new sale
@@ -143,18 +161,5 @@ contract SalesFactory {
             index++;
         }
         return sales;
-    }
-
-    /// @notice     Function to set the latest sale implementation contract
-    function setImplementation(address _implementation) external onlyAdmin {
-        // Require that implementation is different from current one
-        require(
-            _implementation != implementation,
-            "Given implementation is same as current."
-        );
-        // Set new implementation
-        implementation = _implementation;
-        // Emit relevant event
-        emit ImplementationChanged(implementation);
     }
 }
