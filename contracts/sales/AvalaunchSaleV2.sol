@@ -206,7 +206,7 @@ contract AvalaunchSaleV2 is Initializable {
         // Set vesting portions percents and unlock times
         for (uint256 i = 0; i < numberOfVestedPortions; i++) {
             if (i > 0) {
-                // Each portion unlock time must be latter than previous
+                // Each portion unlock time must be later than previous
                 require(_unlockingTimes[i] > _unlockingTimes[i-1], "Invalid unlock time.");
             }
             vestingPortionsUnlockTime.push(_unlockingTimes[i]);
