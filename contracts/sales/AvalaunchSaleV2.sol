@@ -242,7 +242,7 @@ contract AvalaunchSaleV2 is Initializable {
      * @param _portionVestingPrecision is precision rate for vested portion percents
      */
     function setSaleParams(
-        address _token,
+        IERC20 _token,
         uint256 _tokenPriceInAVAX,
         uint256 _amountOfTokensToSell,
         uint256 _saleEnd,
@@ -261,7 +261,7 @@ contract AvalaunchSaleV2 is Initializable {
 
         // Set sale params
         sale.isCreated = true;
-        sale.token = IERC20(_token);
+        sale.token = _token;
         sale.tokenPriceInAVAX = _tokenPriceInAVAX;
         sale.amountOfTokensToSell = _amountOfTokensToSell;
         sale.saleEnd = _saleEnd;
