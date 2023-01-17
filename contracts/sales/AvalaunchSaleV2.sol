@@ -11,6 +11,7 @@ import "../interfaces/IAvalaunchMarketplace.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
+import "../IERC20.sol";
 
 contract AvalaunchSaleV2 is Initializable {
 
@@ -825,11 +826,11 @@ contract AvalaunchSaleV2 is Initializable {
     /**
      * @notice Function to remove stuck tokens from contract
      */
-    function removeStuckTokens(address token, address beneficiary, uint256 amount) external onlyAdmin {
+    function removeStuckTokens(IERC20 token, address beneficiary, uint256 amount) external onlyAdmin {
         // Require that token address does not match with sale token
         require(token != address(sale.token));
         // Safe transfer token from sale contract to beneficiary
-        IERC20(token).safeTransfer(beneficiary, amount);
+        token.safeTransfer(beneficiary, amount);
     }
 
     /**
