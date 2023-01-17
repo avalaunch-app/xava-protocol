@@ -51,6 +51,8 @@ contract AvalaunchMarketplace is Initializable {
         _;
     }
 
+    constructor() public initializer {}
+
     function initialize(IAdmin _admin, ISalesFactory _factory, uint256 _feePercentage, uint256 _feePrecision) external initializer {
         require(address(_admin) != address(0) && address(_factory) != address(0));
         require(_feePercentage > 0 && _feePercentage < _feePrecision && _feePrecision >= 100);
