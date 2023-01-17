@@ -34,7 +34,8 @@ contract AvalaunchMarketplace is Initializable {
     event PortionListed(address portionOwner, address saleAddress, uint256 portionId);
     event PortionRemoved(address portionOwner, address saleAddress, uint256 portionId);
     event PortionSold(address portionSeller, address portionBuyer, address saleAddress, uint256 portionId);
-    event SaleApproved(address indexed sale, uint256 indexed timestamp);
+    event SaleApproved(address indexed sale);
+    event ApprovedSaleRemoved(address indexed sale);
 
     // Modifier to receive calls only from official sale contracts
     modifier onlyOfficialSales() {
@@ -160,7 +161,16 @@ contract AvalaunchMarketplace is Initializable {
     function approveSale(address sale) external {
         require(msg.sender == address(factory) || admin.isAdmin(msg.sender), "Only authorized calls.");
         officialSales[sale] = true;
-        emit SaleApproved(sale, block.timestamp);
+        emit SaleApproved(sale);
+    }
+
+    /**
+     * @notice Function to remove sale from approved sales
+     */
+    function removeApprovedSale(address sale) external onlyAdmin {
+        require(officialSales[sale], "Sale not approved.");
+        delete officialSales[sale];
+        emit ApprovedSaleRemoved(sale);
     }
 
     /**
