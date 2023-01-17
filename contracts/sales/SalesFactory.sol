@@ -65,12 +65,14 @@ contract SalesFactory {
     function setAllocationStaking(address _allocationStaking) external onlyAdmin {
         require(_allocationStaking != address(0), "SE2");
         allocationStaking = _allocationStaking;
+        emit AllocationStakingSet(_allocationStaking);
     }
 
     /// @notice     Set official marketplace contract
     function setAvalaunchMarketplace(address _marketplace) external onlyAdmin {
         require(_marketplace != address(0), "SE3");
         marketplace = IAvalaunchMarketplace(_marketplace);
+        emit MarketplaceSet(_marketplace);
     }
 
     /// @notice     Function to set the latest sale implementation contract

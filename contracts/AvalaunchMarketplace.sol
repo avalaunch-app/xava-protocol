@@ -31,11 +31,13 @@ contract AvalaunchMarketplace is Initializable {
     mapping(address => mapping(address => bool[])) public listedUserPortionsPerSale;
 
     // Events
-    event PortionListed(address portionOwner, address saleAddress, uint256 portionId);
-    event PortionRemoved(address portionOwner, address saleAddress, uint256 portionId);
-    event PortionSold(address portionSeller, address portionBuyer, address saleAddress, uint256 portionId);
+    event PortionListed(address indexed portionOwner, address indexed saleAddress, uint256 portionId);
+    event PortionRemoved(address indexed portionOwner, address indexed saleAddress, uint256 portionId);
+    event PortionSold(address indexed portionSeller, address indexed portionBuyer, address indexed saleAddress, uint256 portionId);
     event SaleApproved(address indexed sale);
     event ApprovedSaleRemoved(address indexed sale);
+    event FactorySet(ISalesFactory indexed factory);
+    event FeeParamsSet(uint256 percentage, uint256 precision);
 
     // Modifier to receive calls only from official sale contracts
     modifier onlyOfficialSales() {
@@ -49,11 +51,11 @@ contract AvalaunchMarketplace is Initializable {
         _;
     }
 
-    function initialize(address _admin, address _factory, uint256 _feePercentage, uint256 _feePrecision) external initializer {
-        require(_admin != address(0) && _factory != address(0));
+    function initialize(IAdmin _admin, ISalesFactory _factory, uint256 _feePercentage, uint256 _feePrecision) external initializer {
+        require(address(_admin) != address(0) && address(_factory) != address(0));
         require(_feePercentage > 0 && _feePercentage < _feePrecision && _feePrecision >= 100);
-        admin = IAdmin(_admin);
-        factory = ISalesFactory(_factory);
+        admin = _admin;
+        factory = _factory;
         feePercentage = _feePercentage;
         feePrecision = _feePrecision;
     }
@@ -186,9 +188,10 @@ contract AvalaunchMarketplace is Initializable {
     /**
      * @notice Function to set new factory contract
      */
-    function setFactory(address _factory) external onlyAdmin {
-        require(_factory != address(factory) && _factory != address(0));
-        factory = ISalesFactory(_factory);
+    function setFactory(ISalesFactory _factory) external onlyAdmin {
+        require(address(_factory) != address(factory) && address(_factory) != address(0));
+        factory = _factory;
+        emit FactorySet(_factory);
     }
 
     /**
@@ -198,5 +201,6 @@ contract AvalaunchMarketplace is Initializable {
         require(_percentage > 0 && _percentage < _precision && _precision >= 100);
         feePercentage = _percentage;
         feePrecision = _precision;
+        emit FeeParamsSet(_percentage, _percentage);
     }
 }
