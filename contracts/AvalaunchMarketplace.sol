@@ -132,12 +132,12 @@ contract AvalaunchMarketplace is Initializable {
         }
         // Increase traded volume
         totalVolumeTraded += msg.value;
-        // Make portion transfer state changes on sale contract
-        IAvalaunchSaleV2(sale).transferPortions(owner, msg.sender, portions);
         // Compute fee amount
         uint256 feeAmount = msg.value.mul(feePercentage).div(feePrecision);
         // Increase total fees collected
         totalFeesCollected += feeAmount;
+        // Make portion transfer state changes on sale contract
+        IAvalaunchSaleV2(sale).transferPortions(owner, msg.sender, portions);
         // Forward msg.value to portion owner (with message)
         (bool success, ) = owner.call{value: msg.value - feeAmount}(
             bytes("Your portion(s) just got sold! Greetings from Avalaunch Team :)")
