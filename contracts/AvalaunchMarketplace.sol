@@ -29,6 +29,8 @@ contract AvalaunchMarketplace is Initializable {
     mapping(address => bool) public officialSales;
     // Mapping for market visible portions
     mapping(address => mapping(address => bool[])) public listedUserPortionsPerSale;
+    // Message usage mapping
+    mapping(bytes32 => bool) public isMsgHashUsed;
 
     // Events
     event PortionListed(address indexed portionOwner, address indexed saleAddress, uint256 portionId);
@@ -116,10 +118,12 @@ contract AvalaunchMarketplace is Initializable {
         require(officialSales[sale], "Invalid sale address.");
         // Disable user from buying his own listed sale
         require(address(msg.sender) != owner, "Can't purchase your own portions.");
-        // Compute signed message hash
-        bytes32 msgHash = keccak256(abi.encodePacked(owner, msg.sender/*buyer*/, sale, portions, priceSum, sigExpTimestamp, "buyPortions"));
-        // Make sure provided signature is signed by admin and containing valid data
-        verifySignature(msgHash, signature);
+        {
+            // Compute signed message hash
+            bytes32 msgHash = keccak256(abi.encodePacked(owner, msg.sender/*buyer*/, sale, portions, priceSum, sigExpTimestamp, "buyPortions"));
+            // Make sure provided signature is signed by admin and containing valid data
+            verifySignature(msgHash, signature);
+        }
         // Make sure signature is used in a valid timeframe
         require(block.timestamp <= sigExpTimestamp, "Signature expired.");
         // Require that msg.value is matching sum of all portion prices
@@ -180,11 +184,16 @@ contract AvalaunchMarketplace is Initializable {
     /**
      * @notice Function to verify admin signed signatures
      */
-    function verifySignature(bytes32 hash, bytes memory signature) internal view {
+    function verifySignature(bytes32 hash, bytes memory signature) internal {
+        // Check if message hash is already used
+        require(!isMsgHashUsed[hash], "Message already used.");
+        // Check if message signer is admin
         require(
             admin.isAdmin(hash.toEthSignedMessageHash().recover(signature)),
             "Invalid signature."
         );
+        // Mark hash as used
+        isMsgHashUsed[hash] = true;
     }
 
     /**
