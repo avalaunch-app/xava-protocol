@@ -11,7 +11,6 @@ import "../interfaces/IAvalaunchMarketplace.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
-import "../IERC20.sol";
 
 contract AvalaunchSaleV2 is Initializable {
 
@@ -308,7 +307,7 @@ contract AvalaunchSaleV2 is Initializable {
         // Require that dexalot unlock time is inbetween sale end and first vesting unlock..
         // ..and that vesting params are already set
         require(
-            _dexalotPortfolio != address(0) &&
+            address(_dexalotPortfolio) != address(0) &&
             _dexalotUnlockTime > sale.saleEnd &&
             _dexalotUnlockTime <= vestingPortionsUnlockTime[0] &&
             vestingPortionsUnlockTime[0] > 0 &&
@@ -828,7 +827,7 @@ contract AvalaunchSaleV2 is Initializable {
      */
     function removeStuckTokens(IERC20 token, address beneficiary, uint256 amount) external onlyAdmin {
         // Require that token address does not match with sale token
-        require(token != address(sale.token));
+        require(address(token) != address(sale.token));
         // Safe transfer token from sale contract to beneficiary
         token.safeTransfer(beneficiary, amount);
     }
