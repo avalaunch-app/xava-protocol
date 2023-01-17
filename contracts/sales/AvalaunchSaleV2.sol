@@ -297,7 +297,7 @@ contract AvalaunchSaleV2 is Initializable {
      * @dev Optional feature to enable user portion withdrawals directly to Dexalot Portfolio
      */
     function setDexalotParameters(
-        address _dexalotPortfolio,
+        IDexalotPortfolio _dexalotPortfolio,
         uint256 _dexalotUnlockTime
     )
     external
@@ -313,7 +313,7 @@ contract AvalaunchSaleV2 is Initializable {
             vestingPortionsUnlockTime[0] > 0 &&
             sale.saleEnd > 0
         );
-        dexalotPortfolio = IDexalotPortfolio(_dexalotPortfolio);
+        dexalotPortfolio = _dexalotPortfolio;
         dexalotUnlockTime = _dexalotUnlockTime;
     }
 
