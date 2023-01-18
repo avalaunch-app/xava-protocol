@@ -373,7 +373,10 @@ contract AvalaunchSaleV2 is Initializable {
 
         // Set user's registration phase
         addressToPhaseRegisteredFor[msg.sender] = phaseId;
-
+        // Increment number of registered users
+        numberOfRegistrants++;
+        // Increase earnings from registration fees
+        registrationFees += msg.value;
         // Locking tokens for participants of staking phase until the sale ends
         if (phaseId == uint8(Phases.Staking)) {
             allocationStaking.setTokensUnlockTime(
@@ -382,10 +385,6 @@ contract AvalaunchSaleV2 is Initializable {
                 sale.saleEnd
             );
         }
-        // Increment number of registered users
-        numberOfRegistrants++;
-        // Increase earnings from registration fees
-        registrationFees += msg.value;
         // Emit event
         emit UserRegistered(msg.sender, phaseId);
     }
@@ -550,15 +549,6 @@ contract AvalaunchSaleV2 is Initializable {
             require(p.boostedAmountBought == 0, "Already boosted.");
         }
 
-        if (phaseId == uint8(Phases.Staking) || isBooster) {
-            // Burn XAVA from user
-            allocationStaking.redistributeXava(
-                0,
-                user,
-                amountXavaToBurn
-            );
-        }
-
         uint256 lastPercent; uint256 lastAmount;
         // Compute portion amounts
         for(uint256 i = 0; i < numberOfVestedPortions; i++) {
@@ -567,6 +557,15 @@ contract AvalaunchSaleV2 is Initializable {
                 lastAmount = amountOfTokensBuying.mul(lastPercent).div(portionVestingPrecision);
             }
             p.portionAmounts[i] += lastAmount;
+        }
+
+        if (phaseId == uint8(Phases.Staking) || isBooster) {
+            // Burn XAVA from user
+            allocationStaking.redistributeXava(
+                0,
+                user,
+                amountXavaToBurn
+            );
         }
 
         if (!isBooster) { // Normal flow
@@ -780,12 +779,16 @@ contract AvalaunchSaleV2 is Initializable {
      * @dev only after sale has ended and there is fund leftover
      */
     function withdrawRegistrationFees() external onlyAdmin {
+        // Gas optimization
+        uint256 _registrationFees = registrationFees;
+        // Require that sale is over
         require(block.timestamp > sale.saleEnd, "Sale isn't over.");
-        require(registrationFees > 0, "No fees accumulated.");
-        // Transfer AVAX to the admin wallet
-        safeTransferAVAX(msg.sender, registrationFees);
+        // Check if there are accumulated fees
+        require(_registrationFees > 0, "No fees accumulated.");
         // Set registration fees to zero
         registrationFees = 0;
+        // Transfer AVAX to the admin wallet
+        safeTransferAVAX(msg.sender, _registrationFees);
     }
 
     /**
