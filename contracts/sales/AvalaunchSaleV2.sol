@@ -286,7 +286,9 @@ contract AvalaunchSaleV2 is Initializable {
         require(timeToShift > 0, "Invalid time to shift.");
         require(block.timestamp < sale.saleEnd, "Sale already ended.");
         sale.saleEnd = sale.saleEnd.add(timeToShift);
-        require(sale.saleEnd < vestingPortionsUnlockTime[0], "Sale end crossing vesting unlock times.");
+        if (vestingPortionsUnlockTime.length > 0) {
+            require(sale.saleEnd < vestingPortionsUnlockTime[0], "Sale end crossing vesting unlock times.");
+        }
         if (dexalotUnlockTime > 0) require(sale.saleEnd < dexalotUnlockTime, "Sale end crossing dexalot unlock time.");
     }
 
