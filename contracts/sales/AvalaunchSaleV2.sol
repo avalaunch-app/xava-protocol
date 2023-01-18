@@ -910,6 +910,8 @@ contract AvalaunchSaleV2 is Initializable {
     function getTokenSymbolBytes32() internal view returns (bytes32 _symbol) {
         // Get token symbol
         string memory symbol = IERC20Metadata(address(sale.token)).symbol();
+        // Check if token has a valid symbol
+        require(bytes(symbol).length > 0, "Token does not contain a valid symbol.");
         // Parse token symbol to bytes32
         assembly {
             _symbol := mload(add(symbol, 32))
