@@ -154,6 +154,8 @@ contract AvalaunchSaleV2 is Initializable {
         require(!isLockOn, "Lock active.");
     }
 
+    constructor() public initializer {}
+
     function initialize(
         address _admin,
         address _allocationStaking,
