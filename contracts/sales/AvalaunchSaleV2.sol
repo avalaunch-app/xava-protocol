@@ -512,8 +512,11 @@ contract AvalaunchSaleV2 is Initializable {
     ) internal {
         // Make sure selected phase is ongoing and is round phase (Validator, Staking, Booster)
         require(phaseId > uint256(Phases.Registration) && phaseId == uint8(sale.phase), "Invalid phase.");
-
+        
         bool isBooster = phaseId == uint8(Phases.Booster);
+
+        // Load participation storage pointer
+        Participation storage p = userToParticipation[user];
 
         if (!isBooster) { // Normal flow
             // User must have registered for the phase in advance
@@ -523,12 +526,12 @@ contract AvalaunchSaleV2 is Initializable {
         } else { // Booster flow
             // Check user has participated before
             require(isParticipated[user], "Only participated users.");
+            // Cannot boost participation more than once
+            require(p.boostedAmountBought == 0, "Already boosted.");
         }
 
         // Compute the amount of tokens user is buying
-        uint256 amountOfTokensBuying =
-            (msg.value).mul(oneTokenInWei).div(sale.tokenPriceInAVAX);
-
+        uint256 amountOfTokensBuying = (msg.value).mul(oneTokenInWei).div(sale.tokenPriceInAVAX);
         // Cannot buy zero tokens
         require(amountOfTokensBuying > 0, "Can't buy 0 tokens.");
 
@@ -546,14 +549,9 @@ contract AvalaunchSaleV2 is Initializable {
 
         // Gas optimization
         uint256 _numberOfVestedPortions = numberOfVestedPortions;
-        // Load participation storage pointer
-        Participation storage p = userToParticipation[user];
         if (!isBooster) { // Normal flow
             // Initialize user's participation
             _initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, phaseId, _numberOfVestedPortions);
-        } else { // Booster flow
-            // Cannot boost participation more than once
-            require(p.boostedAmountBought == 0, "Already boosted.");
         }
 
         uint256 lastPercent; uint256 lastAmount;
