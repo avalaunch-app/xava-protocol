@@ -95,10 +95,8 @@ contract AvalaunchSaleV2 is Initializable {
     uint256 public dexalotUnlockTime;
     // Sale setter lock flag
     bool public isLockOn;
-
-    // Empty global arrays for cheaper participation initialization
-    PortionStates[] private _emptyPortionStates;
-    uint256[] private _emptyUint256;
+    // Multiplier used on token amount calculations
+    uint256 public oneTokenInWei;
 
     // Events
     event SaleCreated(uint256 tokenPriceInAVAX, uint256 amountOfTokensToSell, uint256 saleEnd);
@@ -195,16 +193,15 @@ contract AvalaunchSaleV2 is Initializable {
 
         // Set number of vested portions
         numberOfVestedPortions = _unlockingTimes.length;
-        // Create empty arrays with slot number of numberOfVestedPortions
-        _emptyPortionStates = new PortionStates[](numberOfVestedPortions);
-        _emptyUint256 = new uint256[](numberOfVestedPortions);
+        // Gas optimization
+        uint256 _numberOfVestedPortions = numberOfVestedPortions;
 
         // Require that locking times are later than sale end
         require(_unlockingTimes[0] > sale.saleEnd, "Invalid first unlock time.");
         // Use precision to make sure percents of portions align
         uint256 precision = portionVestingPrecision;
         // Set vesting portions percents and unlock times
-        for (uint256 i = 0; i < numberOfVestedPortions; i++) {
+        for (uint256 i = 0; i < _numberOfVestedPortions; i++) {
             if (i > 0) {
                 // Each portion unlock time must be later than previous
                 require(_unlockingTimes[i] > _unlockingTimes[i-1], "Invalid unlock time.");
@@ -224,8 +221,10 @@ contract AvalaunchSaleV2 is Initializable {
     function shiftVestingUnlockTimes(uint256 timeToShift) external onlyAdmin {
         require(timeToShift > 0, "Invalid shift time.");
         bool movable;
+        // Gas optimization
+        uint256 _numberOfVestedPortions = numberOfVestedPortions;
         // Shift the unlock time for each portion
-        for (uint256 i = 0; i < numberOfVestedPortions; i++) {
+        for (uint256 i = 0; i < _numberOfVestedPortions; i++) {
             // Shift only portions that time didn't reach yet
             if (!movable && block.timestamp < vestingPortionsUnlockTime[i]) movable = true;
             // Each portion is after the previous so once movable flag is active all latter portions may be shifted
@@ -269,12 +268,13 @@ contract AvalaunchSaleV2 is Initializable {
         // Set portion vesting precision
         portionVestingPrecision = _portionVestingPrecision;
         registrationDepositAVAX = _registrationDepositAVAX;
+        oneTokenInWei = uint(10) ** IERC20Metadata(address(_token)).decimals();
 
         // Emit event
         emit SaleCreated(
-            sale.tokenPriceInAVAX,
-            sale.amountOfTokensToSell,
-            sale.saleEnd
+            _tokenPriceInAVAX,
+            _amountOfTokensToSell,
+            _saleEnd
         );
     }
 
@@ -352,7 +352,7 @@ contract AvalaunchSaleV2 is Initializable {
      * @param phaseId is id of phase user is registering for
      */
     function registerForSale(
-        bytes memory signature,
+        bytes calldata signature,
         uint256 sigExpTime,
         uint256 phaseId
     )
@@ -527,7 +527,7 @@ contract AvalaunchSaleV2 is Initializable {
 
         // Compute the amount of tokens user is buying
         uint256 amountOfTokensBuying =
-            (msg.value).mul(uint(10) ** IERC20Metadata(address(sale.token)).decimals()).div(sale.tokenPriceInAVAX);
+            (msg.value).mul(oneTokenInWei).div(sale.tokenPriceInAVAX);
 
         // Cannot buy zero tokens
         require(amountOfTokensBuying > 0, "Can't buy 0 tokens.");
@@ -544,21 +544,26 @@ contract AvalaunchSaleV2 is Initializable {
         // Increase amount of AVAX raised
         sale.totalAVAXRaised = sale.totalAVAXRaised.add(msg.value);
 
+        // Gas optimization
+        uint256 _numberOfVestedPortions = numberOfVestedPortions;
+        // Load participation storage pointer
         Participation storage p = userToParticipation[user];
         if (!isBooster) { // Normal flow
             // Initialize user's participation
-            _initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, phaseId);
+            _initParticipationForUser(user, amountOfTokensBuying, msg.value, block.timestamp, phaseId, _numberOfVestedPortions);
         } else { // Booster flow
             // Cannot boost participation more than once
             require(p.boostedAmountBought == 0, "Already boosted.");
         }
 
         uint256 lastPercent; uint256 lastAmount;
+        // Gas optimization
+        uint256 _portionVestingPrecision = portionVestingPrecision;
         // Compute portion amounts
-        for(uint256 i = 0; i < numberOfVestedPortions; i++) {
+        for (uint256 i = 0; i < _numberOfVestedPortions; i++) {
             if (lastPercent != vestingPercentPerPortion[i]) {
                 lastPercent = vestingPercentPerPortion[i];
-                lastAmount = amountOfTokensBuying.mul(lastPercent).div(portionVestingPrecision);
+                lastAmount = amountOfTokensBuying.mul(lastPercent).div(_portionVestingPrecision);
             }
             p.portionAmounts[i] += lastAmount;
         }
@@ -713,7 +718,7 @@ contract AvalaunchSaleV2 is Initializable {
         Participation storage pBuyer = userToParticipation[buyer];
         // Initialize portions for user if hasn't participated the sale
         if(!isParticipated[buyer]) {
-            _initParticipationForUser(buyer, 0, 0, block.timestamp, uint(sale.phase) /*==Phases.Idle*/);
+            _initParticipationForUser(buyer, 0, 0, block.timestamp, uint(sale.phase) /*==Phases.Idle*/, numberOfVestedPortions);
             isParticipated[buyer] = true;
         }
         uint256 totalAmountExchanged;
@@ -870,15 +875,16 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 amountBought,
         uint256 amountAVAXPaid,
         uint256 timeParticipated,
-        uint256 phaseId
+        uint256 phaseId,
+        uint256 numberOfPortions
     ) internal {
         userToParticipation[user] = Participation({
             amountBought: amountBought,
             amountAVAXPaid: amountAVAXPaid,
             timeParticipated: timeParticipated,
             phaseId: phaseId,
-            portionAmounts: _emptyUint256,
-            portionStates: _emptyPortionStates,
+            portionAmounts: getEmptyUint256Array(numberOfPortions),
+            portionStates: getEmptyPortionStatesArray(numberOfPortions),
             boostedAmountAVAXPaid: 0,
             boostedAmountBought: 0,
             amountBoughtOnMarketplace: 0,
@@ -887,9 +893,23 @@ contract AvalaunchSaleV2 is Initializable {
     }
 
     /**
+     * @notice function to retrieve an empty uint256 array
+     */
+    function getEmptyUint256Array(uint256 size) internal pure returns (uint256[] memory) {
+        return new uint256[](size);
+    }
+
+    /**
+     * @notice function to retrieve an empty PortionStates array
+     */
+    function getEmptyPortionStatesArray(uint256 size) internal pure returns (PortionStates[] memory) {
+        return new PortionStates[](size);
+    }
+
+    /**
      * @notice Function to verify admin signed signatures
      */
-    function verifySignature(bytes32 hash, bytes memory signature) internal view {
+    function verifySignature(bytes32 hash, bytes calldata signature) internal view {
         require(
             admin.isAdmin(hash.toEthSignedMessageHash().recover(signature)),
             "Invalid signature."
