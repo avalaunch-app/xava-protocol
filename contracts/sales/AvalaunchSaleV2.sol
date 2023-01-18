@@ -2,7 +2,6 @@
 pragma solidity 0.6.12;
 
 import "../interfaces/IAdmin.sol";
-import "../interfaces/ISalesFactory.sol";
 import "../interfaces/IAllocationStaking.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/IDexalotPortfolio.sol";
@@ -21,7 +20,7 @@ contract AvalaunchSaleV2 is Initializable {
     // Pointer allocation staking contract
     IAllocationStaking public allocationStaking;
     // Pointer to sales factory contract
-    ISalesFactory public factory;
+    address public factory;
     // Pointer to admin contract
     IAdmin public admin;
     // Pointer to collateral contract
@@ -157,23 +156,23 @@ contract AvalaunchSaleV2 is Initializable {
     constructor() public initializer {}
 
     function initialize(
-        address _admin,
-        address _allocationStaking,
-        address _collateral,
-        address _marketplace,
+        IAdmin _admin,
+        IAllocationStaking _allocationStaking,
+        ICollateral _collateral,
+        IAvalaunchMarketplace _marketplace,
         address _moderator
     ) external initializer {
-        require(_admin != address(0));
-        require(_allocationStaking != address(0));
-        require(_collateral != address(0));
-        require(_marketplace != address(0));
+        require(address(_admin) != address(0));
+        require(address(_allocationStaking) != address(0));
+        require(address(_collateral) != address(0));
+        require(address(_marketplace) != address(0));
         require(_moderator != address(0));
 
-        factory = ISalesFactory(msg.sender);
-        admin = IAdmin(_admin);
-        allocationStaking = IAllocationStaking(_allocationStaking);
-        collateral = ICollateral(_collateral);
-        marketplace = IAvalaunchMarketplace(_marketplace);
+        factory = msg.sender;
+        admin = _admin;
+        allocationStaking = _allocationStaking;
+        collateral = _collateral;
+        marketplace = _marketplace;
         moderator = _moderator;
     }
 
@@ -229,7 +228,7 @@ contract AvalaunchSaleV2 is Initializable {
         for (uint256 i = 0; i < _numberOfVestedPortions; i++) {
             // Shift only portions that time didn't reach yet
             if (!movable && block.timestamp < vestingPortionsUnlockTime[i]) movable = true;
-            // Each portion is after the previous so once movable flag is active all latter portions may be shifted
+            // Each portion is after the previous so once movable flag is active all later portions may be shifted
             if (movable) vestingPortionsUnlockTime[i] = vestingPortionsUnlockTime[i].add(timeToShift);
         }
     }
@@ -315,7 +314,8 @@ contract AvalaunchSaleV2 is Initializable {
             _dexalotUnlockTime > sale.saleEnd &&
             _dexalotUnlockTime <= vestingPortionsUnlockTime[0] &&
             vestingPortionsUnlockTime[0] > 0 &&
-            sale.saleEnd > 0
+            sale.saleEnd > 0,
+            "Invalid parameter(s)."
         );
         dexalotPortfolio = _dexalotPortfolio;
         dexalotUnlockTime = _dexalotUnlockTime;
@@ -336,7 +336,7 @@ contract AvalaunchSaleV2 is Initializable {
      * @dev Retroactive calls are option for teams which do not have token at the moment of sale launch
      */
     function setSaleToken(
-        address saleToken
+        IERC20 saleToken
     )
     external
     onlyAdmin
@@ -344,7 +344,7 @@ contract AvalaunchSaleV2 is Initializable {
     {
         require(address(saleToken) != address(0));
         require(!sale.tokensDeposited, "Tokens already deposited.");
-        sale.token = IERC20(saleToken);
+        sale.token = saleToken;
     }
 
     /**
@@ -513,7 +513,7 @@ contract AvalaunchSaleV2 is Initializable {
         uint256 phaseId
     ) internal {
         // Make sure selected phase is ongoing and is round phase (Validator, Staking, Booster)
-        require(phaseId > uint256(Phases.Registration) && phaseId == uint8(sale.phase), "Invalid phase.");
+        require(phaseId > uint8(Phases.Registration) && phaseId == uint8(sale.phase), "Invalid phase.");
         
         bool isBooster = phaseId == uint8(Phases.Booster);
 
@@ -621,14 +621,11 @@ contract AvalaunchSaleV2 is Initializable {
             uint256 portionId = portionIds[i];
             require(portionId < numberOfVestedPortions, "Invalid portion id.");
 
-            bool eligible;
             if (
                 p.portionStates[portionId] == PortionStates.Available && p.portionAmounts[portionId] > 0 && (
                     vestingPortionsUnlockTime[portionId] <= block.timestamp || (portionId == 0 && toDexalot)
                 )
-            ) eligible = true;
-
-            if (eligible) {
+            ) {
                 // Mark portion as withdrawn to dexalot
                 if (!toDexalot) p.portionStates[portionId] = PortionStates.Withdrawn;
                 else p.portionStates[portionId] = PortionStates.WithdrawnToDexalot;
