@@ -357,6 +357,8 @@ contract AvalaunchSaleV2 is Initializable {
     external
     payable
     {
+        // Check if sale is created
+        require(sale.isCreated, "Sale is not created yet.");
         // Sale registration validity checks
         require(msg.value == registrationDepositAVAX, "Invalid deposit amount.");
         // Register only for validator or staking phase
