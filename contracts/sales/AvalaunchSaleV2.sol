@@ -437,9 +437,13 @@ contract AvalaunchSaleV2 is Initializable {
      * @notice Function to deposit sale tokens
      * @dev Only sale moderator may deposit
      */
-    function depositTokens() external onlyModerator ifUnlocked {
+    function depositTokens() external onlyModerator {
         // Require that setSaleParams was called
-        require(sale.isCreated && address(sale.token) != address(0));
+        require(
+            sale.isCreated && 
+            address(sale.token) != address(0) &&
+            !sale.tokensDeposited
+        );
 
         // Mark that tokens are deposited
         sale.tokensDeposited = true;
