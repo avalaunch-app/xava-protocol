@@ -572,14 +572,12 @@ contract AvalaunchSaleV2 is Initializable {
             p.portionAmounts[i] += lastAmount;
         }
 
-        if (phaseId == uint8(Phases.Staking) || isBooster) {
-            // Burn XAVA from user
-            allocationStaking.redistributeXava(
-                0,
-                user,
-                amountXavaToBurn
-            );
-        }
+        // Burn XAVA from user
+        allocationStaking.redistributeXava(
+            0,
+            user,
+            amountXavaToBurn
+        );
 
         if (!isBooster) { // Normal flow
             // Mark user is participated
