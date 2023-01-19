@@ -31,6 +31,8 @@ contract AvalaunchMarketplace is Initializable {
     mapping(address => mapping(address => bool[])) public listedUserPortionsPerSale;
     // Message usage mapping
     mapping(bytes32 => bool) public isMsgHashUsed;
+    // Maximum fee percentage value
+    uint256 public constant MAX_FEE = 5;
 
     // Events
     event PortionListed(address indexed portionOwner, address indexed saleAddress, uint256 portionId);
@@ -57,11 +59,9 @@ contract AvalaunchMarketplace is Initializable {
 
     function initialize(IAdmin _admin, ISalesFactory _factory, uint256 _feePercentage, uint256 _feePrecision) external initializer {
         require(address(_admin) != address(0) && address(_factory) != address(0));
-        require(_feePercentage > 0 && _feePercentage < _feePrecision && _feePrecision >= 100);
         admin = _admin;
         factory = _factory;
-        feePercentage = _feePercentage;
-        feePrecision = _feePrecision;
+        _setFeeParams(_feePercentage, _feePrecision);
     }
 
     /**
@@ -206,12 +206,20 @@ contract AvalaunchMarketplace is Initializable {
     }
 
     /**
-     * @notice Function to set new fee parameters
+     * @notice Function to set new fee parameters by admin
      */
     function setFeeParams(uint256 _percentage, uint256 _precision) external onlyAdmin {
+        _setFeeParams(_percentage, _precision);
+    }
+
+    /**
+     * @notice Internal function to set new fee parameters
+     */
+    function _setFeeParams(uint256 _percentage, uint256 _precision) internal {
         require(_percentage > 0 && _percentage < _precision && _precision >= 100);
+        require(_percentage * 100 / _precision < MAX_FEE);
         feePercentage = _percentage;
         feePrecision = _precision;
-        emit FeeParamsSet(_percentage, _percentage);
+        emit FeeParamsSet(_percentage, _precision);
     }
 }
