@@ -532,6 +532,8 @@ contract AvalaunchSaleV2 is Initializable {
         } else { // Booster flow
             // Check user has participated before
             require(isParticipated[user], "Only participated users.");
+            // Check if user participated in staking round
+            require(addressToPhaseRegisteredFor[user] == uint8(Phases.Staking), "User is not staker.");
             // Cannot boost participation more than once
             require(p.boostedAmountBought == 0, "Already boosted.");
         }
@@ -572,12 +574,14 @@ contract AvalaunchSaleV2 is Initializable {
             p.portionAmounts[i] += lastAmount;
         }
 
-        // Burn XAVA from user
-        allocationStaking.redistributeXava(
-            0,
-            user,
-            amountXavaToBurn
-        );
+        if (phaseId == uint8(Phases.Staking) || isBooster) {
+            // Burn XAVA from user
+            allocationStaking.redistributeXava(
+                0,
+                user,
+                amountXavaToBurn
+            );
+        }
 
         if (!isBooster) { // Normal flow
             // Mark user is participated
