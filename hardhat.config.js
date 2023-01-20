@@ -73,16 +73,34 @@ module.exports = {
   solidity: {
     compilers: [ {version: '0.6.12'} ],
     overrides: {
+      "contracts/sales/AvalaunchSaleV2.sol": {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 999999
+          },
+        },
+      },
       "contracts/sales/AvalaunchSale.sol": {
         version: '0.6.12',
         settings: {
           optimizer: {
             enabled: true,
-            runs: 185
+            runs: 200
           },
         },
       },
       "contracts/sales/SalesFactory.sol": {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 999999
+          },
+        },
+      },
+      "contracts/AvalaunchMarketplace.sol": {
         version: '0.6.12',
         settings: {
           optimizer: {

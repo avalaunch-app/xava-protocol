@@ -2,76 +2,130 @@
 pragma solidity 0.6.12;
 
 import "../interfaces/IAdmin.sol";
+import "../interfaces/IAvalaunchMarketplace.sol";
 
 contract SalesFactory {
 
     // Admin contract
-    IAdmin public admin;
+    IAdmin public immutable admin;
+    // Marketplace contract address
+    IAvalaunchMarketplace public marketplace;
     // Allocation staking contract address
     address public allocationStaking;
     // Collateral contract address
-    address public collateral;
+    address public immutable collateral;
+    // Moderator wallet address
+    address public moderator;
     // Official sale creation flag
     mapping (address => bool) public isSaleCreatedThroughFactory;
     // Expose so query can be possible only by position as well
     address [] public allSales;
     // Latest sale implementation contract address
-    address implementation;
+    address public implementation;
 
     // Events
     event SaleDeployed(address saleContract);
-    event ImplementationChanged(address implementation);
-    event AllocationStakingSet(address allocationStaking);
+    event ImplementationSet(address implementation);
+    event ModeratorSet(address moderator);
+    event AllocationStakingSet(address moderator);
+    event MarketplaceSet(address moderator);
 
     // Restricting calls only to sale admin
     modifier onlyAdmin {
-        require(admin.isAdmin(msg.sender), "Only Admin can deploy sales");
+        require(admin.isAdmin(msg.sender), "Only admin.");
         _;
     }
 
-    constructor (address _adminContract, address _allocationStaking, address _collateral) public {
+    constructor(
+        address _adminContract,
+        address _allocationStaking,
+        address _collateral,
+        address _marketplace,
+        address _moderator
+    ) public {
+        require(_adminContract != address(0), "IE1");
+        require(_collateral != address(0), "IE2");
+        require(_moderator != address(0), "IE3");
+
         admin = IAdmin(_adminContract);
+        marketplace = IAvalaunchMarketplace(_marketplace);
         allocationStaking = _allocationStaking;
-        emit AllocationStakingSet(allocationStaking);
         collateral = _collateral;
+        moderator = _moderator;
+    }
+
+    /// @notice     Set moderator address
+    function setModerator(address _moderator) external onlyAdmin {
+        require(_moderator != address(0), "SE1");
+        moderator = _moderator;
+        emit ModeratorSet(_moderator);
     }
 
     /// @notice     Set allocation staking contract address
     function setAllocationStaking(address _allocationStaking) external onlyAdmin {
-        require(_allocationStaking != address(0));
+        require(_allocationStaking != address(0), "SE2");
         allocationStaking = _allocationStaking;
+        emit AllocationStakingSet(_allocationStaking);
+    }
+
+    /// @notice     Set official marketplace contract
+    function setAvalaunchMarketplace(address _marketplace) external onlyAdmin {
+        require(_marketplace != address(0), "SE3");
+        marketplace = IAvalaunchMarketplace(_marketplace);
+        emit MarketplaceSet(_marketplace);
+    }
+
+    /// @notice     Function to set the latest sale implementation contract
+    function setImplementation(address _implementation) external onlyAdmin {
+        // Require that implementation is different from current one
+        require(
+            _implementation != implementation,
+            "Given implementation is same as current."
+        );
+        // Set new implementation
+        implementation = _implementation;
+        // Emit relevant event
+        emit ImplementationSet(implementation);
     }
 
     /// @notice     Admin function to deploy a new sale
-    function deploySale()
-    external
-    onlyAdmin
-    {
+    function deploySale() external onlyAdmin {
+        // Require that implementation is set
+        require(implementation != address(0), "Sale implementation not set.");
+
         // Deploy sale clone
         address sale;
         // Inline assembly works only with local vars
         address imp = implementation;
 
-        // solhint-disable-next-line no-inline-assembly
+        /// @solidity memory-safe-assembly
         assembly {
-            let ptr := mload(0x40)
-            mstore(ptr, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
-            mstore(add(ptr, 0x14), shl(0x60, imp))
-            mstore(add(ptr, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-            sale := create(0, ptr, 0x37)
+            // Cleans the upper 96 bits of the `implementation` word, then packs the first 3 bytes
+            // of the `implementation` address with the bytecode before the address.
+            mstore(0x00, or(shr(0xe8, shl(0x60, imp)), 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000))
+            // Packs the remaining 17 bytes of `implementation` with the bytecode after the address.
+            mstore(0x20, or(shl(0x78, imp), 0x5af43d82803e903d91602b57fd5bf3))
+            sale := create(0, 0x09, 0x37)
         }
-
         // Require that sale was created
-        require(sale != address(0), "Sale creation failed");
-
-        // Initialize sale
-        (bool success, ) = sale.call(abi.encodeWithSignature("initialize(address,address,address)", address(admin), allocationStaking, collateral));
-        require(success, "Initialization failed.");
+        require(sale != address(0), "Sale creation failed.");
 
         // Mark sale as created through official factory
         isSaleCreatedThroughFactory[sale] = true;
         // Add sale to allSales
         allSales.push(sale);
+
+        // Initialize sale
+        (bool success, ) = sale.call(
+            abi.encodeWithSignature(
+                "initialize(address,address,address,address,address)",
+                address(admin), allocationStaking, collateral, address(marketplace), moderator
+            )
+        );
+        require(success, "Initialization failed.");
+
+        // Approve sale on marketplace
+        marketplace.approveSale(sale);
 
         // Emit relevant event
         emit SaleDeployed(sale);
@@ -84,38 +138,23 @@ contract SalesFactory {
 
     /// @notice     Get most recently deployed sale
     function getLastDeployedSale() external view returns (address) {
-        if(allSales.length > 0) {
-            // Return the sale address
-            return allSales[allSales.length - 1];
-        }
+        if(allSales.length > 0) return allSales[allSales.length - 1];
+        // Return zero address if no sales were deployed
         return address(0);
     }
 
     /// @notice     Function to get all sales between indexes
     function getAllSales(uint startIndex, uint endIndex) external view returns (address[] memory) {
         // Require valid index input
-        require(endIndex > startIndex, "Invalid index range.");
-
+        require(endIndex >= startIndex && endIndex < allSales.length, "Invalid index range.");
         // Create new array for sale addresses
-        address[] memory sales = new address[](endIndex - startIndex);
+        address[] memory sales = new address[](endIndex - startIndex + 1);
         uint index = 0;
-
         // Fill the array with sale addresses
-        for(uint i = startIndex; i < endIndex; i++) {
+        for(uint i = startIndex; i <= endIndex; i++) {
             sales[index] = allSales[i];
             index++;
         }
-
         return sales;
-    }
-
-    /// @notice     Function to set the latest sale implementation contract
-    function setImplementation(address _implementation) external onlyAdmin {
-        require(
-            _implementation != implementation,
-            "Given implementation is same as current."
-        );
-        implementation = _implementation;
-        emit ImplementationChanged(implementation);
     }
 }
