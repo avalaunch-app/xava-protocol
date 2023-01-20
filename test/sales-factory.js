@@ -52,9 +52,21 @@ describe("SalesFactory", function() {
     await SalesFactory.deployed();
 
     const MarketplaceFactory = await ethers.getContractFactory("AvalaunchMarketplace");
-    Marketplace = await MarketplaceFactory.deploy();
-    await Marketplace.initialize(Admin.address, SalesFactory.address, 200, 100000);
+    const MarketplaceImplementation = await MarketplaceFactory.deploy();
+    await MarketplaceImplementation.deployed()
 
+    // Marketplace proxy setup
+    const methodId = (ethers.utils.keccak256(ethers.utils.toUtf8Bytes("initialize(address,address,uint256,uint256)"))).substring(0,10); // '0x' + 4 bytes
+    const types = ['address','address','uint256','uint256']; // Types to encode
+    const values = [Admin.address, SalesFactory.address, 200, 100000]; // Values to encode
+
+    const abi = new ethers.utils.AbiCoder(); // Get abi coder instance
+    let data = methodId + abi.encode(types, values).substring(2); // Generate calldata
+
+    const proxyFactory = await hre.ethers.getContractFactory("contracts/openzeppelin/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy");
+    Marketplace = await proxyFactory.deploy(MarketplaceImplementation.address, deployer.address, data);
+    await Marketplace.deployed();
+    
     const AvalaunchSaleV2Factory = await ethers.getContractFactory("AvalaunchSaleV2");
     AvalaunchSale = await AvalaunchSaleV2Factory.deploy();
 

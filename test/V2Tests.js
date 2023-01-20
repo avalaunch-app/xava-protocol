@@ -130,6 +130,7 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         alice = accounts[2];
         bob = accounts[3];
         charlie = accounts[4];
+        proxyAdmin = accounts[5];
 
         const adminFactory = await ethers.getContractFactory("Admin");
         admin = await adminFactory.deploy([deployer.address]);
@@ -157,24 +158,39 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         marketplace = await marketplaceFactory.deploy();
         await marketplace.deployed();
 
+        const MarketplaceFactory = await ethers.getContractFactory("AvalaunchMarketplace");
+        const MarketplaceImplementation = await MarketplaceFactory.deploy();
+        await MarketplaceImplementation.deployed()
+
         const salesFactoryFactory = await ethers.getContractFactory("SalesFactory");
         salesFactory = await salesFactoryFactory.deploy(
             admin.address,
             allocationStaking.address,
             collateral.address,
-            marketplace.address,
+            ZERO_ADDRESS,
             mod.address
         );
         await salesFactory.deployed();
 
-        await marketplace.initialize(admin.address, salesFactory.address, FEE_PERCENT, FEE_PRECISION);
+        // Marketplace proxy setup
+        const methodId = (ethers.utils.keccak256(ethers.utils.toUtf8Bytes("initialize(address,address,uint256,uint256)"))).substring(0,10); // '0x' + 4 bytes
+        const types = ['address','address','uint256','uint256']; // Types to encode
+        const values = [admin.address, salesFactory.address, FEE_PERCENT, FEE_PRECISION]; // Values to encode
+
+        const abi = new ethers.utils.AbiCoder(); // Get abi coder instance
+        let data = methodId + abi.encode(types, values).substring(2); // Generate calldata
+
+        const proxyFactory = await hre.ethers.getContractFactory("contracts/openzeppelin/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy");
+        const proxy = await proxyFactory.deploy(MarketplaceImplementation.address, proxyAdmin.address, data);
+        await proxy.deployed();
+        marketplace = await hre.ethers.getContractAt("AvalaunchMarketplace", proxy.address);
 
         const saleImplementationFactory = await ethers.getContractFactory("AvalaunchSaleV2");
         const saleImplementation = await saleImplementationFactory.deploy();
         await saleImplementation.deployed();
 
+        await salesFactory.setAvalaunchMarketplace(marketplace.address);
         await salesFactory.setImplementation(saleImplementation.address);
-
         await salesFactory.deploySale();
 
         sale = await ethers.getContractAt("AvalaunchSaleV2", await salesFactory.getLastDeployedSale());
