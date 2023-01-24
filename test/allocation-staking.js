@@ -1,7 +1,6 @@
-const { ethers, upgrades } = require("hardhat");
+const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const ethUtil = require("ethereumjs-util");
-const hre = require("hardhat");
 
 describe("AllocationStaking", function() {
 
@@ -140,7 +139,7 @@ describe("AllocationStaking", function() {
     await Collateral.initialize(deployer.address, Admin.address, 43114);
 
     const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address);
+    SalesFactory = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address, ZERO_ADDRESS, deployer.address);
 
     AllocationStakingRewardsFactory = await ethers.getContractFactory("AllocationStaking");
     const blockTimestamp = await getCurrentBlockTimestamp();
@@ -212,7 +211,7 @@ describe("AllocationStaking", function() {
     it("Should set salesFactory", async function() {
       // Given
       const SalesFactoryFactory = await ethers.getContractFactory("SalesFactory");
-      const SalesFactory2 = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address);
+      const SalesFactory2 = await SalesFactoryFactory.deploy(Admin.address, ZERO_ADDRESS, Collateral.address, ZERO_ADDRESS, deployer.address);
 
       // When
       await AllocationStaking.setSalesFactory(SalesFactory2.address);

@@ -5,7 +5,7 @@ const { ethers } = hre;
 async function main() {
     const contracts = getSavedContractAddresses()[hre.network.name];
 
-    const saleFactory = await ethers.getContractFactory("AvalaunchSale");
+    const saleFactory = await ethers.getContractFactory("AvalaunchSaleV2");
     const saleImplementation = await saleFactory.deploy();
     await saleImplementation.deployed();
 
