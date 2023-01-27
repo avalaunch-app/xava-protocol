@@ -534,13 +534,13 @@ contract AvalaunchSale is Initializable {
         // Require that round has not already started
         require(
             block.timestamp < roundIdToRound[roundIds[0]].startTime,
-            "1st round already started."
+            "Rounds started."
         );
-        require(rounds.length == caps.length, "Invalid array length.");
+        require(rounds.length == caps.length, "Array size mismatch.");
 
         // Set max participation per round
         for (uint256 i = 0; i < rounds.length; i++) {
-            require(caps[i] > 0, "Max participation can't be 0.");
+            require(caps[i] > 0, "Invalid cap.");
 
             Round storage round = roundIdToRound[rounds[i]];
             round.maxParticipation = caps[i];
@@ -549,23 +549,19 @@ contract AvalaunchSale is Initializable {
         }
     }
 
+    // Function to asynchronously set the amount of tokens to sell
+    function setAmountOfTokensToSell(uint256 _amountOfTokensToSell, uint256 _tokenPriceInUSD) external onlySaleOwner onlyIfGateOpen {
+        sale.tokenPriceInUSD = _tokenPriceInUSD;
+        sale.amountOfTokensToSell = _amountOfTokensToSell;
+    }
+
     // Function for owner to deposit tokens, can be called only once.
-    function depositTokens()
-        external
-        onlySaleOwner
-        onlyIfGateOpen
-    {
+    function depositTokens() external onlySaleOwner onlyIfGateOpen {
         // Require that setSaleParams was called
-        require(
-            sale.amountOfTokensToSell > 0,
-            "Sale parameters not set."
-        );
+        require(sale.isCreated);
 
         // Require that tokens are not deposited
-        require(
-            !sale.tokensDeposited,
-            "Tokens already deposited."
-        );
+        require(!sale.tokensDeposited);
 
         // Mark that tokens are deposited
         sale.tokensDeposited = true;
@@ -625,7 +621,7 @@ contract AvalaunchSale is Initializable {
         // User must have registered for the round in advance
         require(
             addressToRoundRegisteredFor[user] == roundId,
-            "Not registered for this round."
+            "Invalid round."
         );
 
         // Check user haven't participated before
