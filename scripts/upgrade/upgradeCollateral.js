@@ -1,6 +1,6 @@
 // scripts/upgrade-box.js
 const { ethers, upgrades } = require("hardhat");
-const { getSavedContractAddresses, getSavedProxyABI, saveContractAddress} = require('./utils')
+const { getSavedContractAddresses, getSavedProxyABI, saveContractAddress } = require('../utils')
 const hre = require("hardhat");
 
 async function main() {
@@ -18,6 +18,7 @@ async function main() {
     await collateralImplementation.deployed();
 
     console.log("New Implementation:", collateralImplementation.address);
+    saveContractAddress(hre.network.name, "AvalaunchCollateral", collateralImplementation.address);
 
     await proxyAdmin.upgrade(collateralProxy, collateralImplementation.address);
     console.log("Collateral contract upgraded");

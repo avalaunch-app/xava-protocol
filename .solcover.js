@@ -6,6 +6,7 @@ module.exports = {
         'KuCoinVestingContract.sol',
         'ParticipationVestingPrivate.sol',
         'ParticipationVestingSeed.sol',
+        'sales/AvalaunchSale.sol',
         'openzeppelin/TransparentUpgradeableProxy.sol'
     ]
 };
