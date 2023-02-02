@@ -487,6 +487,11 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
                 .withArgs(bob.address, amount);
         });
 
+        it("Should not auto-participate second time", async () => {
+            await expect(collateral.connect(deployer).autoParticipate(sale.address, 0, 0, 0, 3, bob.address, 0, "0x00"))
+                .to.be.revertedWith("AutoBuy already executed for user.");
+        });
+
         it("Should boost participation", async () => {
             await sale.changePhase(4);
             let messageJSON = {
@@ -512,6 +517,12 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
                 .to.emit(sale, "ParticipationBoosted")
                 .withArgs(alice.address, boostAmountAVAX, BigNumber.from(boostAmountAVAX).mul(NUMBER_1E18).div(SALE_TOKEN_PRICE_IN_AVAX));
             // console.log(await sale.getParticipationAmountsAndStates(alice.address));
+        });
+
+        it("Should not boost participation second time", async () => {
+            // console.log(await sale.getParticipationAmountsAndStates(alice.address));
+            await expect(collateral.connect(deployer).boostParticipation(sale.address, 0, 0, alice.address, 0, "0x00"))
+                .to.be.revertedWith("Participation already boosted for user.");
         });
     });
 
