@@ -269,7 +269,7 @@ contract AvalaunchSaleV2 is Initializable {
         // Set portion vesting precision
         portionVestingPrecision = _portionVestingPrecision;
         registrationDepositAVAX = _registrationDepositAVAX;
-        if(_token != address(0x0)) {
+        if(address(_token) != address(0x0)) {
             oneTokenInWei = uint(10) ** IERC20Metadata(address(_token)).decimals();
         }
 
