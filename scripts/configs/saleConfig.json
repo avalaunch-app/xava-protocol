@@ -2,7 +2,7 @@
   "mainnet": {
     "saleName": "Deepwaters",
     "saleEndTime": "1676543400",
-    "tokenAddress": "",
+    "tokenAddress": "0x0000000000000000000000000000000000000000",
     "totalTokens": "2083333.33",
     "tokenPriceInAvax": "0.0059850374",
     "portionVestingPrecision": 100000,
