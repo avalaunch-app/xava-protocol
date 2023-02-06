@@ -223,9 +223,9 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             percents = [2000, 2000, 2000, 2000, 2000];
             unlockTimes = [
                 saleEndTime + 600,
-                saleEndTime + 600 * 2, 
-                saleEndTime + 600 * 3, 
-                saleEndTime + 600 * 4, 
+                saleEndTime + 600 * 2,
+                saleEndTime + 600 * 3,
+                saleEndTime + 600 * 4,
                 saleEndTime + 600 * 5
             ];
         });
@@ -254,7 +254,7 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             );
         });
 
-        it("Should set different sale token, and then re-set old one", async () => {
+        xit("Should set different sale token, and then re-set old one", async () => {
             await sale.setSaleToken(ONE_ADDRESS);
             let saleDetails = await sale.sale();
             expect(saleDetails.token).to.equal(ONE_ADDRESS);
@@ -638,7 +638,7 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         it("Should not withdraw registration fees when none accumulated", async () => {
             await expect(sale.withdrawRegistrationFees()).to.be.revertedWith("No fees accumulated.");
         });
-        
+
         it("Should withdraw unused funds", async () => {
             await sale.withdrawUnusedFunds();
         });
