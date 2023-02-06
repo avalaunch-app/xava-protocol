@@ -346,7 +346,7 @@ contract AvalaunchSaleV2 is Initializable {
     {
         require(address(saleToken) != address(0));
         require(!sale.tokensDeposited, "Tokens already deposited.");
-        oneTokenInWei = uint(10) ** IERC20Metadata(address(_token)).decimals();
+        oneTokenInWei = uint(10) ** IERC20Metadata(address(saleToken)).decimals();
         sale.token = saleToken;
     }
 
