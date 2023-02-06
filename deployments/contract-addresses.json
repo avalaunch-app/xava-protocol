@@ -100,7 +100,8 @@
         "AirdropXAVA-Portion-25": "0x306A7750f0A861214A4f1413822b6F3A12767E89",
         "AirdropXAVA-Portion-26": "0x6d1C24cFC33e2df39223e6bd4d7FA000e3cCA450",
         "AvalaunchMarketplace": "0xb6D16bD6872A67B285853664Ef1f1149ba6F223A",
-        "AvalaunchMarketplaceProxy": "0x863C5AAD62c8086746d03E10A7b327504E154f08"
+        "AvalaunchMarketplaceProxy": "0x863C5AAD62c8086746d03E10A7b327504E154f08",
+        "Deepwaters": "0x60D57fE620DBCf7d8D96b8BcfBF504fD3135Ec42"
     },
     "local": {
         "MOCK-XAVA": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
