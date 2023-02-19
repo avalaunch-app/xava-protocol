@@ -1,11 +1,11 @@
-## Avalaunch protcool implementation
+## Avalaunch protocol implementation
 ![unit-tests](https://github.com/avalaunch-app/xava-protocol/actions/workflows/unit-tests.yaml/badge.svg)
 ![solhint-lint](https://github.com/avalaunch-app/xava-protocol/actions/workflows/solhint-lint.yaml/badge.svg)
 [![codecov](https://codecov.io/gh/avalaunch-app/xava-protocol/branch/staging/graph/badge.svg?token=JxZIQnKZcw)](https://codecov.io/gh/avalaunch-app/xava-protocol)
 
 _The first protocol, exclusively for the Avalanche ecosystem, to offer promising and innovative projects a fast, secure, and efficient platform for decentralized fundraising._
 
-### Developement instructions
+### Development instructions
 - `$ yarn install` - _Install all dependencies_
 - `$ echo PK="PRIVATE_KEY" > .env` - _Add testing private key_
 - `$ npx hardhat compile` - _Compile all contracts_
