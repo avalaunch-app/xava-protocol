@@ -38,6 +38,7 @@ contract AvalaunchMarketplace is Initializable {
     event PortionListed(address indexed portionOwner, address indexed saleAddress, uint256 portionId);
     event PortionRemoved(address indexed portionOwner, address indexed saleAddress, uint256 portionId);
     event PortionSold(address indexed portionSeller, address indexed portionBuyer, address indexed saleAddress, uint256 portionId);
+    event ItemSold(address indexed itemBuyer, uint256 indexed itemId);
     event SaleApproved(address indexed sale);
     event ApprovedSaleRemoved(address indexed sale);
     event FactorySet(ISalesFactory indexed factory);
@@ -153,6 +154,8 @@ contract AvalaunchMarketplace is Initializable {
             bytes("Your portion(s) just got sold! Greetings from Avalaunch Team :)")
         );
         require(success);
+        // Trigger event
+        emit ItemSold(msg.sender, itemId);
     }
 
     /**
