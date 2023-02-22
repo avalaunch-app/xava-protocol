@@ -21,7 +21,8 @@
     "hardhat-contract-sizer": "2.5.0",
     "hardhat-gas-reporter": "1.0.8",
     "hardhat-web3": "1.0.1",
-    "scrypt": "github:barrysteyn/node-scrypt#fb60a8d3c158fe115a624b5ffa7480f3a24b03fb"
+    "scrypt": "github:barrysteyn/node-scrypt#fb60a8d3c158fe115a624b5ffa7480f3a24b03fb",
+    "solhint": "^3.4.0"
   },
   "devDependencies": {
     "@chainlink/contracts": "0.0.10",
