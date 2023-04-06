@@ -269,7 +269,9 @@ contract AvalaunchSaleV2 is Initializable {
         // Set portion vesting precision
         portionVestingPrecision = _portionVestingPrecision;
         registrationDepositAVAX = _registrationDepositAVAX;
-        oneTokenInWei = uint(10) ** IERC20Metadata(address(_token)).decimals();
+        if(address(_token) != address(0x0)) {
+            oneTokenInWei = uint(10) ** IERC20Metadata(address(_token)).decimals();
+        }
 
         // Emit event
         emit SaleCreated(
@@ -344,6 +346,7 @@ contract AvalaunchSaleV2 is Initializable {
     {
         require(address(saleToken) != address(0));
         require(!sale.tokensDeposited, "Tokens already deposited.");
+        oneTokenInWei = uint(10) ** IERC20Metadata(address(saleToken)).decimals();
         sale.token = saleToken;
     }
 
@@ -440,7 +443,7 @@ contract AvalaunchSaleV2 is Initializable {
     function depositTokens() external onlyModerator {
         // Require that setSaleParams was called
         require(
-            sale.isCreated && 
+            sale.isCreated &&
             address(sale.token) != address(0) &&
             !sale.tokensDeposited
         );
@@ -518,7 +521,7 @@ contract AvalaunchSaleV2 is Initializable {
     ) internal {
         // Make sure selected phase is ongoing and is round phase (Validator, Staking, Booster)
         require(phaseId > uint8(Phases.Registration) && phaseId == uint8(sale.phase), "Invalid phase.");
-        
+
         bool isBooster = phaseId == uint8(Phases.Booster);
 
         // Load participation storage pointer
