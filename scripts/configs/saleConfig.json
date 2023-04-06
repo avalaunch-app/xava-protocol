@@ -1,28 +1,19 @@
 {
   "mainnet": {
-    "tokenAddress": "0xFd538CA3f58dC309dA55B11f007ff53fb4602876",
-    "totalTokens": "4687500",
-    "tokenPriceInUSD": "0.05333",
-    "tokenPriceInAvax": "0.00298934977",
-    "saleOwner": "0x4F92C01bBfe5918f0FC0bdfE4Af6f7edD1eD85A5",
-    "registrationStartAt": 1664118000,
-    "registrationLength": 702000,
-    "delayBetweenRegistrationAndSale": 43200,
-    "validatorRoundLength": 32400,
-    "stakingRoundLength": 54000,
-    "boosterRoundLength": 16200,
-    "TGE": "1665243000",
+    "saleName": "Deepwaters",
+    "saleEndTime": "1676543400",
+    "tokenAddress": "0x0000000000000000000000000000000000000000",
+    "totalTokens": "2083333.33",
+    "tokenPriceInAvax": "0.0059850374",
     "portionVestingPrecision": 100000,
-    "stakingRoundId": 2,
     "registrationDepositAVAX": "1",
-    "maxVestingTimeShift": 2592000,
-    "updateTokenPriceInAVAXPercentageThreshold": 30,
-    "updateTokenPriceInAVAXTimeLimit": 600,
     "unlockingTimes": [
-      1665243000
+      1676894400,
+      1679313600
     ],
     "portionPercents": [
-      100000
+      50000,
+      50000
     ]
   },
   "mainnet-gold": {

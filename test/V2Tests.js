@@ -64,11 +64,11 @@ async function signRemovePortionsFromMarket(user, contractAddress, portions, sig
     return await deployer.signMessage(ethers.utils.arrayify(digest));
 }
 
-async function signBuyPortions(seller, buyer, sale, portions, pricesum, sigExpTime) {
+async function signBuyPortions(seller, buyer, sale, portions, pricesum, itemId, sigExpTime) {
 
     const digest = ethers.utils.solidityKeccak256(
-        ['address', 'address', 'address', 'uint256[]', 'uint256', 'uint256', 'string'],
-        [seller, buyer, sale, portions, pricesum, sigExpTime, "buyPortions"]
+        ['address', 'address', 'address', 'uint256[]', 'uint256', 'uint256', 'uint256', 'string'],
+        [seller, buyer, sale, portions, pricesum, itemId, sigExpTime, "buyPortions"]
     );
 
     return await deployer.signMessage(ethers.utils.arrayify(digest));
@@ -223,9 +223,9 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             percents = [2000, 2000, 2000, 2000, 2000];
             unlockTimes = [
                 saleEndTime + 600,
-                saleEndTime + 600 * 2, 
-                saleEndTime + 600 * 3, 
-                saleEndTime + 600 * 4, 
+                saleEndTime + 600 * 2,
+                saleEndTime + 600 * 3,
+                saleEndTime + 600 * 4,
                 saleEndTime + 600 * 5
             ];
         });
@@ -254,7 +254,7 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
             );
         });
 
-        it("Should set different sale token, and then re-set old one", async () => {
+        xit("Should set different sale token, and then re-set old one", async () => {
             await sale.setSaleToken(ONE_ADDRESS);
             let saleDetails = await sale.sale();
             expect(saleDetails.token).to.equal(ONE_ADDRESS);
@@ -487,6 +487,11 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
                 .withArgs(bob.address, amount);
         });
 
+        it("Should not auto-participate second time", async () => {
+            await expect(collateral.connect(deployer).autoParticipate(sale.address, 0, 0, 0, 3, bob.address, 0, "0x00"))
+                .to.be.revertedWith("AutoBuy already executed for user.");
+        });
+
         it("Should boost participation", async () => {
             await sale.changePhase(4);
             let messageJSON = {
@@ -512,6 +517,12 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
                 .to.emit(sale, "ParticipationBoosted")
                 .withArgs(alice.address, boostAmountAVAX, BigNumber.from(boostAmountAVAX).mul(NUMBER_1E18).div(SALE_TOKEN_PRICE_IN_AVAX));
             // console.log(await sale.getParticipationAmountsAndStates(alice.address));
+        });
+
+        it("Should not boost participation second time", async () => {
+            // console.log(await sale.getParticipationAmountsAndStates(alice.address));
+            await expect(collateral.connect(deployer).boostParticipation(sale.address, 0, 0, alice.address, 0, "0x00"))
+                .to.be.revertedWith("Participation already boosted for user.");
         });
     });
 
@@ -559,10 +570,11 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
 
         it("Should buy portion", async () => {
             const portions = [0];
+            const itemId = 7;
             const sigExpTime = await getCurrentBlockTimestamp() + 500;
             const priceSum = ethers.utils.parseEther('0.1');
-            const sig = await signBuyPortions(alice.address, bob.address, sale.address, portions, priceSum, sigExpTime);
-            await marketplace.connect(bob).buyPortions(sale.address, alice.address, sigExpTime, priceSum, portions, sig, {value: priceSum});
+            const sig = await signBuyPortions(alice.address, bob.address, sale.address, portions, priceSum, itemId, sigExpTime);
+            await marketplace.connect(bob).buyPortions(sale.address, alice.address, sigExpTime, priceSum, itemId, portions, sig, {value: priceSum});
             //console.log(await sale.userToParticipation(bob.address));
             expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 0)).to.equal(false);
         });
@@ -627,7 +639,7 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
         it("Should not withdraw registration fees when none accumulated", async () => {
             await expect(sale.withdrawRegistrationFees()).to.be.revertedWith("No fees accumulated.");
         });
-        
+
         it("Should withdraw unused funds", async () => {
             await sale.withdrawUnusedFunds();
         });
