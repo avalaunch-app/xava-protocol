@@ -64,11 +64,11 @@ async function signRemovePortionsFromMarket(user, contractAddress, portions, sig
     return await deployer.signMessage(ethers.utils.arrayify(digest));
 }
 
-async function signBuyPortions(seller, buyer, sale, portions, pricesum, sigExpTime) {
+async function signBuyPortions(seller, buyer, sale, portions, pricesum, itemId, sigExpTime) {
 
     const digest = ethers.utils.solidityKeccak256(
-        ['address', 'address', 'address', 'uint256[]', 'uint256', 'uint256', 'string'],
-        [seller, buyer, sale, portions, pricesum, sigExpTime, "buyPortions"]
+        ['address', 'address', 'address', 'uint256[]', 'uint256', 'uint256', 'uint256', 'string'],
+        [seller, buyer, sale, portions, pricesum, itemId, sigExpTime, "buyPortions"]
     );
 
     return await deployer.signMessage(ethers.utils.arrayify(digest));
@@ -570,10 +570,11 @@ describe("Avalaunch Sale V2/Marketplace Tests", async () => {
 
         it("Should buy portion", async () => {
             const portions = [0];
+            const itemId = 7;
             const sigExpTime = await getCurrentBlockTimestamp() + 500;
             const priceSum = ethers.utils.parseEther('0.1');
-            const sig = await signBuyPortions(alice.address, bob.address, sale.address, portions, priceSum, sigExpTime);
-            await marketplace.connect(bob).buyPortions(sale.address, alice.address, sigExpTime, priceSum, portions, sig, {value: priceSum});
+            const sig = await signBuyPortions(alice.address, bob.address, sale.address, portions, priceSum, itemId, sigExpTime);
+            await marketplace.connect(bob).buyPortions(sale.address, alice.address, sigExpTime, priceSum, itemId, portions, sig, {value: priceSum});
             //console.log(await sale.userToParticipation(bob.address));
             expect(await marketplace.listedUserPortionsPerSale(alice.address, sale.address, 0)).to.equal(false);
         });
