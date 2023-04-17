@@ -1,19 +1,15 @@
 {
   "mainnet": {
-    "saleName": "Deepwaters",
-    "saleEndTime": "1676543400",
-    "tokenAddress": "0x0000000000000000000000000000000000000000",
-    "totalTokens": "2083333.33",
-    "tokenPriceInAvax": "0.0059850374",
+    "saleName": "GoGoPool Protocol",
+    "saleEndTime": "1682505000",
+    "tokenAddress": "0x69260B9483F9871ca57f81A90D91E2F96c2Cd11d",
+    "totalTokens": "",
+    "tokenPriceInAvax": "",
     "portionVestingPrecision": 100000,
     "registrationDepositAVAX": "1",
     "unlockingTimes": [
-      1676894400,
-      1679313600
     ],
     "portionPercents": [
-      50000,
-      50000
     ]
   },
   "mainnet-gold": {
