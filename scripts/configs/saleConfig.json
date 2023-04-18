@@ -3,13 +3,15 @@
     "saleName": "GoGoPool Protocol",
     "saleEndTime": "1682505000",
     "tokenAddress": "0x69260B9483F9871ca57f81A90D91E2F96c2Cd11d",
-    "totalTokens": "",
-    "tokenPriceInAvax": "",
+    "totalTokens": "225000",
+    "tokenPriceInAvax": "0.06244131455",
     "portionVestingPrecision": 100000,
     "registrationDepositAVAX": "1",
     "unlockingTimes": [
-    ],
+		1682715600
+	],
     "portionPercents": [
+		100
     ]
   },
   "mainnet-gold": {
