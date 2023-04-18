@@ -18,6 +18,8 @@ const main = async () => {
     await (await salesFactory.deploySale()).wait();
     console.log(boldOut('Sale deployed successfully.'));
 
+    await delay(delayLength);
+
     // retrieve the sale deployed and save the address
     const lastDeployedSale = await salesFactory.getLastDeployedSale();
     saveContractAddress(network.name, c['saleName'], lastDeployedSale);
@@ -27,7 +29,7 @@ const main = async () => {
     // instantiate deployed sale contract
     const sale = await ethers.getContractAt('AvalaunchSaleV2', lastDeployedSale);
     console.log(' - Successfully instantiated sale contract.');
-  
+
     // compute the states for a new sale
     const saleEndTime = c['saleEndTime'];
     const token = c['tokenAddress'];
@@ -57,11 +59,11 @@ const main = async () => {
     console.log(' - Vesting parameters set successfully.');
     await delay(delayLength);
 
-    // add dexalot portfolio support
-    await sale.setAndSupportDexalotPortfolio(c['dexalotPortfolio'], c['dexalotUnlockingTime'])
-        .then(() => console.log(greenOut('Dexalot supported.')))
-        .catch((err) => console.log(redOut('Dexalot not supported.')));
-    
+    // // add dexalot portfolio support
+    // await sale.setAndSupportDexalotPortfolio(c['dexalotPortfolio'], c['dexalotUnlockingTime'])
+    //     .then(() => console.log(greenOut('Dexalot supported.')))
+    //     .catch((err) => console.log(redOut('Dexalot not supported.')));
+
     console.log("Config:");
     console.log({
         sale: lastDeployedSale,
@@ -69,7 +71,6 @@ const main = async () => {
         tokenPriceInAvax,
         totalTokens,
         saleEndTime,
-        tokensUnlockTime,
         registrationDepositAVAX,
         unlockingTimes,
         percents
@@ -79,7 +80,7 @@ const main = async () => {
     await marketplace.approveSale(sale.address)
         .then(() => console.log(' - Sale approved on marketplace'))
         .catch((err) => console.log(' - Marketplace whitelist failed.'));
-    
+
 
     const collateral = await ethers.getContractAt("AvalaunchCollateral", contracts['AvalaunchCollateralProxy']);
     await collateral.approveSale(sale.address)
