@@ -1,14 +1,14 @@
 {
   "mainnet": {
-    "saleName": "GoGoPool Protocol",
-    "saleEndTime": "1682505000",
-    "tokenAddress": "0x69260B9483F9871ca57f81A90D91E2F96c2Cd11d",
-    "totalTokens": "225000",
-    "tokenPriceInAvax": "0.06244131455",
+    "saleName": "Aether Games",
+    "saleEndTime": "1706178600",
+    "tokenAddress": "0x90Ee87F15aB3f5929513DB072Aec28a32222e2Cc",
+    "totalTokens": "9375000",
+    "tokenPriceInAvax": "0.00089",
     "portionVestingPrecision": 100000,
     "registrationDepositAVAX": "1",
     "unlockingTimes": [
-		1682715600
+      1706182200
 	],
     "portionPercents": [
       100000
