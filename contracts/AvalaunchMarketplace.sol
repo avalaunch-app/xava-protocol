@@ -38,6 +38,7 @@ contract AvalaunchMarketplace is Initializable {
     event PortionListed(address indexed portionOwner, address indexed saleAddress, uint256 portionId);
     event PortionRemoved(address indexed portionOwner, address indexed saleAddress, uint256 portionId);
     event PortionSold(address indexed portionSeller, address indexed portionBuyer, address indexed saleAddress, uint256 portionId);
+    event ItemSold(address indexed itemBuyer, uint256 indexed itemId);
     event SaleApproved(address indexed sale);
     event ApprovedSaleRemoved(address indexed sale);
     event FactorySet(ISalesFactory indexed factory);
@@ -104,6 +105,7 @@ contract AvalaunchMarketplace is Initializable {
      * @param sigExpTimestamp is signature expiration timestamp
      * @param portions is array of portion ids function caller wants to buy
      * @param priceSum is sum of all portion prices
+     * @param itemId is unique identifier of marketplace item
      * @param signature is admin signed data hash which confirms validity of action
      */
     function buyPortions(
@@ -111,6 +113,7 @@ contract AvalaunchMarketplace is Initializable {
         address owner,
         uint256 sigExpTimestamp,
         uint256 priceSum,
+        uint256 itemId,
         uint256[] calldata portions,
         bytes calldata signature
     ) external payable {
@@ -120,7 +123,7 @@ contract AvalaunchMarketplace is Initializable {
         require(address(msg.sender) != owner, "Can't purchase your own portions.");
         {
             // Compute signed message hash
-            bytes32 msgHash = keccak256(abi.encodePacked(owner, msg.sender/*buyer*/, sale, portions, priceSum, sigExpTimestamp, "buyPortions"));
+            bytes32 msgHash = keccak256(abi.encodePacked(owner, msg.sender/*buyer*/, sale, portions, priceSum, itemId, sigExpTimestamp, "buyPortions"));
             // Make sure provided signature is signed by admin and containing valid data
             verifySignature(msgHash, signature);
         }
@@ -151,6 +154,8 @@ contract AvalaunchMarketplace is Initializable {
             bytes("Your portion(s) just got sold! Greetings from Avalaunch Team :)")
         );
         require(success);
+        // Trigger event
+        emit ItemSold(msg.sender, itemId);
     }
 
     /**
