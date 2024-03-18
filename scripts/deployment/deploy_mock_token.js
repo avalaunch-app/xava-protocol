@@ -2,17 +2,17 @@ const hre = require("hardhat");
 const { saveContractAddress } = require('../utils')
 
 async function main() {
-  const tokenName = "Aether Games - Mock ERC20";
-  const symbol = "AEG";
-  const totalSupply = "9375000000000000000000000";
+  const tokenName = "COB - Mock ERC20";
+  const symbol = "COB";
+  const totalSupply = "2000000000000000000000000";
   const decimals = 18;
 
   const MCK1 = await hre.ethers.getContractFactory("XavaToken");
   const token = await MCK1.deploy(tokenName, symbol, totalSupply, decimals);
   await token.deployed();
-  console.log("AEG deployed to: ", token.address);
+  console.log("COB deployed to: ", token.address);
 
-  saveContractAddress(hre.network.name, "AEG-MOCK-TOKEN", token.address);
+  saveContractAddress(hre.network.name, "COB-MOCK-TOKEN", token.address);
 }
 
 
