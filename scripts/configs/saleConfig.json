@@ -1,10 +1,10 @@
 {
   "mainnet": {
-    "saleName": "Aether Games",
-    "saleEndTime": "1706178600",
-    "tokenAddress": "0x90Ee87F15aB3f5929513DB072Aec28a32222e2Cc",
-    "totalTokens": "9375000",
-    "tokenPriceInAvax": "0.00089",
+    "saleName": "Castle of Blackwater",
+    "saleEndTime": "1711535400",
+    "tokenAddress": "0x7cc12D76488B88895178d4C6A3E1e39158201e02",
+    "totalTokens": "2000000",
+    "tokenPriceInAvax": "0.003165",
     "portionVestingPrecision": 100000,
     "registrationDepositAVAX": "1",
     "unlockingTimes": [
