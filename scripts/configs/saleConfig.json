@@ -1,10 +1,10 @@
 {
   "mainnet": {
     "saleName": "Arrow Markets",
-    "saleEndTime": "1682715600",
+    "saleEndTime": "1715509800",
     "tokenAddress": "0x5c5e384Bd4e36724B2562cCAA582aFd125277C9B",
-    "totalTokens": "864000",
-    "tokenPriceInAvax": "0.0073641994",
+    "totalTokens": "720000",
+    "tokenPriceInAvax": "0.0107459",
     "portionVestingPrecision": 100000,
     "registrationDepositAVAX": "1",
     "unlockingTimes": [
