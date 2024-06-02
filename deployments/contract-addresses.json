@@ -131,8 +131,8 @@
         "LatestSale": "0x69CCb83b538902abFa576E7429c40B12bB066177",
         "AvalaunchCollateral": "0x739B226fa938BF0cA5F1BF49E4F89104fE226073",
         "AvalaunchCollateralProxy": "0x3F6715c77B978fb7824a64BBBB502bbB09EcA00b",
-        "Sale-Implementation": "0x5c8eAd5829c53FBBB1740b3ab2B0fF1670555f7A",
-        "AvalaunchMarketplace": "0xCF6000A4419a6Ea448f3F951ed6B5273c7406cD1",
+        "Sale-Implementation": "0x5C69d6694605791D334D596b833D8d04922Cd648",
+        "AvalaunchMarketplace": "0x60ff7152dBAaD8702f037900505eb33aCbaEdB79",
         "AvalaunchMarketplaceProxy": "0xda7C53E855f188038FBAeC9fca07130ac5842468"
     }
 }
